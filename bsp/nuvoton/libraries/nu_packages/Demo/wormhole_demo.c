@@ -1,14 +1,8 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-10-10      Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <rtthread.h>
 
@@ -288,6 +282,16 @@ RTM_EXPORT(whc_devmem_read);
 
 void whc_devmem(int argc, char *argv[])
 {
+    /**
+     * @brief  This function may interact with critical system registers. Use with caution.
+     *
+     * @details
+     * This function has the potential to access and modify important system registers
+     * as part of its operation. Ensure proper validation and system state checks
+     * before calling this function. Improper or careless usage may lead to system
+     * instability or unintended behavior.
+    */
+
     volatile unsigned int u32Addr;
     unsigned int value = 0, mode = 0;
 

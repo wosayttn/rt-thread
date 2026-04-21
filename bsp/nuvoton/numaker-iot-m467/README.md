@@ -1,100 +1,65 @@
-﻿# NuMaker-IoT-M467
+# NuMaker-IoT-M467
 
 ## 1. Introduction
 
-NuMaker-IoT-M467 provides multiple networking, interfaces, and flexible extended data storage. Whether you need a sensor node or a light-weight gateway, the NuMaker-IoT-M467 is an ideal choice for IoT applications.
+The NuMaker-IoT-M467 is an IoT evaluation board based on the Nuvoton NuMicro® **M467HJHAN** microcontroller (Arm® Cortex®-M4F) with an on-board Nu-Link2-Me debugger/programmer. It integrates Ethernet, Wi-Fi, CAN-FD, USB OTG, microSD, SPI Flash, and sensors with Arduino UNO and mikroBUS expansion headers.
 
-The M467HJ target board is based on NuMicro M467HJHAN. For the development flexibility, the M467HJ target board provides the extension connectors, the Arduino UNO, mikroBUS compatible headers and the capability of adopting multiple power supplies.
+### 1.1 Hardware Specifications
 
-The NuMaker-IoT-M467 is an evaluation board for Nuvoton NuMicro M467HJ microcontrollers. The NuMaker-IoT-M467 consists of two parts: an M467HJ target board and an on-board Nu-Link2-Me debugger and programmer. The NuMaker-IoT-M467 is designed for project evaluation, prototype development and validation with power consumption monitoring function.
+| Item | Specification |
+| :--- | :--- |
+| MCU | M467HJHAN (Arm® Cortex®-M4F) |
+| Operating Frequency | 200 MHz |
+| On-chip Flash | 1 MB (Dual Bank) |
+| On-chip SRAM | 512 KB |
+| Crypto Engine | TRNG, PRNG, AES, SHA/HMAC, RSA, ECC |
+| Ethernet | 10/100 Mbps RMII (RTL8201F PHY) |
+| Interfaces | Arduino UNO, 2x mikroBUS, RJ45 Ethernet, USB 1.1/2.0 OTG, microSD, CAN-FD, SWD |
 
-![NuMaker-IoT-M467](./figures/NuMaker-IoT-M467-V1_F.png)
+### 1.2 On-board Devices
 
-### 1.1 MCU specification
-
-|  | Features |
-| -- | -- |
-| MCU | M467HJHAN |
-| Operation frequency | 200 MHz |
-| embedded Flash size | 1 MB, Dual Bank |
-| SRAM size | 512 kB |
-| Crypto engine |  TRNG, PRNG, AES, SHA/HMAC, RSA, and ECC crypto accelerator |
-| RMII interface | Support 10/100 Mbps Ethernet |
-
-### 1.2 Interface
-
-| Interface |
-| -- |
-| An Arduino UNO compatible extension connector |
-| Two mikroBUS compatible extension connector |
-| RJ45 Ethernet port |
-| USB 1.1/2.0 OTG ports |
-| A microSD slot |
-| A CAN FD communication port |
-| Debug through SWD interface |
-
-### 1.3 On-board devices
-
-| Device | Description | Driver supporting status |
-| -- | -- | -- |
-| SPI flash | 32Mb, W25Q32 | Supported |
-| Wi-Fi | ESP8266 | Supported |
+| Device | Description | Status |
+| :--- | :--- | :--- |
+| SPI Flash | W25Q32 (32 Mb) | Supported |
 | Ethernet PHY | RTL8201F | Supported |
+| Wi-Fi Module | ESP8266 | Supported |
 | Thermal Sensor | NCT7717U | Supported |
-| 6-axis MotionTracking Sensor | MPU6500 | Supported |
+| 6-Axis IMU | MPU6500 | Supported |
+| NuTFT V1.2/V1.3 | ILI9341 LCD (`spi2`) + ADC Touch (`eadc0`) | Supported |
 
-### 1.4 Board extended module
+## 2. Supported Toolchains
 
-| Device | Description | Driver supporting status |
-| -- | -- | -- |
-| LCD Panel(NuTFT V1.2) | ILI9341(over spi2) | Supported |
-| Touch screen | ADC S/W touch(over eadc0) | Supported |
+| Toolchain | Tested Version | Linker Script |
+| :--- | :--- | :--- |
+| **Arm GCC** | Arm GNU Toolchain 13.3.1 (RT-Thread Env v2.1+) | `linking_scripts/link.ld` |
+| **Keil MDK5** | Arm Compiler 6 (`armclang` V6.22) | `linking_scripts/link.sct` |
 
-## 2. Supported compiler
+> Install `Nu-Link_Keil_Driver` when debugging/flashing from Keil MDK5.
 
-Support GCC, MDK5, IAR IDE/compilers. More information of these compiler version as following:
+## 3. Build Instructions
 
-| IDE/Compiler  | Tested version            |
-| ---------- | ---------------------------- |
-| MDK5       | 5.26.2                       |
-| IAR        | 8.2                          |
-| GCC        | GCC 5.4.1 20160919 (release) |
+The default `.config` enables the minimal baseline (`UART0`, `PDMA`, `GPIO`, `PIN`, `MSH`). Use `menuconfig` to enable additional peripherals.
 
-Notice: Please install Nu-Link_Keil_Driver or Nu-Link_IAR_Driver for development.
+```bash
+# Arm GCC build
+scons -j16
 
-## 3. Program firmware
+# Generate Keil MDK5 project (Windows Env)
+set RTT_CC=keil
+scons --target=mdk5
+```
 
-### Step 1
+## 4. Flashing & Serial Console
 
-At first, you need to configure switch on the NuMaker-IoT-M467 board. Set the No.1/2 switches to ‘ON’ position. After the configuration is done, connect the NuMaker-IoT-M467 board and your computer using the USB Micro cable. After that, window manager will show a ‘NuMicro MCU’ virtual disk. Finally, you will use this virtual disk to burn firmware.
+1. Set **Nu-Link2-Me** DIP switches No. 1 and 2 to **ON**, then connect the board to your PC via USB to enumerate the **NuMicro MCU** virtual drive and **Nu-Link2 Virtual COM Port**.
+2. Drag and drop `rtthread.bin` onto the **NuMicro MCU** virtual drive (or flash via Keil MDK5 / `Nuvoton ICP Program`).
+3. Open the Virtual COM Port (`UART0`, **115200 8-N-1**, no flow control) to access the RT-Thread FinSH/MSH prompt (`msh >`).
 
-![NuLinkMe2_SwitchSetting](./figures/NuLinkMe_SwitchSetting.png)
+- [Download NuMicro ICP Programming Tool](https://www.nuvoton.com/resource-download.jsp?tp_GUID=UG1320200721113745)
 
-![NuMicro MCU](./figures/NuMicro_MCU_Disk.png)
+## 5. Resources
 
-### Step 2
-
-A simple firmware burning method is that you can drag and drop the binary image file to NuMicro MCU virtual disk or copy the binary file to NuMicro MCU disk to burn firmware.
-
-![Sendto](./figures/Sendto.png)
-
-## 4. Test
-
-You can use Tera Term terminate emulator (or other software) to type commands of RTT. All parameters of serial communication are shown in below image. Here, you can find out the corresponding port number of Nuvoton Virtual Com Port in window device manager.
-
-![Serial settings](./figures/SerialSetting.png)
-
-## 5. Purchase
-
-* [Nuvoton Direct][1]
-
-## 6. Resources
-
-* [Download Board User Manual][2]
-* [Download MCU TRM][3]
-* [Download MCU Datasheet][4]
-
-  [1]: https://direct.nuvoton.com/en/numaker-iot-m467
-  [2]: https://Coming_soon
-  [3]: https://www.nuvoton.com/resource-download.jsp?tp_GUID=DA05-M460
-  [4]: https://www.nuvoton.com/resource-download.jsp?tp_GUID=DA00-M460
+- [Quick Start — NuMaker-IoT-M467](https://www.nuvoton.com/board/numaker-iot-m467/)
+- [User Manual — NuMaker-IoT-M467](https://www.nuvoton.com/resource-download.jsp?tp_GUID=UG132022122307174070)
+- [Schematic, PCB & Gerber File — NuMaker-IoT-M467](https://www.nuvoton.com/resource-download.jsp?tp_GUID=HL102022120506421490)
+- [Nuvoton Direct — Buy NuMaker-IoT-M467](https://direct.nuvoton.com/search?options%5Bprefix%5D=last&q=NuMaker-IoT-M467)

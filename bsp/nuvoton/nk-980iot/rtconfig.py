@@ -28,7 +28,7 @@ BUILD = ''
 
 CORE = 'arm926ej-s'
 MAP_FILE = 'rtthread_nuc980.map'
-LINK_FILE = 'linking_scripts/nuc980'
+LINK_FILE = 'linking_scripts/link'
 TARGET_NAME = 'rtthread.bin'
 
 #------- GCC settings ----------------------------------------------------------

@@ -382,7 +382,7 @@
             <useFile>0</useFile>
             <TextAddressRange>0x00000000</TextAddressRange>
             <DataAddressRange>0x20000000</DataAddressRange>
-            <ScatterFile>.\linking_scripts\m480_flash.sct</ScatterFile>
+            <ScatterFile>.\linking_scripts\link.sct</ScatterFile>
             <IncludeLibs />
             <IncludeLibsPath />
             <Misc />

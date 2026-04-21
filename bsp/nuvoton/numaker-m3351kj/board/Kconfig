@@ -1,0 +1,43 @@
+menu "Hardware Drivers Config"
+
+    menu "On-chip Peripheral Drivers"
+        source "$(BSP_DIR)/../libraries/cortex-m/Kconfig_M3351"
+    endmenu
+
+    menu "On-board Peripheral Drivers"
+
+        config BOARD_USING_NULINKME
+            bool "Enable UART0 for RTT Console.(uart0)"
+            select BSP_USING_UART
+            select BSP_USING_UART0
+            default y
+
+        config BSP_USING_CUSTOM_LOADER
+            bool "Enable Custom Loader for Swapping Flash Bank."
+            select BSP_USING_FMC
+
+        config BOARD_USING_USBD
+            select BSP_USING_USBD
+            bool "Enable USBD"
+            help
+                Choose this option if you need USBD function mode.
+
+    endmenu
+
+    menu "Board extended module drivers"
+    choice
+        prompt "Select On-board Module"
+        config BOARD_USING_NONE
+            bool "None"
+        config BOARD_USING_NUTFT
+            bool "NuTFT V1.3"
+    endchoice
+
+    if BOARD_USING_NUTFT
+        source "$(BSP_DIR)/board/Kconfig_Board_NUTFT"
+    endif
+    endmenu
+
+    source "$(BSP_DIR)/../libraries/nu_packages/Kconfig"
+
+endmenu

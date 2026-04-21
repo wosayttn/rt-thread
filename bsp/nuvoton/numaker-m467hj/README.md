@@ -1,105 +1,65 @@
-﻿# NuMaker-M467HJ
+# NuMaker-M467HJ
 
 ## 1. Introduction
 
-The NuMaker-M467HJ is an evaluation board for Nuvoton NuMicro M467HJ microcontrollers. The NuMaker-M467HJ consists of two parts: an M467HJ target board and an on-board Nu-Link2-Me debugger and programmer. The NuMaker-M467HJ is designed for project evaluation, prototype development and validation with power consumption monitoring function.
+The NuMaker-M467HJ is an evaluation board based on the Nuvoton NuMicro® **M467HJHAN** microcontroller (Arm® Cortex®-M4F) with an on-board Nu-Link2-Me debugger/programmer. It features HyperRAM, Ethernet, audio codec, CAN-FD, USB OTG, microSD, EBI LCD, and CCAP camera interfaces.
 
-The M467HJ target board is based on NuMicro M467HJHAN. For the development flexibility, the M467HJ target board provides the extension connectors, the Arduino UNO compatible headers and the capability of adopting multiple power supplies. Furthermore, the Nuvoton-designed ammeter connector can measure the power consumption instantly, which is essential for the prototype evaluation.
+### 1.1 Hardware Specifications
 
-In addition, there is an attached on-board debugger and programmer “Nu-Link2-Me”. The Nu-Link2-Me supports on-chip debugging, online and offline ICP programming via SWD interface. The Nu-Link2-Me supports virtual COM (VCOM) port for printing debug messages on PC. Besides, the programming status could be shown on the built-in LEDs. Lastly, the Nu-Link2-Me could be detached from the evaluation board and become a stand-alone mass production programmer.
+| Item | Specification |
+| :--- | :--- |
+| MCU | M467HJHAN (Arm® Cortex®-M4F) |
+| Operating Frequency | 200 MHz |
+| On-chip Flash | 1 MB (Dual Bank) |
+| On-chip SRAM | 512 KB |
+| Crypto Engine | TRNG, PRNG, AES, SHA/HMAC, RSA, ECC |
+| Ethernet | 10/100 Mbps RMII (RTL8201F PHY) |
+| Interfaces | Arduino UNO, RJ45 Ethernet, USB 1.1/2.0 OTG, microSD, 3.5 mm Audio, CAN-FD, EBI LCD, CCAP Camera, SWD |
 
-![NuMaker-M467HJ](./figures/NuMaker-M467HJ-V1_F.png)
+### 1.2 On-board Devices
 
-### 1.1 MCU specification
-
-|  | Features |
-| -- | -- |
-| MCU | M467HJHAN |
-| Operation frequency | 192 MHz |
-| embedded Flash size | 1 MB, Dual Bank |
-| SRAM size | 512 kB |
-| Crypto engine |  TRNG, PRNG, AES, SHA/HMAC, RSA, and ECC crypto accelerator |
-| RMII interface | Support 10/100 Mbps Ethernet |
-
-### 1.2 Interface
-
-| Interface |
-| -- |
-| Arduino UNO compatible extension connector |
-| RJ45 Ethernet port |
-| USB 1.1/2.0 OTG ports |
-| A microSD slot |
-| A 3.5mm Audio connector |
-| A CAN FD communication port |
-| Debug through SWD interface |
-| A LCD panel EBI interface |
-| A Camera Capture interface |
-
-### 1.3 On-board devices
-
-| Device | Description | Driver supporting status |
-| -- | -- | -- |
-| SPI flash | 32Mb, W25Q32 | Supported |
-| HyperRAM | 64Mb, W956A8MBYA5I | Supported |
+| Device | Description | Status |
+| :--- | :--- | :--- |
+| HyperRAM | W956A8MBYA5I (64 Mb) | Supported |
 | Ethernet PHY | RTL8201F | Supported |
 | Audio Codec | NAU88L22 | Supported |
 | Thermal Sensor | NCT7717U | Supported |
+| EBI LCD Panels | SSD1963 / FSA506 (`ebi0`) + ILI2130 / ST1663I Touch (`i2c1`) | Supported |
+| CCAP Sensors | HM1055 / ADV7280 (`i2c0`) | Supported |
 
-### 1.4 Board extended module
+## 2. Supported Toolchains
 
-| Device | Description | Driver supporting status |
-| -- | -- | -- |
-| LCD Panel | SSD1963(over ebi0) | Supported |
-| LCD Panel | LCD FSA506(over ebi0) | Supported |
-| Touch screen controller | TPC ILI2130(over i2c1) | Supported |
-| Touch screen controller | TPC ST1663I(over i2c1) | Supported |
-| CCAP sensor module(over i2c0/PG11/PD12) | HM1055, ADV7280 | Supported |
+| Toolchain | Tested Version | Linker Script |
+| :--- | :--- | :--- |
+| **Arm GCC** | Arm GNU Toolchain 13.3.1 (RT-Thread Env v2.1+) | `linking_scripts/link.ld` |
+| **Keil MDK5** | Arm Compiler 6 (`armclang` V6.22) | `linking_scripts/link.sct` |
 
-## 2. Supported compiler
+> Install `Nu-Link_Keil_Driver` when debugging/flashing from Keil MDK5.
 
-Support GCC, MDK5, IAR IDE/compilers. More information of these compiler version as following:
+## 3. Build Instructions
 
-| IDE/Compiler  | Tested version            |
-| ---------- | ---------------------------- |
-| MDK5       | 5.26.2                       |
-| IAR        | 8.2                          |
-| GCC        | GCC 5.4.1 20160919 (release) |
+The default `.config` enables the minimal baseline (`UART0`, `PDMA`, `GPIO`, `PIN`, `MSH`). Use `menuconfig` to enable additional peripherals.
 
-Notice: Please install Nu-Link_Keil_Driver or Nu-Link_IAR_Driver for development.
+```bash
+# Arm GCC build
+scons -j16
 
-## 3. Program firmware
+# Generate Keil MDK5 project (Windows Env)
+set RTT_CC=keil
+scons --target=mdk5
+```
 
-### Step 1
+## 4. Flashing & Serial Console
 
-At first, you need to configure switch on the NuMaker-M467HJ board. Set the No.1/2 switches to ‘ON’ position. After the configuration is done, connect the NuMaker-M467HJ board and your computer using the USB Micro cable. After that, window manager will show a ‘NuMicro MCU’ virtual disk. Finally, you will use this virtual disk to burn firmware.
+1. Set **Nu-Link2-Me** DIP switches No. 1 and 2 to **ON**, then connect the board to your PC via USB to enumerate the **NuMicro MCU** virtual drive and **Nu-Link2 Virtual COM Port**.
+2. Drag and drop `rtthread.bin` onto the **NuMicro MCU** virtual drive (or flash via Keil MDK5 / `Nuvoton ICP Program`).
+3. Open the Virtual COM Port (`UART0`, **115200 8-N-1**, no flow control) to access the RT-Thread FinSH/MSH prompt (`msh >`).
 
-![NuLinkMe2_SwitchSetting](./figures/NuLinkMe_SwitchSetting.png)
+- [Download NuMicro ICP Programming Tool](https://www.nuvoton.com/resource-download.jsp?tp_GUID=UG1320200721113745)
 
-![NuMicro MCU](./figures/NuMicro_MCU_Disk.png)
+## 5. Resources
 
-### Step 2
-
-A simple firmware burning method is that you can drag and drop the binary image file to NuMicro MCU virtual disk or copy the binary file to NuMicro MCU disk to burn firmware.
-
-![Sendto](./figures/Sendto.png)
-
-## 4. Test
-
-You can use Tera Term terminate emulator (or other software) to type commands of RTT. All parameters of serial communication are shown in below image. Here, you can find out the corresponding port number of Nuvoton Virtual Com Port in window device manager.
-
-![Serial settings](./figures/SerialSetting.png)
-
-## 5. Purchase
-
-* [Nuvoton Direct][1]
-
-## 6. Resources
-
-* [Download Board User Manual][2]
-* [Download MCU TRM][3]
-* [Download MCU Datasheet][4]
-
-  [1]: https://direct.nuvoton.com/en/numaker-m467hj
-  [2]: https://www.nuvoton.com/resource-files/en-us--UM_NuMaker-M467HJ_EN_Rev1.00.pdf
-  [3]: https://www.nuvoton.com/resource-download.jsp?tp_GUID=DA05-M460
-  [4]: https://www.nuvoton.com/resource-download.jsp?tp_GUID=DA00-M460
+- [Quick Start — NuMaker-M467HJ](https://www.nuvoton.com/board/numaker-m467hj/)
+- [User Manual — NuMaker-M467HJ](https://www.nuvoton.com/resource-download.jsp?tp_GUID=UG132022072705350809)
+- [Schematic, PCB & Gerber File — NuMaker-M467HJ](https://www.nuvoton.com/resource-download.jsp?tp_GUID=EV012022072705411161)
+- [Nuvoton Direct — Buy NuMaker-M467HJ](https://direct.nuvoton.com/search?options%5Bprefix%5D=last&q=NuMaker-M467HJ)

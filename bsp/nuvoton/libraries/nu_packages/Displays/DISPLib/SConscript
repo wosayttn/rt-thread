@@ -1,0 +1,21 @@
+# RT-Thread building script for component
+
+import os
+Import('RTT_ROOT')
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+cpppath = [cwd]
+src = Glob('*.c') + Glob('*.cpp')
+group = DefineGroup('nu_pkgs_displib', src, depend = ['NU_PKG_USING_DISPLIB'], CPPPATH = cpppath)
+
+list = os.listdir(cwd)
+for d in list:
+    path = os.path.join(cwd, d)
+    if os.path.isfile(os.path.join(path, 'SConscript')):
+        objs = objs + SConscript(os.path.join(d, 'SConscript'))
+
+objs += group
+
+Return('objs')

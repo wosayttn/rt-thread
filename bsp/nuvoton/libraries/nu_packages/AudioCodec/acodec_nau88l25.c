@@ -1,14 +1,8 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2020-1-16       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <rtconfig.h>
 
@@ -28,8 +22,8 @@
 
 #define DEF_NAU88L25_ADDR    0x1A
 
-static struct rt_i2c_bus_device *g_I2cBusDev = NULL;
-S_NU_NAU88L25_CONFIG *g_psCodecConfig = NULL;
+static struct rt_i2c_bus_device *g_I2cBusDev = RT_NULL;
+static S_NU_NAU88L25_CONFIG *g_psCodecConfig = RT_NULL;
 
 static rt_err_t nau88l25_init(void);
 static rt_err_t nau88l25_reset(void);
@@ -41,7 +35,7 @@ nu_acodec_ops nu_acodec_ops_nau88l25 =
 {
     .name = "NAU88L25",
     .role = NU_ACODEC_ROLE_MASTER,
-    .config = { // Default settings.
+    .config = { /* Default settings. */
         .samplerate = 48000,
         .channels = 2,
         .samplebits = 16
@@ -66,10 +60,10 @@ static int I2C_WriteNAU88L25(uint16_t u16addr, uint16_t u16data)
 
     RT_ASSERT(g_I2cBusDev != NULL);
 
-    au8TxData[0] = (uint8_t)((u16addr >> 8) & 0x00FF);   //addr [15:8]
-    au8TxData[1] = (uint8_t)(u16addr & 0x00FF);          //addr [ 7:0]
-    au8TxData[2] = (uint8_t)((u16data >> 8) & 0x00FF);   //data [15:8]
-    au8TxData[3] = (uint8_t)(u16data & 0x00FF);          //data [ 7:0]
+    au8TxData[0] = (uint8_t)((u16addr >> 8) & 0x00FF);   /* addr [15:8] */
+    au8TxData[1] = (uint8_t)(u16addr & 0x00FF);          /* addr [ 7:0] */
+    au8TxData[2] = (uint8_t)((u16data >> 8) & 0x00FF);   /* data [15:8] */
+    au8TxData[3] = (uint8_t)(u16data & 0x00FF);          /* data [ 7:0] */
 
     msg.addr  = DEF_NAU88L25_ADDR;               /* Slave address */
     msg.flags = RT_I2C_WR;                       /* Write flag */
@@ -93,8 +87,8 @@ static int I2C_ReadNAU88L25(uint16_t u16addr, uint16_t *pu16data)
     RT_ASSERT(g_I2cBusDev != NULL);
     RT_ASSERT(pu16data != NULL);
 
-    au8TxData[0] = (uint8_t)((u16addr >> 8) & 0x00FF);   //addr [15:8]
-    au8TxData[1] = (uint8_t)(u16addr & 0x00FF);          //addr [ 7:0]
+    au8TxData[0] = (uint8_t)((u16addr >> 8) & 0x00FF);   /* addr [15:8] */
+    au8TxData[1] = (uint8_t)(u16addr & 0x00FF);          /* addr [ 7:0] */
 
     msgs[0].addr  = DEF_NAU88L25_ADDR;        /* Slave address */
     msgs[0].flags = RT_I2C_WR;                /* Write flag */
@@ -136,10 +130,10 @@ static rt_err_t nau88l25_probe(void)
 static rt_err_t nau88l25_reset(void)
 {
     I2C_WriteNAU88L25(0,  0x1);
-    I2C_WriteNAU88L25(0,  0);   // Reset all registers
+    I2C_WriteNAU88L25(0,  0);   /* Reset all registers */
     nau88l25_delay_ms(30);
 
-    LOG_I("Software Reset.\n");
+    LOG_I("Software Reset.");
 
     return RT_EOK;
 }
@@ -224,7 +218,7 @@ static rt_err_t nau88l25_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNu
         mClkDiv = 15;
         break;
     default:
-        LOG_E("mclk divider not match!\n");
+        LOG_E("mclk divider not match!");
         mClkDiv = 0;
         return -RT_ERROR;
     }
@@ -253,7 +247,7 @@ static rt_err_t nau88l25_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNu
         bClkDiv = 5;
         break;
     default:
-        LOG_E("bclk divider not match!\n");
+        LOG_E("bclk divider not match!");
         bClkDiv = 0;
         return -RT_ERROR;
     }
@@ -273,7 +267,7 @@ static rt_err_t nau88l25_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNu
         lrClkDiv = 3;
         break;
     default:
-        LOG_E("lrclk divider not match!\n");
+        LOG_E("lrclk divider not match!");
         lrClkDiv = 0;
         return -RT_ERROR;
     }
@@ -301,7 +295,7 @@ static rt_err_t nau88l25_init(void)
 
     if (nu_acodec_ops_nau88l25.role == NU_ACODEC_ROLE_MASTER)
     {
-        I2C_WriteNAU88L25(REG_I2S_PCM_CTRL2,  LRC_DIV_DIV32 | ADCDAT0_OE | MS0_MASTER | BLCKDIV_DIV8);   //301A:Master 3012:Slave
+        I2C_WriteNAU88L25(REG_I2S_PCM_CTRL2,  LRC_DIV_DIV32 | ADCDAT0_OE | MS0_MASTER | BLCKDIV_DIV8);   /* 301A:Master 3012:Slave */
     }
     else
     {
@@ -312,7 +306,7 @@ static rt_err_t nau88l25_init(void)
     I2C_WriteNAU88L25(REG_ADC_RATE,  0x10 | ADC_RATE_128);
     I2C_WriteNAU88L25(REG_DAC_CTRL1,  0x80 | DAC_RATE_128);
 
-    I2C_WriteNAU88L25(REG_MUTE_CTRL,  0x0000); // 0x10000
+    I2C_WriteNAU88L25(REG_MUTE_CTRL,  0x0000); /* 0x10000 */
     I2C_WriteNAU88L25(REG_ADC_DGAIN_CTRL,  DGAINL_ADC0(0xEF));
     I2C_WriteNAU88L25(REG_DACL_CTRL,  DGAINL_DAC(0xAE));
     I2C_WriteNAU88L25(REG_DACR_CTRL,  DGAINR_DAC(0xAE) | DAC_CH_SEL1_RIGHT);
@@ -334,7 +328,7 @@ static rt_err_t nau88l25_init(void)
     nu_acodec_ops_nau88l25.config.channels = 2;
     nu_acodec_ops_nau88l25.config.samplebits = 16;
 
-    LOG_I("Initialized done.\n");
+    LOG_I("Initialized done.");
 
     return RT_EOK;
 }
@@ -441,7 +435,7 @@ int nu_hw_nau88l25_init(S_NU_NAU88L25_CONFIG *psCodecConfig)
     psI2cBusDev = (struct rt_i2c_bus_device *)rt_device_find(psCodecConfig->i2c_bus_name);
     if (psI2cBusDev == RT_NULL)
     {
-        LOG_E("Can't found I2C bus - %s..!\n", psCodecConfig->i2c_bus_name);
+        LOG_E("Can't found I2C bus - %s..!", psCodecConfig->i2c_bus_name);
         goto exit_rt_hw_nau88l25_init;
     }
 
@@ -449,13 +443,13 @@ int nu_hw_nau88l25_init(S_NU_NAU88L25_CONFIG *psCodecConfig)
     psAudioDev = (struct rt_audio_device *)rt_device_find(psCodecConfig->i2s_bus_name);
     if (psAudioDev == RT_NULL)
     {
-        LOG_E("Can't found I2S bus - %s ..!\n", psCodecConfig->i2s_bus_name);
+        LOG_E("Can't found I2S bus - %s ..!", psCodecConfig->i2s_bus_name);
         goto exit_rt_hw_nau88l25_init;
     }
 
     if (nau88l25_probe() != RT_EOK)
     {
-        LOG_E("Can't found audio codec..!\n");
+        LOG_E("Can't found audio codec..!");
         goto exit_rt_hw_nau88l25_init;
     }
 

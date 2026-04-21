@@ -1,0 +1,7 @@
+# Unified Nuvoton SDK symlink / Windows junction
+libraries/nuvoton-series-latest
+
+# Local UTEST junction & IDE/debugger user files
+*/UTEST
+*.uvguix.*
+Nu_Link_Driver.ini

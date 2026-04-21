@@ -410,7 +410,7 @@
             <TextAddressRange>0x20000000</TextAddressRange>
             <DataAddressRange>0x20800000</DataAddressRange>
             <pXoBase></pXoBase>
-            <ScatterFile>.\linking_scripts\n9h30.sct</ScatterFile>
+            <ScatterFile>.\linking_scripts\link.sct</ScatterFile>
             <IncludeLibs></IncludeLibs>
             <IncludeLibsPath></IncludeLibsPath>
             <Misc></Misc>

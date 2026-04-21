@@ -206,7 +206,7 @@ S_CALIBRATION_MATRIX g_sCalMat = { 13321, -53, -1069280, 96, 8461, -1863312, 655
 
 #if defined(NU_PKG_USING_TPC_GT911) && defined(BOARD_USING_GT911)
 #include "drv_gpio.h"
-#include "gt911.h"
+#include "tpc_gt911.h"
 
 #define TPC_RST_PIN   NU_GET_PININDEX(NU_PG, 4)
 #define TPC_IRQ_PIN   NU_GET_PININDEX(NU_PG, 5)
@@ -232,7 +232,7 @@ INIT_ENV_EXPORT(rt_hw_gt911_port);
 
 #if defined(NU_PKG_USING_TPC_FT5446) && defined(BOARD_USING_FT5446)
 #include "drv_gpio.h"
-#include "ft5446.h"
+#include "tpc_ft5446.h"
 
 #define TPC_RST_PIN   NU_GET_PININDEX(NU_PG, 4)
 #define TPC_IRQ_PIN   NU_GET_PININDEX(NU_PG, 5)

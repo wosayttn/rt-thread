@@ -219,7 +219,6 @@ config ARCH_ARMV8
     select ARCH_ARM
     select ARCH_ARM_MMU
     select RT_USING_CPU_FFS
-    select ARCH_USING_ASID
     select ARCH_USING_IRQ_CTX_LIST
 
 config ARCH_MIPS
@@ -311,6 +310,7 @@ config ARCH_REMAP_KERNEL
 config ARCH_USING_ASID
     bool
     depends on RT_USING_SMART
+    default y if ARCH_ARMV8
     help
         Using ASID support from architecture
 

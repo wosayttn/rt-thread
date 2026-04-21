@@ -81,6 +81,9 @@ menu "Using USB legacy version"
                         bool "Enable to use device as audio device"
                         select RT_USB_DEVICE_AUDIO
                 endchoice
+                config RT_USB_DEVICE_HID
+                    bool "Enable to use device as HID device"
+                    default n
                 if RT_USB_DEVICE_COMPOSITE
                     config RT_USB_DEVICE_CDC
                         bool "Enable to use device as CDC device"

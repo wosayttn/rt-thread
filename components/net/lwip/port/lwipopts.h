@@ -417,6 +417,11 @@
 #define TCPIP_THREAD_NAME           "tcpip"
 #define DEFAULT_TCP_RECVMBOX_SIZE   10
 
+/* LWIP_TCPIP_CORE_LOCKING_INPUT: let tcpip_input() grab the core lock
+   for input packets directly instead of passing messages to tcpip_thread.
+   Note: must NOT be called from interrupt context. */
+#define LWIP_TCPIP_CORE_LOCKING_INPUT   1
+
 /* ---------- ARP options ---------- */
 #define LWIP_ARP                    1
 #define ARP_TABLE_SIZE              10

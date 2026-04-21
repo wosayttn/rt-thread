@@ -23,7 +23,7 @@ if os.getenv('RTT_EXEC_PATH'):
 #BUILD = 'debug'
 BUILD = ''
 MAP_FILE = 'rtthread_ma35d1.map'
-LINK_FILE = 'linking_scripts/aarch32'
+LINK_FILE = 'linking_scripts/link'
 TARGET_NAME = 'rtthread.bin'
 
 #------- GCC settings ----------------------------------------------------------

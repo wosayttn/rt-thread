@@ -12,6 +12,8 @@
 
 #include <rtthread.h>
 
+#if defined(RT_USING_DFS)
+
 #define LOG_TAG         "mnt"
 #define DBG_ENABLE
 #define DBG_SECTION_NAME "mnt"
@@ -43,3 +45,4 @@ const struct dfs_mount_tbl mount_table[] =
 };
 #endif
 
+#endif /* defined(RT_USING_DFS) */

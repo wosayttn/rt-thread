@@ -1,7 +1,7 @@
 menu "Hardware Drivers Config"
 
     menu "On-chip Peripheral Drivers"
-        source "$(BSP_DIR)/../libraries/m460/rtt_port/Kconfig"
+        source "$(BSP_DIR)/../libraries/cortex-m/Kconfig_M460"
     endmenu
 
     menu "On-board Peripheral Drivers"
@@ -31,12 +31,6 @@ menu "Hardware Drivers Config"
             select BSP_USING_SDH0
             default n
 
-        config BOARD_USING_STORAGE_SPIFLASH
-            bool "SPIFLASH supporting(over qspi0)"
-            select BSP_USING_QSPI
-            select BSP_USING_QSPI0
-            default y
-
         config BOARD_USING_CANFD0
             bool "CAN-FD supporting(over canfd0)"
             select BSP_USING_CANFD
@@ -62,48 +56,28 @@ menu "Hardware Drivers Config"
             select BSP_USING_I2C2
             default y
 
-        config BOARD_USING_USB_D_H
-            bool "Enable USB Device or Host function"
-            help
-                Choose this option if you need USB function.
+        menu "USB Device or Host function"
+            config BOARD_USING_USB_D_H
+                bool "Enable USB Device or Host function"
+                help
+                    Choose this option if you need USB function mode.
 
-        if BOARD_USING_USB_D_H
-            choice
-                prompt "Select FS/HS USB Ports"
+                if BOARD_USING_USB_D_H
 
-                config BOARD_USING_HSUSBD
-                    select BSP_USING_HSUSBD
-                    bool "Enable HSUSBD(over USB2.0)"
-                    help
-                        Choose this option if you need HSUSBD function mode.
+                    config BOARD_USING_USB
+                        select BSP_USING_OTG
+                        bool "Enable USB"
+                        help
+                            Choose this option if you need USB function mode.
 
-                config BOARD_USING_HSUSBD_USBH
-                    select BSP_USING_USBH
-                    select BSP_USING_HSUSBD
-                    bool "Enable HSUSBD(over USB2.0) and USBH(over USB1.1)"
-                    help
-                        Choose this option if you need HSUSBD and USBH function mode at the same time.
+                    config BOARD_USING_HSUSB
+                        select BSP_USING_HSOTG
+                        bool "Enable HSUSB"
+                        help
+                            Choose this option if you need HSUSB function mode.
 
-                config BOARD_USING_HSUSBH
-                    select BSP_USING_HSUSBH
-                    bool "Enable HSUSBH(over USB2.0)"
-                    help
-                        Choose this option if you need HSUSBH function mode.
-
-                config BOARD_USING_HSUSBH_USBD
-                    select BSP_USING_HSUSBH
-                    select BSP_USING_USBD
-                    bool "Enable HSUSBH(over USB2.0) and USBD(over USB1.1)"
-                    help
-                        Choose this option if you need HSUSBH and USBD function mode at the same time.
-
-                config BOARD_USING_HSOTG
-                    select BSP_USING_HSOTG
-                    bool "Enable HSOTG(over USB2.0)"
-                    help
-                        Choose this option if you need HSOTG function mode.
-            endchoice
-        endif
+                endif
+        endmenu
 
     endmenu
 
@@ -112,7 +86,6 @@ menu "Hardware Drivers Config"
     config BOARD_USING_LCD_SSD1963
         bool "LCD SSD1963(over ebi0)"
         select NU_PKG_USING_SSD1963
-        select NU_PKG_USING_SSD1963_EBI
         select NU_PKG_SSD1963_WITH_OFFSCREEN_FRAMEBUFFER
         default n
 
@@ -145,17 +118,9 @@ menu "Hardware Drivers Config"
 
     endif
 
-    config BOARD_USING_ILI2130
-        bool "TPC ILI2130(over i2c1)"
-        select BSP_USING_I2C1
-        select NU_PKG_USING_TPC
-        select NU_PKG_USING_TPC_ILI
-        default n
-
     config BOARD_USING_LCD_FSA506
         bool "LCD FSA506(over ebi0)"
         select NU_PKG_USING_FSA506
-        select NU_PKG_USING_FSA506_EBI
         select NU_PKG_FSA506_WITH_OFFSCREEN_FRAMEBUFFER
         default n
 
@@ -192,7 +157,6 @@ menu "Hardware Drivers Config"
         bool "TPC ST1663I(over i2c1)"
         select BSP_USING_I2C1
         select NU_PKG_USING_TPC
-        select NU_PKG_USING_TPC_ST1663I
         default n
 
     config BOARD_USING_SENSOR0
@@ -203,14 +167,14 @@ menu "Hardware Drivers Config"
         select BSP_USING_CCAP0
         default n
 
-    config BOARD_USING_SENSON0_ID
+    config BOARD_USING_SENSOR0_ID
         int "Specify Sensor0 ID"
-        default 0  if BOARD_USING_SENSOR0
+        depends on BOARD_USING_SENSOR0
+        default 0
         range 0 2
         help
             HM1055=0
             ADV728X=1
-
     endmenu
 
     source "$(BSP_DIR)/../libraries/nu_packages/Kconfig"

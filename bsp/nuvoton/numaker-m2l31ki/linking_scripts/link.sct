@@ -1,0 +1,51 @@
+#! armclang -E --target=arm-arm-none-eabi -mcpu=cortex-m23 -xc
+; command above MUST be in first line (no comment above!)
+
+#define FLASH_START     0x00000000
+#define FLASH_SIZE      0x00080000
+
+#define SRAM_START      0x20000000
+#define SRAM_SIZE       0x00028000
+
+#define STACK_SIZE      0x00001000
+#define HEAP_SIZE       0x00000000
+
+#define __STACK_TOP         (SRAM_START + STACK_SIZE)
+#define __HEAP_BASE         (AlignExpr(+0, 8))
+
+#define RO_ROM_BASE         ( FLASH_START )
+#define RO_ROM_SIZE         ( FLASH_SIZE  )
+
+#define RW_RAM_BASE         ( SRAM_START + STACK_SIZE )
+#define RW_RAM_SIZE         ( SRAM_SIZE - STACK_SIZE - HEAP_SIZE )
+
+LR_ROM RO_ROM_BASE RO_ROM_SIZE  {
+    ER_ROM0 RO_ROM_BASE RO_ROM_SIZE  {
+        *.o (RESET, +First)
+    }
+
+    ER_ROM1 AlignExpr(+0, 4) {
+        startup_M2L31.o (+RO)
+    }
+
+    ER_ROM2 AlignExpr(+0, 4)  {
+        * (InRoot$$Sections)
+        .ANY (+RO)
+    }
+
+    SRAM_BOUNDARY_START SRAM_START EMPTY 0 {}
+    SRAM_BOUNDARY_END (SRAM_START + SRAM_SIZE) EMPTY 0 {}
+
+#if STACK_SIZE > 0
+    ARM_LIB_STACK __STACK_TOP EMPTY - STACK_SIZE {}
+#endif
+
+    RW_RAM RW_RAM_BASE RW_RAM_SIZE
+    {
+        .ANY (+RW +ZI)
+    }
+
+#if HEAP_SIZE > 0
+    ARM_LIB_HEAP  __HEAP_BASE EMPTY  HEAP_SIZE {}
+#endif
+}

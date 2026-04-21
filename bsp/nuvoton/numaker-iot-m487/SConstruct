@@ -19,7 +19,6 @@ def bsp_pkg_check():
     import subprocess
 
     check_paths = [
-        os.path.join("packages", "nuvoton-cmsis-latest"),
         os.path.join("packages", "nuvoton-series-latest")
     ]
 
@@ -65,7 +64,7 @@ Export('SDK_LIB')
 # prepare building environment
 objs = PrepareBuilding(env, RTT_ROOT, has_libcpu=False)
 
-nuvoton_library = 'm480'
+nuvoton_library = 'cortex-m'
 rtconfig.BSP_LIBRARY_TYPE = nuvoton_library
 
 # include libraries

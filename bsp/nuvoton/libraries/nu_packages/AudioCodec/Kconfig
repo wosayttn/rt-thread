@@ -1,0 +1,13 @@
+menu "Audio Codecs"
+
+    config NU_PKG_USING_NAU88L25
+        bool "NAU88L25 Audio Codec."
+        select BSP_USING_I2C
+        default n
+
+    config NU_PKG_USING_NAU8822
+        bool "NAU8822 Audio Codec."
+        select BSP_USING_I2C
+        default n
+
+endmenu

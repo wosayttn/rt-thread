@@ -1,0 +1,16 @@
+menu "Storages"
+
+    config NU_PKG_USING_QSPINOR
+        bool "QSPI NOR flash."
+        select BSP_USING_SPI
+        select BSP_USING_QSPI
+        default y if BOARD_USING_QSPI_FLASH
+        default n
+
+    config NU_PKG_USING_SPINAND
+        bool "SPI NAND flash."
+        select BSP_USING_QSPI
+        select RT_USING_MTD_NAND
+        default n
+
+endmenu

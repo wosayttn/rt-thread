@@ -1,74 +1,60 @@
 # NuMaker-M2354
+
 ## 1. Introduction
-The NuMaker-M2354 is an evaluation board for Nuvoton NuMicro M2354 microcontrollers. The NuMaker-M2354 consists of two parts, a M2354 target board and an on-board Nu-Link2-Me debugger and programmer. The NuMaker-M2354 is designed for secure evaluation, prototype development and validation with power consumption monitoring function.
 
-[![NuMaker-M2354](https://i.imgur.com/uncXX0g.jpg "NuMaker-M2354")](https://i.imgur.com/uncXX0g.jpg "NuMaker-M2354")
+The NuMaker-M2354 is a security-focused evaluation board based on the Nuvoton NuMicro® **M2354KJFAE** microcontroller (Arm® Cortex®-M23 with TrustZone®) and an on-board Nu-Link2-Me debugger/programmer.
 
-### 1.1 MCU specification
+### 1.1 Hardware Specifications
 
-|  | Features |
-| -- | -- |
-| MCU | M2354KJFAE |
-| Operation frequency | 96MHz |
-| embedded Flash size | 1MB, Dual Bank |
-| SRAM size | 256kB |
-| Crypto engine | PRNG, AES, ECC, RSA, HMAC and SHA crypto accelerator |
+| Item | Specification |
+| :--- | :--- |
+| MCU | M2354KJFAE (Arm® Cortex®-M23) |
+| Operating Frequency | 96 MHz |
+| On-chip Flash | 1 MB (Dual Bank) |
+| On-chip SRAM | 256 KB |
+| Crypto Engine | PRNG, AES, SHA/HMAC, RSA, ECC |
+| Interfaces | Arduino UNO, USB 1.1 OTG, microSD, Segment LCD, SWD |
 
-### 1.2 Interface
+### 1.2 On-board Devices
 
-| Interface |
-| -- |
-| Arduino UNO |
-| USB 1.1 OTG ports |
-| A microSD slot |
-| A segment LCD port |
+| Device | Description | Status |
+| :--- | :--- | :--- |
+| Wi-Fi Module | ESP8266-ESP12 (AT v1.7) | Supported |
+| Segment LCD | On-board SLCD | Supported |
 
-### 1.3 On-board devices
+## 2. Supported Toolchains
 
-| Device | Description | Driver supporting status |
-| -- | -- | -- |
-|Wi-Fi module| ESP8266-ESP12, AT firmware v1.7 | Supported |
-|Segment LCD module| | Supported |
+| Toolchain | Tested Version | Linker Script |
+| :--- | :--- | :--- |
+| **Arm GCC** | Arm GNU Toolchain 13.3.1 (RT-Thread Env v2.1+) | `linking_scripts/link.ld` |
+| **Keil MDK5** | Arm Compiler 6 (`armclang` V6.22) | `linking_scripts/link.sct` |
 
-## 2. Supported compiler
-Support GCC, MDK5, IAR IDE/compilers. More information of these compiler version as following:
+> Install `Nu-Link_Keil_Driver` when debugging/flashing from Keil MDK5.
 
-| IDE/Compiler  | Tested version                    |
-| ---------- | ------------------------------------ |
-| MDK5       | 5.26.2                               |
-| IAR        | 8.32                                 |
-| GCC        | GCC 6.3.1 20170620 (Need update env) |
+## 3. Build Instructions
 
-Notice: 
-(1) Please install Nu-Link_Keil_Driver or Nu-Link_IAR_Driver for development.
+The default `.config` enables the minimal baseline (`UART0`, `PDMA`, `GPIO`, `PIN`, `MSH`). Use `menuconfig` to enable additional peripherals.
 
-## 3. Program firmware
-### Step 1:
-At first, you need to configure ISW1 switch on the NuMaker-M2354 board. Set the four switches to ‘ON’ position. After the configuration is done, connect the NuMaker-M2354 board and your computer using the USB Micro cable. After that, window manager will show a ‘NuMicro MCU’ virtual disk. Finally, you will use this virtual disk to burn firmware.
+```bash
+# Arm GCC build
+scons -j16
 
-[![NuLinkMe](https://i.imgur.com/us0Fhhu.png "NuLinkMe")](https://i.imgur.com/us0Fhhu.png "NuLinkMe")
+# Generate Keil MDK5 project (Windows Env)
+set RTT_CC=keil
+scons --target=mdk5
+```
 
-[![NuMicro MCU](https://i.imgur.com/lWnNtpM.png "NuMicro MCU")](https://i.imgur.com/lWnNtpM.png "NuMicro MCU")
+## 4. Flashing & Serial Console
 
-### Step 2:
-A simple firmware burning method is that you can drag and drop the binary image file to NuMicro MCU virtual disk or copy the binary file to NuMicro MCU disk to burn firmware.
+1. Set **ISW1** switches on the NuMaker-M2354 board to **ON**, then connect the board to your PC via USB to enumerate the **NuMicro MCU** virtual drive and **Nu-Link2 Virtual COM Port**.
+2. Drag and drop `rtthread.bin` onto the **NuMicro MCU** virtual drive (or flash via Keil MDK5 / `Nuvoton ICP Program`).
+3. Open the Virtual COM Port (`UART0`, **115200 8-N-1**, no flow control) to access the RT-Thread FinSH/MSH prompt (`msh >`).
 
-[![CopyTo](https://i.imgur.com/6NfGS7m.png "CopyTo")](https://i.imgur.com/6NfGS7m.png "CopyTo")
+- [Download NuMicro ICP Programming Tool](https://www.nuvoton.com/resource-download.jsp?tp_GUID=UG1320200721113745)
 
-## 4. Test
-You can use Tera Term terminate emulator (or other software) to type commands of RTT. All parameters of serial communication are shown in below image. Here, you can find out the corresponding port number of Nuvoton Virtual Com Port in window device manager.
+## 5. Resources
 
-[![Serial settings](https://i.imgur.com/5NYuSNM.png "Serial settings")](https://i.imgur.com/5NYuSNM.png "Serial settings")
-
-## 5. Purchase
-* [Nuvoton Direct][1]
-
-## 6. Resources
-* [Board Introduction][2]
-* [Download Board Schematics][3]
-* [Download MCU TRM][4]
-
-  [1]: https://direct.nuvoton.com/en/numaker-m2354
-  [2]: https://www.nuvoton.com/board/numaker-m2354/index.html
-  [3]: https://www.nuvoton.com/resource-download.jsp?tp_GUID=HL1020201102161956
-  [4]: https://www.nuvoton.com/resource-download.jsp?tp_GUID=DA05-M2354
+- [Quick Start — NuMaker-M2354](https://www.nuvoton.com/board/numaker-m2354/)
+- [User Manual — NuMaker-M2354](https://www.nuvoton.com/resource-download.jsp?tp_GUID=EV0120201230182459)
+- [Schematic, PCB & Gerber File — NuMaker-M2354](https://www.nuvoton.com/resource-download.jsp?tp_GUID=HL1020201102161956)
+- [Nuvoton Direct — Buy NuMaker-M2354](https://direct.nuvoton.com/search?options%5Bprefix%5D=last&q=NuMaker-M2354)

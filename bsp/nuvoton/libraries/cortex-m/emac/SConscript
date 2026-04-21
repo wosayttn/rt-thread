@@ -1,0 +1,15 @@
+# RT-Thread building script for component
+
+Import('RTT_ROOT')
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+
+if GetDepend('EMAC_IS_NUVOTON'):
+    objs += SConscript('nuvoton/SConscript')
+
+if GetDepend('EMAC_IS_SYNOPSYS'):
+    objs += SConscript('synopsys/SConscript')
+
+Return('objs')

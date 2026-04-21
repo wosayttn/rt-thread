@@ -1,14 +1,8 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-8-16       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <rtthread.h>
 
@@ -19,7 +13,7 @@
 #define DEF_COUNTER_ADDR_RTP  (3*1024*1024)
 #define DEF_COUNTER_ADDR_A35  ((0x80000000+DEF_COUNTER_ADDR_RTP)|UNCACHEABLE)
 
-#if defined(USE_MA35D1_SUBM)
+#if defined(USE_MA35_RTP)
     #define DEF_COUNTER_ADDR   DEF_COUNTER_ADDR_RTP
 #else
     #define DEF_COUNTER_ADDR   DEF_COUNTER_ADDR_A35

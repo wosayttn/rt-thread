@@ -1,79 +1,64 @@
-﻿# NuMaker-IoT-M487
+# NuMaker-IoT-M487
+
 ## 1. Introduction
-NuMaker-IoT-M487 provides multiple networking, interfaces, audio recording, playback functions, and flexible extended data storage. Whether you need a sensor node or a light-weight gateway, the NuMaker-IoT-M487 is an ideal choice for IoT applications.
 
-[![NuMaker-IoT-M487](https://i.imgur.com/VmbMjys.png "NuMaker-IoT-M487")](https://i.imgur.com/VmbMjys.png "NuMaker-IoT-M487")
+The NuMaker-IoT-M487 is an IoT evaluation board based on the Nuvoton NuMicro® **M487JIDAE** microcontroller (Arm® Cortex®-M4F) with an on-board Nu-Link-Me debugger/programmer. It integrates Ethernet, Wi-Fi, audio codec, microSD, SPI Flash, and a 9-axis sensor with Arduino UNO and mikroBUS expansion headers.
 
-### 1.1 MCU specification
+### 1.1 Hardware Specifications
 
-|  | Features |
-| -- | -- |
-| MCU | M487JIDAE |
-| Operation frequency | 192MHz |
-| embedded Flash size | 512kB, Dual Bank |
-| SRAM size | 160kB |
-| Crypto engine | DES, AES, ECC, 3DES, HMAC and SHA crypto accelerator |
-| RMII interface | Support 10/100 Mbps Ethernet |
+| Item | Specification |
+| :--- | :--- |
+| MCU | M487JIDAE (Arm® Cortex®-M4F) |
+| Operating Frequency | 192 MHz |
+| On-chip Flash | 512 KB (Dual Bank) |
+| On-chip SRAM | 160 KB |
+| Crypto Engine | DES, 3DES, AES, SHA/HMAC, ECC |
+| Ethernet | 10/100 Mbps RMII (IP101GR PHY) |
+| Interfaces | Arduino UNO, mikroBUS, NuMaker-Brick I2C, RJ45 Ethernet, USB 1.1/2.0 OTG, microSD, 3.5 mm Audio, SWD |
 
-### 1.2 Interface
+### 1.2 On-board Devices
 
-| Interface |
-| -- |
-| Arduino UNO |
-| mikroBUS |
-| NuMaker-Brick I2C |
-| RJ45 Ethernet |
-| USB 1.1/2.0 OTG ports |
-| A microSD slot |
-| A 3.5mm Audio connector |
+| Device | Description | Status |
+| :--- | :--- | :--- |
+| SPI Flash | W25Q32 (32 Mb) | Supported |
+| Ethernet PHY | IP101GR | Supported |
+| 9-Axis Sensor | BMX055 | Supported |
+| Wi-Fi Module | ESP8266-ESP12 (AT v1.7) | Supported |
+| Audio Codec | NAU88L25 (MIC & earphone) | Supported |
 
-### 1.3 On-board devices
+## 2. Supported Toolchains
 
-| Device | Description | Driver supporting status |
-| -- | -- | -- |
-|SPI flash | W25Q32 | Supported |
-|Ethernet PHY| IP101GR | Supported |
-|Sensor| BMX055 | Supported |
-|Wi-Fi module| ESP8266-ESP12, AT firmware v1.7 | Supported |
-|Audio Codec| NAU88L25, Supports MIC and earphone | Supported |
+| Toolchain | Tested Version | Linker Script |
+| :--- | :--- | :--- |
+| **Arm GCC** | Arm GNU Toolchain 13.3.1 (RT-Thread Env v2.1+) | `linking_scripts/link.ld` |
+| **Keil MDK5** | Arm Compiler 6 (`armclang` V6.22) | `linking_scripts/link.sct` |
 
-## 2. Supported compiler
-Support GCC, MDK4, MDK5, IAR IDE/compilers. More information of these compiler version as following:
+> Install `Nu-Link_Keil_Driver` when debugging/flashing from Keil MDK5.
 
-| IDE/Compiler  | Tested version            |
-| ---------- | ---------------------------- |
-| MDK4       | 4.76                         |
-| MDK5       | 5.26.2                       |
-| IAR        | 8.2                          |
-| GCC        | GCC 5.4.1 20160919 (release) |
+## 3. Build Instructions
 
-Notice: Please install Nu-Link_Keil_Driver or Nu-Link_IAR_Driver for development.
+The default `.config` enables the minimal baseline (`UART0`, `PDMA`, `GPIO`, `PIN`, `MSH`). Use `menuconfig` to enable additional peripherals.
 
-## 3. Program firmware
-### Step 1:
-At first, you need to configure ISW1 switch on the NuMaker-IOT-M487 board. Set the four switches to ‘ON’ position. After the configuration is done,  connect the NuMaker-IOT-M487 board and your computer using the USB Micro cable. After that, window manager will show a ‘NuMicro MCU’ virtual disk. Finally, you will use this virtual disk to burn firmware.
+```bash
+# Arm GCC build
+scons -j16
 
-[![NuLinkMe](https://i.imgur.com/us0Fhhu.png "NuLinkMe")](https://i.imgur.com/us0Fhhu.png "NuLinkMe")
+# Generate Keil MDK5 project (Windows Env)
+set RTT_CC=keil
+scons --target=mdk5
+```
 
-[![NuMicro MCU](https://i.imgur.com/lWnNtpM.png "NuMicro MCU")](https://i.imgur.com/lWnNtpM.png "NuMicro MCU")
+## 4. Flashing & Serial Console
 
-### Step 2:
-A simple firmware burning method is that you can drag and drop the binary image file to NuMicro MCU virtual disk or copy the binary file to NuMicro MCU disk to burn firmware.
+1. Set **ISW1** switches on the NuMaker-IoT-M487 board to **ON**, then connect the board to your PC via USB to enumerate the **NuMicro MCU** virtual drive and **Nu-Link Virtual COM Port**.
+2. Drag and drop `rtthread.bin` onto the **NuMicro MCU** virtual drive (or flash via Keil MDK5 / `Nuvoton ICP Program`).
+3. Open the Virtual COM Port (`UART0`, **115200 8-N-1**, no flow control) to access the RT-Thread FinSH/MSH prompt (`msh >`).
 
-[![CopyTo](https://i.imgur.com/6NfGS7m.png "CopyTo")](https://i.imgur.com/6NfGS7m.png "CopyTo")
+- [Download NuMicro ICP Programming Tool](https://www.nuvoton.com/resource-download.jsp?tp_GUID=UG1320200721113745)
 
-## 4. Test
-You can use Tera Term terminate emulator (or other software) to type commands of RTT. All parameters of serial communication are shown in below image. Here, you can find out the corresponding port number of Nuvoton Virtual Com Port in window device manager.
+## 5. Resources
 
-[![Serial settings](https://i.imgur.com/5NYuSNM.png "Serial settings")](https://i.imgur.com/5NYuSNM.png "Serial settings")
-
-## 5. Purchase
-* [Nuvoton Direct][1]
-
-## 6. Resources
-* [Download board schematics][2]
-* [Download MCU TRM][3]
-
-  [1]: https://direct.nuvoton.com/en/numaker-iot-m487
-  [2]: https://www.nuvoton.com/resource-download.jsp?tp_GUID=HL0320180905131830
-  [3]: https://www.nuvoton.com/resource-download.jsp?tp_GUID=DA05-M480
+- [Quick Start — NuMaker-IoT-M487](https://www.nuvoton.com/board/numaker-iot-m487/)
+- [User Manual — NuMaker-IoT-M487](https://www.nuvoton.com/resource-download.jsp?tp_GUID=UG0120180907124835)
+- [Schematic, PCB & Gerber File — NuMaker-IoT-M487](https://www.nuvoton.com/resource-download.jsp?tp_GUID=HL0320180905131830)
+- [Nuvoton Direct — Buy NuMaker-IoT-M487](https://direct.nuvoton.com/search?options%5Bprefix%5D=last&q=NuMaker-IoT-M487)

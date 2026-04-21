@@ -12,3 +12,4 @@ PKGS_DIR := packages
 source "$(RTT_DIR)/Kconfig"
 osource "$PKGS_DIR/Kconfig"
 source "$(BSP_DIR)/board/Kconfig"
+source "$(BSP_DIR)/UTEST/Kconfig"

@@ -1,29 +1,46 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2021-10-7       Wayne            First version
-*
-******************************************************************************/
-#include <rtconfig.h>
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_ECAP)
 
-#include <rtdevice.h>
-#include "drv_sys.h"
 #include "drv_common.h"
+#include "drv_sys.h"
 #include "nu_bitutil.h"
+#include "rtdevice.h"
+
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.ecap"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
 #define ECAP_CHANNEL_NUM    0x3
-#define ECAP_CHANNEL_MSK    ((1<<ECAP_CHANNEL_NUM)-1)
-
+#define ECAP_CHANNEL_MSK    ((1 << ECAP_CHANNEL_NUM) - 1)
 #define ECAP_CLK_DIV        ECAP_CAPTURE_TIMER_CLKDIV_32
+#define NU_ECAP_GET_LEVEL(status, channel)    (((status) & (1 << (ECAP_STATUS_CAP0_Pos + (channel)))) ? 0 : 1)
+#define DEFINE_NU_ECAP(_mod, _chn) \
+    {                              \
+        .base = ECAP##_mod,        \
+        .name = "ecap" #_mod "i" #_chn, \
+        .irqn = ECAP##_mod##_IRQn, \
+        .rstidx = ECAP##_mod##_RST, \
+        .modid = ECAP##_mod##_MODULE \
+    }
 
-/* Private typedef --------------------------------------------------------------*/
+#define DEFINE_ECAP_IRQ_HANDLER(_idx)            \
+void ECAP##_idx##_IRQHandler(void)               \
+{                                                \
+    rt_interrupt_enter();                        \
+    nu_ecap_isr(&nu_ecap_arr[ECAP##_idx##_IDX]); \
+    rt_interrupt_leave();                        \
+}
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     ECAP_START = -1,
@@ -59,106 +76,73 @@ struct nu_ecap
     uint32_t     rstidx;
     uint32_t     modid;
 
-    float       fUsPerTick;
-    uint8_t     u8Channel;
-    rt_bool_t   bfirstData;
-    uint32_t    u32CurrentCnt;
-    uint32_t    u32LastCnt;
-    rt_bool_t   input_data_level;
-} ;
+    float        fUsPerTick;
+    uint8_t      u8Channel;
+    rt_bool_t    bfirstData;
+    uint32_t     u32CurrentCnt;
+    uint32_t     u32LastCnt;
+    rt_bool_t    input_data_level;
+};
 typedef struct nu_ecap *nu_ecap_t;
 
-/* Private functions ------------------------------------------------------------*/
-static  rt_err_t nu_ecap_init(struct rt_inputcapture_device *inputcapture);
-static  rt_err_t nu_ecap_open(struct rt_inputcapture_device *inputcapture);
-static  rt_err_t nu_ecap_close(struct rt_inputcapture_device *inputcapture);
-static  rt_err_t nu_ecap_get_pulsewidth(struct rt_inputcapture_device *inputcapture, rt_uint32_t *pulsewidth_us);
+/* Static Function Prototypes ------------------------------------------------*/
+static rt_err_t nu_ecap_init(struct rt_inputcapture_device *inputcapture);
+static rt_err_t nu_ecap_open(struct rt_inputcapture_device *inputcapture);
+static rt_err_t nu_ecap_close(struct rt_inputcapture_device *inputcapture);
+static rt_err_t nu_ecap_get_pulsewidth(struct rt_inputcapture_device *inputcapture, rt_uint32_t *pulsewidth_us);
 static void nu_ecap_isr(nu_ecap_t psNuEcap);
+static float get_ecap_tick_time_us(nu_ecap_t psNuEcap);
+static void nu_ecap_channel_init(ECAP_T *base);
+static int rt_hw_ecap_init(void);
 
-/* Private define ---------------------------------------------------------------*/
-#define NU_ECAP_GET_LEVEL(status, channel)    ((status & (1<<(ECAP_STATUS_CAP0_Pos+channel)))?0:1)
-#define ECAP_GET_CLK_DIV_INDEX(ecap)          ((ecap)->CTL1 = ((ecap)->CTL1 & ECAP_CTL1_CLKSEL_Msk)>>ECAP_CTL1_CLKSEL_Pos)
-
-/* Public functions -------------------------------------------------------------*/
-
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct nu_ecap nu_ecap_arr [] =
 {
 #if defined(BSP_USING_ECAP0)
-    {  .base = ECAP0, .name = "ecap0i0", .irqn = ECAP0_IRQn, .rstidx = ECAP0_RST, .modid = ECAP0_MODULE },
-    {  .base = ECAP0, .name = "ecap0i1", .irqn = ECAP0_IRQn, .rstidx = ECAP0_RST, .modid = ECAP0_MODULE },
-    {  .base = ECAP0, .name = "ecap0i2", .irqn = ECAP0_IRQn, .rstidx = ECAP0_RST, .modid = ECAP0_MODULE },
+    DEFINE_NU_ECAP(0, 0),
+    DEFINE_NU_ECAP(0, 1),
+    DEFINE_NU_ECAP(0, 2),
 #endif
 #if defined(BSP_USING_ECAP1)
-    {  .base = ECAP1, .name = "ecap1i0", .irqn = ECAP1_IRQn, .rstidx = ECAP1_RST, .modid = ECAP1_MODULE },
-    {  .base = ECAP1, .name = "ecap1i1", .irqn = ECAP1_IRQn, .rstidx = ECAP1_RST, .modid = ECAP1_MODULE },
-    {  .base = ECAP1, .name = "ecap1i2", .irqn = ECAP1_IRQn, .rstidx = ECAP1_RST, .modid = ECAP1_MODULE },
+    DEFINE_NU_ECAP(1, 0),
+    DEFINE_NU_ECAP(1, 1),
+    DEFINE_NU_ECAP(1, 2),
 #endif
 #if defined(BSP_USING_ECAP2)
-    {  .base = ECAP2, .name = "ecap2i0", .irqn = ECAP2_IRQn, .rstidx = ECAP1_RST, .modid = ECAP2_MODULE },
-    {  .base = ECAP2, .name = "ecap2i1", .irqn = ECAP2_IRQn, .rstidx = ECAP1_RST, .modid = ECAP2_MODULE },
-    {  .base = ECAP2, .name = "ecap2i2", .irqn = ECAP2_IRQn, .rstidx = ECAP1_RST, .modid = ECAP2_MODULE },
+    DEFINE_NU_ECAP(2, 0),
+    DEFINE_NU_ECAP(2, 1),
+    DEFINE_NU_ECAP(2, 2),
 #endif
 #if defined(BSP_USING_ECAP3)
-    {  .base = ECAP3, .name = "ecap3i0", .irqn = ECAP3_IRQn, .rstidx = ECAP3_RST, .modid = ECAP3_MODULE },
-    {  .base = ECAP3, .name = "ecap3i1", .irqn = ECAP3_IRQn, .rstidx = ECAP3_RST, .modid = ECAP3_MODULE },
-    {  .base = ECAP3, .name = "ecap3i2", .irqn = ECAP3_IRQn, .rstidx = ECAP3_RST, .modid = ECAP3_MODULE },
+    DEFINE_NU_ECAP(3, 0),
+    DEFINE_NU_ECAP(3, 1),
+    DEFINE_NU_ECAP(3, 2),
 #endif
 };
 
 static struct rt_inputcapture_ops nu_ecap_ops =
 {
-    .init   =   nu_ecap_init,
-    .open   =   nu_ecap_open,
-    .close  =   nu_ecap_close,
-    .get_pulsewidth =   nu_ecap_get_pulsewidth,
+    .init   = nu_ecap_init,
+    .open   = nu_ecap_open,
+    .close  = nu_ecap_close,
+    .get_pulsewidth = nu_ecap_get_pulsewidth,
 };
 
-/* Functions define ------------------------------------------------------------*/
-
+/* Functions Implementation --------------------------------------------------*/
 #if defined(BSP_USING_ECAP0)
-void ECAP0_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_ecap_isr((void *)&nu_ecap_arr[ECAP0_IDX]);
-
-    rt_interrupt_leave();
-}
+DEFINE_ECAP_IRQ_HANDLER(0)
 #endif
 
 #if defined(BSP_USING_ECAP1)
-void ECAP1_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_ecap_isr((void *)&nu_ecap_arr[ECAP3_IDX]);
-
-    rt_interrupt_leave();
-}
+DEFINE_ECAP_IRQ_HANDLER(1)
 #endif
 
 #if defined(BSP_USING_ECAP2)
-void ECAP2_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_ecap_isr((void *)&nu_ecap_arr[ECAP6_IDX]);
-
-    rt_interrupt_leave();
-}
+DEFINE_ECAP_IRQ_HANDLER(2)
 #endif
 
 #if defined(BSP_USING_ECAP3)
-void ECAP3_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_ecap_isr((void *)&nu_ecap_arr[ECAP9_IDX]);
-
-    rt_interrupt_leave();
-}
+DEFINE_ECAP_IRQ_HANDLER(3)
 #endif
 
 static void nu_ecap_isr(nu_ecap_t psNuEcapBase)
@@ -172,21 +156,26 @@ static void nu_ecap_isr(nu_ecap_t psNuEcapBase)
 
     /* Check input capture channel flag */
     /* Find index of pin is attached in pool. */
-    while ((i32ChnId = nu_ctz(u32ChStatus)) < ECAP_CHANNEL_NUM) // Count Trailing Zeros ==> Find First One
+    while ((i32ChnId = nu_ctz(u32ChStatus)) < ECAP_CHANNEL_NUM) // Count Trailing Zeros == > Find First One
     {
         if (u32ChStatus & (ECAP_STATUS_CAPTF0_Msk << i32ChnId))
         {
             nu_ecap_t psNuEcap = psNuEcapBase + i32ChnId;
+            struct rt_inputcapture_device *inputcapture = (struct rt_inputcapture_device *)&psNuEcap->parent;
 
             /* Clear input capture channel flag */
             ECAP_CLR_CAPTURE_FLAG(base, 1 << (ECAP_STATUS_CAPTF0_Pos + i32ChnId));
 
-            psNuEcap->input_data_level = NU_ECAP_GET_LEVEL(u32Status, i32ChnId);
+            if (inputcapture->ringbuff)
+            {
+                psNuEcap->input_data_level = NU_ECAP_GET_LEVEL(u32Status, i32ChnId);
 
-            psNuEcap->u32CurrentCnt = ECAP_GET_CNT_HOLD_VALUE(base, i32ChnId);
+                psNuEcap->u32CurrentCnt = ECAP_GET_CNT_HOLD_VALUE(base, i32ChnId);
 
-            rt_hw_inputcapture_isr(&psNuEcap->parent, psNuEcap->input_data_level);
+                rt_hw_inputcapture_isr(inputcapture, psNuEcap->input_data_level);
+            }
         }
+
         u32ChStatus &= ~(1 << i32ChnId);
     }
 }
@@ -202,7 +191,7 @@ static rt_err_t nu_ecap_get_pulsewidth(struct rt_inputcapture_device *inputcaptu
     if (psNuEcap->bfirstData)
     {
         psNuEcap->bfirstData = RT_FALSE;
-        ret = -RT_ERROR;
+        ret = RT_ERROR;
 
         return -(ret);
     }
@@ -221,9 +210,13 @@ static rt_err_t nu_ecap_get_pulsewidth(struct rt_inputcapture_device *inputcaptu
 
 static float get_ecap_tick_time_us(nu_ecap_t psNuEcap)
 {
-    uint8_t u8ClockDivider[8] = { 1, 4, 16, 32, 64, 96, 112, 128};
+    uint8_t u8ClockDivider[8] = { 1, 4, 16, 32, 64, 96, 112, 128 };
 
-    if (psNuEcap->base == ECAP0 || (psNuEcap->base == ECAP2))
+    if (psNuEcap->base == ECAP0 
+	#if defined(ECAP2)
+	 || (psNuEcap->base == ECAP2)
+	#endif
+	)
         return ((float)1000000 / ((float)CLK_GetPCLK0Freq() / u8ClockDivider[(psNuEcap->base->CTL1 & ECAP_CTL1_CLKSEL_Msk) >> ECAP_CTL1_CLKSEL_Pos]));
     else
         return ((float)1000000 / ((float)CLK_GetPCLK1Freq() / u8ClockDivider[(psNuEcap->base->CTL1 & ECAP_CTL1_CLKSEL_Msk) >> ECAP_CTL1_CLKSEL_Pos]));
@@ -296,7 +289,6 @@ static void nu_ecap_channel_init(ECAP_T *base)
     ECAP_SEL_CAPTURE_EDGE(base, ECAP_IC2, ECAP_RISING_FALLING_EDGE);
 }
 
-/* Init and register ecap capture */
 static int rt_hw_ecap_init(void)
 {
     int i;
@@ -314,21 +306,13 @@ static int rt_hw_ecap_init(void)
 
         if ((psNuEcap->u8Channel % ECAP_CHANNEL_NUM) == 0)
         {
-            uint32_t u32RegLockBackup = SYS_IsRegLocked();
-            SYS_UnlockReg();
 
             /* register ecap module */
             CLK_EnableModuleClock(psNuEcap->modid);
             SYS_ResetModule(psNuEcap->rstidx);
-
-
-            if (u32RegLockBackup)
-                SYS_LockReg();
-
             nu_ecap_channel_init(psNuEcap->base);
+            NVIC_EnableIRQ((IRQn_Type)psNuEcap->irqn);
         }
-
-        /* register inputcapture device */
         ret = rt_device_inputcapture_register(&psNuEcap->parent, psNuEcap->name, psNuEcap);
         RT_ASSERT(ret == RT_EOK);
     }
@@ -336,5 +320,4 @@ static int rt_hw_ecap_init(void)
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_hw_ecap_init);
-
 #endif //#if defined(BSP_USING_ECAP)

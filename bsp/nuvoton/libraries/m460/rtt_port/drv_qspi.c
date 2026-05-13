@@ -1,31 +1,47 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
-#include <rtconfig.h>
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_QSPI)
 
-#define LOG_TAG                 "drv.qspi"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME        LOG_TAG
-#define DBG_LEVEL               DBG_INFO
-#define DBG_COLOR
-#include <rtdbg.h>
+#include "drv_spi.h"
+#include "rtdef.h"
+#include "rthw.h"
 
-#include <rthw.h>
-#include <rtdef.h>
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.qspi"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
-#include <drv_spi.h>
+#if defined(BSP_USING_SPI_PDMA)
+#if defined(BSP_USING_QSPI0_PDMA)
+#define QSPI0_PDMA_INIT                 \
+    .pdma_perp_tx = PDMA_QSPI0_TX,      \
+    .pdma_perp_rx = PDMA_QSPI0_RX,
+#else
+#define QSPI0_PDMA_INIT                 \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+#else
+#define QSPI0_PDMA_INIT
+#endif
 
-/* Private define ---------------------------------------------------------------*/
+#define DEFINE_NU_QSPI(_idx, _pdma_init) \
+    {                                     \
+        .name = "qspi" #_idx,            \
+        .spi_base = (SPI_T *)QSPI##_idx,  \
+        .rstidx = QSPI##_idx##_RST,       \
+        _pdma_init                        \
+    }
+
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     QSPI_START = -1,
@@ -38,16 +54,12 @@ enum
     QSPI_CNT
 };
 
-/* Private typedef --------------------------------------------------------------*/
-
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_qspi_bus_configure(struct rt_spi_device *device, struct rt_spi_configuration *configuration);
 static rt_ssize_t nu_qspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_message *message);
 static int nu_qspi_register_bus(struct nu_spi *qspi_bus, const char *name);
 
-/* Public functions -------------------------------------------------------------*/
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct rt_spi_ops nu_qspi_poll_ops =
 {
     .configure = nu_qspi_bus_configure,
@@ -57,39 +69,14 @@ static struct rt_spi_ops nu_qspi_poll_ops =
 static struct nu_spi nu_qspi_arr [] =
 {
 #if defined(BSP_USING_QSPI0)
-    {
-        .name = "qspi0",
-        .spi_base = (SPI_T *)QSPI0,
-        .rstidx = QSPI0_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_QSPI0_PDMA)
-        .pdma_perp_tx = PDMA_QSPI0_TX,
-        .pdma_perp_rx = PDMA_QSPI0_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
-#endif
-#endif
-    },
+    DEFINE_NU_QSPI(0, QSPI0_PDMA_INIT),
 #endif
 #if defined(BSP_USING_QSPI1)
-    {
-        .name = "qspi1",
-        .spi_base = (SPI_T *)QSPI1,
-        .rstidx = QSPI1_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_QSPI1_PDMA)
-        .pdma_perp_tx = PDMA_QSPI1_TX,
-        .pdma_perp_rx = PDMA_QSPI1_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
-#endif
-#endif
-    },
+    DEFINE_NU_QSPI(1, QSPI1_PDMA_INIT),
 #endif
 }; /* qspi nu_qspi */
 
+/* Functions Implementation --------------------------------------------------*/
 static rt_err_t nu_qspi_bus_configure(struct rt_spi_device *device,
                                       struct rt_spi_configuration *configuration)
 {
@@ -119,29 +106,23 @@ static rt_err_t nu_qspi_bus_configure(struct rt_spi_device *device,
         u32SPIMode = SPI_MODE_3;
         break;
     default:
-        ret = -RT_EIO;
+        ret = RT_EIO;
         goto exit_nu_qspi_bus_configure;
     }
-
-    /* Check data width */
     if (!(configuration->data_width == 8  ||
             configuration->data_width == 16 ||
             configuration->data_width == 24 ||
             configuration->data_width == 32))
     {
-        ret = -RT_EINVAL;
+        ret = RT_EINVAL;
         goto exit_nu_qspi_bus_configure;
     }
-
-    /* Try to set clock and get actual spi bus clock */
     u32BusClock = QSPI_SetBusClock((QSPI_T *)spi_bus->spi_base, configuration->max_hz);
     if (configuration->max_hz > u32BusClock)
     {
-        LOG_W("%s clock max frequency is %dHz (!= %dHz)\n", spi_bus->name, u32BusClock, configuration->max_hz);
+        LOG_W("%s clock max frequency is %dHz ( != %dHz)\n", spi_bus->name, u32BusClock, configuration->max_hz);
         configuration->max_hz = u32BusClock;
     }
-
-    /* Need to initialize new configuration? */
     if (rt_memcmp(configuration, &spi_bus->configuration, sizeof(struct rt_spi_configuration)) != 0)
     {
         rt_memcpy(&spi_bus->configuration, configuration, sizeof(struct rt_spi_configuration));
@@ -170,8 +151,6 @@ static rt_err_t nu_qspi_bus_configure(struct rt_spi_device *device,
             SPI_SET_LSB_FIRST(spi_bus->spi_base);
         }
     }
-
-    /* Clear SPI RX FIFO */
     nu_spi_drain_rxfifo(spi_bus->spi_base);
 
 exit_nu_qspi_bus_configure:
@@ -182,7 +161,6 @@ exit_nu_qspi_bus_configure:
 static int nu_qspi_mode_config(struct nu_spi *qspi_bus, rt_uint8_t *tx, rt_uint8_t *rx, int qspi_lines)
 {
     QSPI_T *qspi_base = (QSPI_T *)qspi_bus->spi_base;
-#if defined(RT_SFUD_USING_QSPI)
     if (qspi_lines > 1)
     {
         if (tx)
@@ -217,7 +195,6 @@ static int nu_qspi_mode_config(struct nu_spi *qspi_bus, rt_uint8_t *tx, rt_uint8
         }
     }
     else
-#endif
     {
         QSPI_DISABLE_DUAL_MODE(qspi_base);
         QSPI_DISABLE_QUAD_MODE(qspi_base);
@@ -233,7 +210,7 @@ static rt_ssize_t nu_qspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
     rt_uint8_t u8last = 1;
     rt_uint8_t bytes_per_word;
     QSPI_T *qspi_base;
-    rt_ssize_t u32len = 0;
+    rt_uint32_t u32len = 0;
 
     RT_ASSERT(device != RT_NULL);
     RT_ASSERT(message != RT_NULL);
@@ -269,8 +246,6 @@ static rt_ssize_t nu_qspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
                         1,
                         1);
     }
-
-    /* Address stage */
     if (qspi_message->address.size > 0)
     {
         rt_uint32_t u32ReversedAddr = 0;
@@ -300,8 +275,6 @@ static rt_ssize_t nu_qspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
                         u32AddrNumOfByte,
                         1);
     }
-
-    /* alternate_bytes stage */
     if ((qspi_message->alternate_bytes.size > 0) && (qspi_message->alternate_bytes.size <= 4))
     {
         rt_uint32_t u32AlternateByte = 0;
@@ -331,15 +304,13 @@ static rt_ssize_t nu_qspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
                         u32NumOfByte,
                         1);
     }
-
-    /* Dummy_cycles stage */
     if (qspi_message->dummy_cycles > 0)
     {
-        qspi_bus->dummy = 0x00;
+        qspi_bus->dummy[0] = 0x00;
 
-        u8last = nu_qspi_mode_config(qspi_bus, (rt_uint8_t *) &qspi_bus->dummy, RT_NULL, u8last);
+        u8last = nu_qspi_mode_config(qspi_bus, (rt_uint8_t *) &qspi_bus->dummy[0], RT_NULL, u8last);
         nu_spi_transfer((struct nu_spi *)qspi_bus,
-                        (rt_uint8_t *) &qspi_bus->dummy,
+                        (rt_uint8_t *) &qspi_bus->dummy[0],
                         RT_NULL,
                         qspi_message->dummy_cycles / (8 / u8last),
                         1);
@@ -392,7 +363,8 @@ static int rt_hw_qspi_init(void)
     {
         SYS_ResetModule(nu_qspi_arr[i].rstidx);
 
-        nu_qspi_register_bus(&nu_qspi_arr[i], nu_qspi_arr[i].name);
+        nu_qspi_arr[i].dummy = rt_malloc_align(RT_ALIGN_SIZE, RT_ALIGN_SIZE);
+        RT_ASSERT(nu_qspi_arr[i].dummy);
 #if defined(BSP_USING_SPI_PDMA)
         nu_qspi_arr[i].pdma_chanid_tx = -1;
         nu_qspi_arr[i].pdma_chanid_rx = -1;
@@ -406,6 +378,7 @@ static int rt_hw_qspi_init(void)
             }
         }
 #endif
+        nu_qspi_register_bus(&nu_qspi_arr[i], nu_qspi_arr[i].name);
     }
 
     return 0;
@@ -421,7 +394,8 @@ rt_err_t nu_qspi_bus_attach_device(const char *bus_name, const char *device_name
     RT_ASSERT(device_name != RT_NULL);
     RT_ASSERT(data_line_width == 1 || data_line_width == 2 || data_line_width == 4);
 
-    qspi_device = (struct rt_qspi_device *)rt_malloc(sizeof(struct rt_qspi_device));
+    qspi_device = (struct rt_qspi_device *)
+                  rt_malloc(sizeof(struct rt_qspi_device));
     if (qspi_device == RT_NULL)
     {
         LOG_E("no memory, qspi bus attach device failed!\n");
@@ -446,5 +420,4 @@ __exit:
 
     return  result;
 }
-
 #endif //#if defined(BSP_USING_QSPI)

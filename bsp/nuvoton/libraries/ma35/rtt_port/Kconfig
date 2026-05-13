@@ -60,10 +60,6 @@
     config RT_USING_FPU
         bool
 
-    config BSP_USE_STDDRIVER_SOURCE
-        bool "Build StdDriver source"
-        default n
-
     menuconfig BSP_USING_PDMA
         bool "Enable Peripheral Direct Memory Access Controller(PDMA)"
         default y

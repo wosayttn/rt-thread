@@ -1,24 +1,45 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2021-10-21      Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_EQEI)
 
-#include <rtdevice.h>
-#include "drv_sys.h"
 #include "drv_eqei.h"
+#include "drv_sys.h"
+#include "rtdevice.h"
 
-/* Private define ---------------------------------------------------------------*/
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.eqei"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
+#define DEFINE_NU_EQEI(_idx)      \
+    {                             \
+        .name = "eqei" #_idx,    \
+        .base = EQEI##_idx,       \
+        .irqn = EQEI##_idx##_IRQn,\
+        .rstidx = EQEI##_idx##_RST,\
+        .modid = EQEI##_idx##_MODULE,\
+        .max_cntval = 1000,       \
+        .cmp_val = 100,           \
+    }
+
+#define DEFINE_EQEI_IRQ_HANDLER(_idx)      \
+void EQEI##_idx##_IRQHandler(void)         \
+{                                          \
+    rt_interrupt_enter();                  \
+                                           \
+    nu_eqei_isr((void *)&nu_eqei_arr[EQEI##_idx##_IDX]); \
+                                           \
+    rt_interrupt_leave();                  \
+}
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     EQEI_START = -1,
@@ -37,7 +58,6 @@ enum
     EQEI_CNT
 };
 
-/* Private typedef --------------------------------------------------------------*/
 struct nu_qei
 {
     struct rt_pulse_encoder_device dev;
@@ -53,69 +73,32 @@ struct nu_qei
 };
 typedef struct nu_qei *nu_eqei_t;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_uint32_t nu_eqei_type(struct rt_pulse_encoder_device *pulse_encoder);
 static rt_err_t nu_eqei_init(struct rt_pulse_encoder_device *pulse_encoder);
 static rt_int32_t nu_eqei_get_count(struct rt_pulse_encoder_device *pulse_encoder);
 static rt_err_t nu_eqei_clear_count(struct rt_pulse_encoder_device *pulse_encoder);
 static rt_err_t nu_eqei_control(struct rt_pulse_encoder_device *pulse_encoder, rt_uint32_t cmd, void *args);
 static void nu_eqei_isr(nu_eqei_t psNuEqei);
+static int rt_hw_qei_init(void);
 
-/* Public functions -------------------------------------------------------------*/
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct nu_qei nu_eqei_arr [] =
 {
 #if defined(BSP_USING_EQEI0)
-    {
-        .name = "eqei0",
-        .base = EQEI0,
-        .irqn = EQEI0_IRQn,
-        .rstidx = EQEI0_RST,
-        .modid  = EQEI0_MODULE,
-
-        .max_cntval = 1000,
-        .cmp_val = 100,
-    },
+    DEFINE_NU_EQEI(0),
 #endif
 
 #if defined(BSP_USING_EQEI1)
-    {
-        .name = "eqei1",
-        .base = EQEI1,
-        .irqn = EQEI1_IRQn,
-        .rstidx = EQEI1_RST,
-        .modid  = EQEI1_MODULE,
-
-        .max_cntval = 1000,
-        .cmp_val = 100,
-    },
+    DEFINE_NU_EQEI(1),
 #endif
 
 #if defined(BSP_USING_EQEI2)
-    {
-        .name = "eqei2",
-        .base = EQEI2,
-        .irqn = EQEI2_IRQn,
-        .rstidx = EQEI2_RST,
-        .modid  = EQEI2_MODULE,
-
-        .max_cntval = 1000,
-        .cmp_val = 100,
-    },
+    DEFINE_NU_EQEI(2),
 #endif
 
 #if defined(BSP_USING_EQEI3)
-    {
-        .name = "eqei3",
-        .base = EQEI3,
-        .irqn = EQEI3_IRQn,
-        .rstidx = EQEI3_RST,
-        .modid  = EQEI3_MODULE,
-
-        .max_cntval = 1000,
-        .cmp_val = 100,
-    },
+    DEFINE_NU_EQEI(3),
 #endif
 };
 
@@ -127,48 +110,21 @@ static const struct rt_pulse_encoder_ops nu_eqei_ops =
     .control = nu_eqei_control,
 };
 
+/* Functions Implementation --------------------------------------------------*/
 #if defined(BSP_USING_EQEI0)
-void EQEI0_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_eqei_isr((void *)&nu_eqei_arr[EQEI0_IDX]);
-
-    rt_interrupt_leave();
-}
+    DEFINE_EQEI_IRQ_HANDLER(0)
 #endif
 
 #if defined(BSP_USING_EQEI1)
-void EQEI1_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_eqei_isr((void *)&nu_eqei_arr[EQEI1_IDX]);
-
-    rt_interrupt_leave();
-}
+    DEFINE_EQEI_IRQ_HANDLER(1)
 #endif
 
 #if defined(BSP_USING_EQEI2)
-void EQEI2_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_eqei_isr((void *)&nu_eqei_arr[EQEI2_IDX]);
-
-    rt_interrupt_leave();
-}
+    DEFINE_EQEI_IRQ_HANDLER(2)
 #endif
 
 #if defined(BSP_USING_EQEI3)
-void EQEI3_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_eqei_isr((void *)&nu_eqei_arr[EQEI3_IDX]);
-
-    rt_interrupt_leave();
-}
+    DEFINE_EQEI_IRQ_HANDLER(3)
 #endif
 
 static rt_uint32_t nu_eqei_type(struct rt_pulse_encoder_device *pulse_encoder)
@@ -324,7 +280,7 @@ void nu_eqei_set_maxval_type(rt_device_t pulse_encoder, rt_uint32_t u32val, enum
     EQEI_Open(psNuEqei->base, nu_eqei_type(&psNuEqei->dev), u32val);
 }
 
-int rt_hw_qei_init(void)
+static int rt_hw_qei_init(void)
 {
     int i;
     rt_err_t result = RT_EOK;
@@ -346,6 +302,7 @@ int rt_hw_qei_init(void)
 
     return (int)result;
 }
+
 INIT_APP_EXPORT(rt_hw_qei_init);
 
-#endif /* BSP_USING_EQEI */
+#endif //#if defined(BSP_USING_EQEI)

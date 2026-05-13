@@ -1,33 +1,29 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-3-15       Wayne        First version
-*
-******************************************************************************/
-#include <rtconfig.h>
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#if defined (BSP_USING_RTC)
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
+#if defined(BSP_USING_RTC)
 
-#include <rtdevice.h>
-#include <sys/time.h>
 #include "NuMicro.h"
+#include "sys/time.h"
+#include "rtdevice.h"
 
-/* Private define ---------------------------------------------------------------*/
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.rtc"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
-/* convert the real year and month value to the format of struct tm. */
 #define CONV_TO_TM_YEAR(year)           ((year) - 1900)
 #define CONV_TO_TM_MON(mon)             ((mon) - 1)
 
-/* convert the tm_year and tm_mon from struct tm to the real value. */
 #define CONV_FROM_TM_YEAR(tm_year)      ((tm_year) + 1900)
 #define CONV_FROM_TM_MON(tm_mon)        ((tm_mon) + 1)
 
-/* rtc date upper bound reaches the year of 2099. */
 #define RTC_TM_UPPER_BOUND                                              \
 {   .tm_year = CONV_TO_TM_YEAR(2038),                                   \
     .tm_mon  = CONV_TO_TM_MON(1),                                       \
@@ -36,8 +32,6 @@
     .tm_min = 14,                                                       \
     .tm_sec  = 07,                                                      \
 }
-
-/* rtc date lower bound reaches the year of 2000. */
 #define RTC_TM_LOWER_BOUND                                              \
 {   .tm_year = CONV_TO_TM_YEAR(2000),                                   \
     .tm_mon  = CONV_TO_TM_MON(1),                                       \
@@ -47,43 +41,26 @@
     .tm_sec  = 0,                                                       \
 }
 
-/* Private typedef --------------------------------------------------------------*/
+/* Types / Structures ---------------------------------------------------------*/
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_rtc_control(rt_device_t dev, int cmd, void *args);
-
-#if defined (NU_RTC_SUPPORT_IO_RW)
-    static rt_ssize_t nu_rtc_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size);
-    static rt_ssize_t nu_rtc_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size);
-#endif
-
 static rt_err_t nu_rtc_is_date_valid(const time_t t);
 static rt_err_t nu_rtc_init(void);
-
 #if defined(RT_USING_ALARM)
     static void nu_rtc_alarm_reset(void);
 #endif
 
-/* Public functions -------------------------------------------------------------*/
-#if defined (NU_RTC_SUPPORT_MSH_CMD)
-    extern rt_err_t set_date(rt_uint32_t year, rt_uint32_t month, rt_uint32_t day);
-    extern rt_err_t set_time(rt_uint32_t hour, rt_uint32_t minute, rt_uint32_t second);
-#endif
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct rt_device device_rtc;
 
-
+/* Functions Implementation --------------------------------------------------*/
 static rt_err_t nu_rtc_init(void)
 {
     /* hw rtc initialise */
     RTC_Open(NULL);
-    RTC_DisableInt(RTC_INTEN_ALMIEN_Msk | RTC_INTEN_TICKIEN_Msk | RTC_INTEN_TAMP0IEN_Msk |
-                   RTC_INTEN_TAMP1IEN_Msk | RTC_INTEN_TAMP2IEN_Msk | RTC_INTEN_TAMP3IEN_Msk |
-                   RTC_INTEN_TAMP4IEN_Msk | RTC_INTEN_TAMP5IEN_Msk);
-
+    RTC_DisableInt(RTC_INTEN_ALMIEN_Msk | RTC_INTEN_TICKIEN_Msk);
 #if defined(RT_USING_ALARM)
-
     nu_rtc_alarm_reset();
     RTC_EnableInt(RTC_INTEN_ALMIEN_Msk);
     NVIC_EnableIRQ(RTC_IRQn);
@@ -91,8 +68,6 @@ static rt_err_t nu_rtc_init(void)
 
     return RT_EOK;
 }
-
-
 #if defined(RT_USING_ALARM)
 /* Reset alarm settings to avoid the unwanted values remain in rtc registers. */
 static void nu_rtc_alarm_reset(void)
@@ -115,10 +90,9 @@ static void nu_rtc_alarm_reset(void)
     RTC_SetAlarmTimeMask(0, 0, 0, 0, 0, 0);
 
     /* Clear alarm flag for safe */
-    RTC_CLEAR_ALARM_INT_FLAG(RTC);
+    RTC_CLEAR_ALARM_INT_FLAG();
 }
 #endif
-
 
 /* rtc device driver initialise. */
 int rt_hw_rtc_init(void)
@@ -133,14 +107,8 @@ int rt_hw_rtc_init(void)
     device_rtc.open = NULL;
     device_rtc.close = NULL;
     device_rtc.control = nu_rtc_control;
-
-#if defined (NU_RTC_SUPPORT_IO_RW)
-    device_rtc.read = nu_rtc_read;
-    device_rtc.write = nu_rtc_write;
-#else
     device_rtc.read = NULL;
     device_rtc.write = NULL;
-#endif
 
     device_rtc.user_data = RT_NULL;
     device_rtc.rx_indicate = RT_NULL;
@@ -151,31 +119,6 @@ int rt_hw_rtc_init(void)
     return (int)ret;
 }
 INIT_BOARD_EXPORT(rt_hw_rtc_init);
-
-
-#if defined (NU_RTC_SUPPORT_IO_RW)
-/* Register rt-thread device.read() entry. */
-static rt_ssize_t nu_rtc_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size)
-{
-    (void) pos;
-    nu_rtc_control(dev, RT_DEVICE_CTRL_RTC_GET_TIME, buffer);
-
-    return size;
-}
-#endif
-
-
-#if defined (NU_RTC_SUPPORT_IO_RW)
-/* Register rt-thread device.write() entry. */
-static rt_ssize_t nu_rtc_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size)
-{
-    (void) pos;
-    nu_rtc_control(dev, RT_DEVICE_CTRL_RTC_SET_TIME, (void *)buffer);
-
-    return size;
-}
-#endif
-
 
 static rt_err_t nu_rtc_is_date_valid(const time_t t)
 {
@@ -190,22 +133,17 @@ static rt_err_t nu_rtc_is_date_valid(const time_t t)
         t_lower = timegm((struct tm *)&tm_lower);
         initialised = RT_TRUE;
     }
-
-    /* check the date is supported by rtc. */
     if ((t > t_upper) || (t < t_lower))
         return -(RT_EINVAL);
 
     return RT_EOK;
 }
 
-
-/* Register rt-thread device.control() entry. */
 static rt_err_t nu_rtc_control(rt_device_t dev, int cmd, void *args)
 {
     struct tm tm_out, tm_in;
     time_t *time;
     S_RTC_TIME_DATA_T hw_time;
-
 #if defined(RT_USING_ALARM)
 
     struct rt_rtc_wkalarm *wkalarm;
@@ -250,7 +188,6 @@ static rt_err_t nu_rtc_control(rt_device_t dev, int cmd, void *args)
 
         RTC_SetDateAndTime(&hw_time);
         break;
-
 #if defined(RT_USING_ALARM)
     case RT_DEVICE_CTRL_RTC_GET_ALARM:
 
@@ -280,54 +217,6 @@ static rt_err_t nu_rtc_control(rt_device_t dev, int cmd, void *args)
 
     return RT_EOK;
 }
-
-
-#if defined (NU_RTC_SUPPORT_MSH_CMD)
-
-/* Support "rtc_det_date" command line in msh mode */
-static rt_err_t msh_rtc_set_date(int argc, char **argv)
-{
-    rt_uint32_t index, len, arg[3];
-
-    rt_memset(arg, 0, sizeof(arg));
-    len = (argc >= 4) ? 4 : argc;
-
-    /* The date information stored in argv is represented by the following order :
-       argv[0,1,2,3] = [cmd, year, month, day] */
-    for (index = 0; index < (len - 1); index ++)
-    {
-        arg[index] = atol(argv[index + 1]);
-    }
-
-    return set_date(arg[0], arg[1], arg[2]);
-}
-MSH_CMD_EXPORT_ALIAS(msh_rtc_set_date, rtc_set_date, e.g: rtc_set_date 2020 1 20);
-#endif
-
-
-#if defined (NU_RTC_SUPPORT_MSH_CMD)
-
-/* Support "rtc_det_time" command line in msh mode */
-static rt_err_t msh_rtc_set_time(int argc, char **argv)
-{
-    rt_uint32_t index, len, arg[3];
-
-    rt_memset(arg, 0, sizeof(arg));
-    len = (argc >= 4) ? 4 : argc;
-
-    /* The time information stored in argv is represented by the following order :
-       argv[0,1,2,3] = [cmd, hour, minute, second] */
-    for (index = 0; index < (len - 1); index ++)
-    {
-        arg[index] = atol(argv[index + 1]);
-    }
-
-    return set_time(arg[0], arg[1], arg[2]);
-}
-MSH_CMD_EXPORT_ALIAS(msh_rtc_set_time, rtc_set_time, e.g: rtc_set_time 18 30 00);
-#endif
-
-
 /* rtc interrupt entry */
 void RTC_IRQHandler(void)
 {
@@ -337,20 +226,17 @@ void RTC_IRQHandler(void)
     {
         RTC_CLEAR_TICK_INT_FLAG();
     }
-
 #if defined(RT_USING_ALARM)
 
-    if (RTC_GET_ALARM_INT_FLAG(RTC))
+    if (RTC_GET_ALARM_INT_FLAG())
     {
-        RTC_CLEAR_ALARM_INT_FLAG(RTC);
+        RTC_CLEAR_ALARM_INT_FLAG();
 
         /* Send an alarm event to notify rt-thread alarm service. */
-        rt_alarm_update(&device_rtc, NULL);
+        rt_alarm_update(&device_rtc, 0);
     }
 #endif
 
     rt_interrupt_leave();
 }
-
-#endif /* BSP_USING_RTC */
-
+#endif //#if defined(BSP_USING_RTC)

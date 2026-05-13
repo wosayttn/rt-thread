@@ -185,6 +185,9 @@ menu "Nuvoton Packages Config"
     if NU_PKG_USING_TPC
         choice
             prompt "Select TPC drivers"
+            default NU_PKG_USING_TPC_ILI if BOARD_USING_ILI2130
+            default NU_PKG_USING_TPC_ST1663I if BOARD_USING_ST1663I
+
             config NU_PKG_USING_TPC_ILI
                 bool "ILI Series TPC"
 

@@ -12,7 +12,8 @@
 MCU:M487JIDAE(LQFP144)
 ********************/
 
-#include "M480.h"
+#include "NuMicro.h"
+#include "rtconfig.h"
 
 void nutool_pincfg_init_bpwm0(void)
 {
@@ -450,15 +451,33 @@ void nutool_pincfg_init(void)
     //SYS->GPH_MFPH = 0x00002222;
     //SYS->GPH_MFPL = 0x00000444;
 
+#if defined(BSP_USING_BPWM0)
     nutool_pincfg_init_bpwm0();
+#endif
+#if defined(BSP_USING_CAN0)
     nutool_pincfg_init_can0();
+#endif
+#if defined(BSP_USING_EADC0)
     nutool_pincfg_init_eadc0();
+#endif
+#if defined(BSP_USING_EBI)
     nutool_pincfg_init_ebi();
+#endif
+#if defined(BSP_USING_EMAC)
     nutool_pincfg_init_emac();
+#endif
+#if defined(BSP_USING_HSUSBD) || defined(BSP_USING_HSUSBH) || defined(BSP_USING_HSOTG)
     nutool_pincfg_init_hsusb();
+#endif
+#if defined(BSP_USING_I2C1)
     nutool_pincfg_init_i2c1();
+#endif
+#if defined(BSP_USING_I2C2)
     nutool_pincfg_init_i2c2();
+#endif
+#if defined(BSP_USING_I2S0)
     nutool_pincfg_init_i2s0();
+#endif
     nutool_pincfg_init_ice();
     nutool_pincfg_init_pa();
     nutool_pincfg_init_pb();
@@ -467,28 +486,60 @@ void nutool_pincfg_init(void)
     nutool_pincfg_init_pe();
     nutool_pincfg_init_pg();
     nutool_pincfg_init_ph();
+#if defined(BSP_USING_QSPI0)
     nutool_pincfg_init_qspi0();
+#endif
+#if defined(BSP_USING_SDH0)
     nutool_pincfg_init_sd0();
+#endif
+#if defined(BSP_USING_SPI3)
     nutool_pincfg_init_spi3();
+#endif
+#if defined(BSP_USING_UART0)
     nutool_pincfg_init_uart0();
+#endif
+#if defined(BSP_USING_UART1)
     nutool_pincfg_init_uart1();
+#endif
+#if defined(BSP_USING_UART5)
     nutool_pincfg_init_uart5();
+#endif
+#if defined(BSP_USING_USBD) || defined(BSP_USING_USBH) || defined(BSP_USING_OTG)
     nutool_pincfg_init_usb();
+#endif
 
     return;
 }
 
 void nutool_pincfg_deinit(void)
 {
+#if defined(BSP_USING_BPWM0)
     nutool_pincfg_deinit_bpwm0();
+#endif
+#if defined(BSP_USING_CAN0)
     nutool_pincfg_deinit_can0();
+#endif
+#if defined(BSP_USING_EADC0)
     nutool_pincfg_deinit_eadc0();
+#endif
+#if defined(BSP_USING_EBI)
     nutool_pincfg_deinit_ebi();
+#endif
+#if defined(BSP_USING_EMAC)
     nutool_pincfg_deinit_emac();
+#endif
+#if defined(BSP_USING_HSUSBD) || defined(BSP_USING_HSUSBH) || defined(BSP_USING_HSOTG)
     nutool_pincfg_deinit_hsusb();
+#endif
+#if defined(BSP_USING_I2C1)
     nutool_pincfg_deinit_i2c1();
+#endif
+#if defined(BSP_USING_I2C2)
     nutool_pincfg_deinit_i2c2();
+#endif
+#if defined(BSP_USING_I2S0)
     nutool_pincfg_deinit_i2s0();
+#endif
     nutool_pincfg_deinit_ice();
     nutool_pincfg_deinit_pa();
     nutool_pincfg_deinit_pb();
@@ -497,13 +548,27 @@ void nutool_pincfg_deinit(void)
     nutool_pincfg_deinit_pe();
     nutool_pincfg_deinit_pg();
     nutool_pincfg_deinit_ph();
+#if defined(BSP_USING_QSPI0)
     nutool_pincfg_deinit_qspi0();
+#endif
+#if defined(BSP_USING_SDH0)
     nutool_pincfg_deinit_sd0();
+#endif
+#if defined(BSP_USING_SPI3)
     nutool_pincfg_deinit_spi3();
+#endif
+#if defined(BSP_USING_UART0)
     nutool_pincfg_deinit_uart0();
+#endif
+#if defined(BSP_USING_UART1)
     nutool_pincfg_deinit_uart1();
+#endif
+#if defined(BSP_USING_UART5)
     nutool_pincfg_deinit_uart5();
+#endif
+#if defined(BSP_USING_USBD) || defined(BSP_USING_USBH) || defined(BSP_USING_OTG)
     nutool_pincfg_deinit_usb();
+#endif
 
     return;
 }

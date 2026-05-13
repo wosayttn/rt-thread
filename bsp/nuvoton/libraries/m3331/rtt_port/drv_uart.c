@@ -220,9 +220,6 @@ static struct nu_uart nu_uart_arr [] =
 #endif
                       )
 #endif
-    {
-        0
-    }
 };
 
 /* Functions Implementation --------------------------------------------------*/
@@ -233,6 +230,7 @@ static struct nu_uart nu_uart_arr [] =
        nu_uart_isr(&nu_uart_arr[UART##x##_IDX]); \
        rt_interrupt_leave(); \
     }
+
 #if defined(BSP_USING_UART0)
     MAKE_UART_ISR(0);
 #endif

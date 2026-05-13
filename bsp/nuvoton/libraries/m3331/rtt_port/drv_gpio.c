@@ -22,7 +22,9 @@
 #include "drv_log.h"
 
 #define PORT_OFFSET         0x40
-#define IRQ_MAX_NUM         32
+
+#define IRQ_MAX_NUM         16            //Max support 32
+
 #define MAX_PORTH_PIN_MAX   11
 
 #define DEFINE_GPIO_IRQ_HANDLER(_port)        \
@@ -205,7 +207,9 @@ static void nu_gpio_write(struct rt_device *device, rt_base_t pin, rt_uint8_t va
 static rt_ssize_t nu_gpio_read(struct rt_device *device, rt_base_t pin)
 {
     if (nu_port_check(pin))
-        return PIN_LOW;
+    {
+        return -RT_EINVAL;
+    }
 
     return GPIO_PIN_DATA(NU_GET_PORT(pin), NU_GET_PINS(pin));
 }

@@ -7,9 +7,6 @@ config SOC_SERIES_M480
     select PKG_USING_NUVOTON_SERIES_DRIVER
     default y
 
-    config BSP_USE_STDDRIVER_SOURCE
-        bool "Build StdDriver source"
-        default n
 
     menuconfig BSP_USING_PDMA
         bool "Enable Peripheral Direct Memory Access Controller(PDMA)"

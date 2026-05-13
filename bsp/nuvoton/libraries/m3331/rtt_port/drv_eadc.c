@@ -31,7 +31,7 @@
 enum
 {
     EADC_START = -1,
-#if defined(BSP_USING_EADC0) && defined(EADC0)
+#if defined(BSP_USING_EADC0)
     EADC0_IDX,
 #endif
     EADC_CNT
@@ -81,7 +81,7 @@ static rt_int16_t nu_eadc_get_vref(struct rt_adc_device *device);
 /* Static Variables ----------------------------------------------------------*/
 static struct nu_eadc nu_eadc_arr [] =
 {
-#if defined(BSP_USING_EADC0) && defined(EADC0)
+#if defined(BSP_USING_EADC0)
     DEFINE_NU_EADC(0),
 #endif
 };

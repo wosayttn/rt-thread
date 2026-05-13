@@ -1,32 +1,32 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
+/* Includes ------------------------------------------------------------------*/
 #include <rtconfig.h>
 
 #if (defined(BSP_USING_TRNG) && defined(RT_HWCRYPTO_USING_RNG))
 
-#include <rtdevice.h>
 #include "NuMicro.h"
+#include <rtdevice.h>
+
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG                 "drv.trng"
+#define DBG_TAG                 LOG_TAG
+#include "drv_log.h"
 
 #define NU_CRYPTO_TRNG_NAME "nu_TRNG"
 
-#define LOG_TAG         "TRNG"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME "TRNG"
-#define DBG_LEVEL DBG_INFO
-#define DBG_COLOR
-#include <rtdbg.h>
+/* Types / Structures ---------------------------------------------------------*/
 
-/* Private variables ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
+
+/* Static Variables ----------------------------------------------------------*/
+
+/* Functions Implementation --------------------------------------------------*/
 rt_err_t nu_trng_init(void)
 {
     CLK_EnableModuleClock(TRNG_MODULE);

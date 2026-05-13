@@ -66,9 +66,6 @@ static struct nu_i2c_bus nu_i2c_arr [ ] =
 #if defined(BSP_USING_I2C2)
     DEFINE_NU_I2C(2),
 #endif
-#if defined(BSP_USING_I2C3) && defined(I2C3)
-    DEFINE_NU_I2C(3),
-#endif
 };
 
 #if defined(BSP_USING_I2C)

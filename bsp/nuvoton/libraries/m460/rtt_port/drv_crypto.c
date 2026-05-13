@@ -1,23 +1,17 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author         Notes
-* 2022-3-15       Wayne          First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
+#if defined(BSP_USING_CRYPTO) && defined(RT_USING_HWCRYPTO)
 
-#if ((defined(BSP_USING_CRYPTO) || defined(BSP_USING_TRNG) || defined(BSP_USING_CRC)) && defined(RT_USING_HWCRYPTO))
-
-#include <rtdevice.h>
-#include <board.h>
 #include "NuMicro.h"
-#include <nu_bitutil.h>
+#include "drv_crc.h"
+#include "nu_bitutil.h"
+#include "rtdevice.h"
 
 #if defined(BSP_USING_TRNG)
     #include "drv_trng.h"
@@ -27,14 +21,13 @@
     #include "drv_crc.h"
 #endif
 
-/* Private typedef --------------------------------------------------------------*/
-#define LOG_TAG         "CRYPTO"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME "CRYPTO"
-#define DBG_LEVEL DBG_INFO
-#define DBG_COLOR
-#include <rtdbg.h>
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.crypto"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
+/* Types / Structures ---------------------------------------------------------*/
 typedef struct
 {
     uint8_t *pu8SHATempBuf;
@@ -43,13 +36,13 @@ typedef struct
     uint32_t u32BlockSize;
 } S_SHA_CONTEXT;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_hwcrypto_create(struct rt_hwcrypto_ctx *ctx);
 static void nu_hwcrypto_destroy(struct rt_hwcrypto_ctx *ctx);
 static rt_err_t nu_hwcrypto_clone(struct rt_hwcrypto_ctx *des, const struct rt_hwcrypto_ctx *src);
 static void nu_hwcrypto_reset(struct rt_hwcrypto_ctx *ctx);
 
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static const struct rt_hwcrypto_ops nu_hwcrypto_ops =
 {
     .create = nu_hwcrypto_create,
@@ -68,6 +61,7 @@ static const struct rt_hwcrypto_ops nu_hwcrypto_ops =
 static struct rt_mutex s_AES_mutex;
 static struct rt_mutex s_SHA_mutex;
 
+/* Functions Implementation --------------------------------------------------*/
 static rt_err_t nu_crypto_init(void)
 {
     rt_err_t result = RT_EOK;
@@ -733,7 +727,10 @@ static void nu_hwcrypto_reset(struct rt_hwcrypto_ctx *ctx)
     }
 }
 
-/* Init and register nu_hwcrypto_dev */
+/*
+ * @brief  Initialize and register the Nuvoton hardware crypto device.
+ * @return 0 on success
+ */
 int nu_hwcrypto_device_init(void)
 {
     rt_err_t result;
@@ -770,7 +767,7 @@ int nu_hwcrypto_device_init(void)
     }
 #endif
 
-    /* register hwcrypto operation */
+    // Register hardware crypto device
     result = rt_hwcrypto_register(&nu_hwcrypto_dev, RT_HWCRYPTO_DEFAULT_NAME);
     RT_ASSERT(result == RT_EOK);
 

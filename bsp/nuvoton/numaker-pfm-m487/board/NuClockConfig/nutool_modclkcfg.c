@@ -561,7 +561,7 @@ void nutool_modclkcfg_deinit_sc2(void)
 void nutool_modclkcfg_init_sdh0(void)
 {
     CLK_EnableModuleClock(SDH0_MODULE);
-    CLK_SetModuleClock(SDH0_MODULE, CLK_CLKSEL0_SDH0SEL_HCLK, CLK_CLKDIV0_SDH0(1));
+    CLK_SetModuleClock(SDH0_MODULE, CLK_CLKSEL0_SDH0SEL_HCLK, CLK_CLKDIV0_SDH0(4));
 
     return;
 }
@@ -886,15 +886,15 @@ void nutool_modclkcfg_deinit_usci1(void)
 
 void nutool_modclkcfg_init_wdt(void)
 {
-    CLK_EnableModuleClock(WDT_MODULE);
-    CLK_SetModuleClock(WDT_MODULE, CLK_CLKSEL1_WDTSEL_LXT, MODULE_NoMsk);
+    CLK_EnableModuleClock(WDT0_MODULE);
+    CLK_SetModuleClock(WDT0_MODULE, CLK_CLKSEL1_WDT0SEL_LXT, MODULE_NoMsk);
 
     return;
 }
 
 void nutool_modclkcfg_deinit_wdt(void)
 {
-    CLK_DisableModuleClock(WDT_MODULE);
+    CLK_DisableModuleClock(WDT0_MODULE);
 
     return;
 }

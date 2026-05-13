@@ -1,30 +1,33 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-4-8        Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
+#if defined(BSP_USING_BPWM)
 
-#if (defined(BSP_USING_BPWM) && defined(RT_USING_PWM))
-
-#define LOG_TAG                 "drv.bpwm"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME        LOG_TAG
-#define DBG_LEVEL               DBG_INFO
-#define DBG_COLOR
-#include <rtdbg.h>
-
-#include <rtdevice.h>
-#include <rthw.h>
 #include "NuMicro.h"
+#include "rtdevice.h"
+#include "rthw.h"
 
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.bpwm"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
+#define MAKE_BPWM_NAME(x)         #x
+#define MAKE_BPWM_INSTANCE(x) \
+    { \
+        .name  = MAKE_BPWM_NAME(bpwm##x), \
+        .base  = BPWM##x, \
+        .rstidx = BPWM##x##_RST, \
+        .modid = BPWM##x##_MODULE, \
+    },
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     BPWM_START = -1,
@@ -46,31 +49,29 @@ struct nu_bpwm
     uint32_t             modid;
     rt_int32_t  pwm_period_time;
 };
-
 typedef struct nu_bpwm *nu_bpwm_t;
 
-static struct nu_bpwm nu_bpwm_arr [] =
-{
-#if defined(BSP_USING_BPWM0)
-    { .name = "bpwm0", .base = BPWM0, .rstidx = BPWM0_RST, .modid = BPWM0_MODULE },
-#endif
-
-#if defined(BSP_USING_BPWM1)
-    { .name = "bpwm1", .base = BPWM1, .rstidx = BPWM1_RST, .modid = BPWM1_MODULE },
-#endif
-
-#if (BPWM_CNT==0)
-    0
-#endif
-}; /* bpwm nu_bpwm */
-
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_bpwm_control(struct rt_device_pwm *device, int cmd, void *arg);
 
+/* Static Variables ----------------------------------------------------------*/
 static struct rt_pwm_ops nu_bpwm_ops =
 {
     .control = nu_bpwm_control
 };
 
+static struct nu_bpwm nu_bpwm_arr [] =
+{
+#if defined(BSP_USING_BPWM0)
+    MAKE_BPWM_INSTANCE(0)
+#endif
+
+#if defined(BSP_USING_BPWM1)
+    MAKE_BPWM_INSTANCE(1)
+#endif
+}; /* bpwm nu_bpwm */
+
+/* Functions Implementation --------------------------------------------------*/
 static rt_err_t nu_bpwm_enable(struct rt_device_pwm *device, struct rt_pwm_configuration *configuration, rt_bool_t enable)
 {
     rt_err_t result = RT_EOK;
@@ -86,7 +87,7 @@ static rt_err_t nu_bpwm_enable(struct rt_device_pwm *device, struct rt_pwm_confi
     else
     {
         BPWM_DisableOutput(pwm_base, 1 << pwm_channel);
-        BPWM_ForceStop(pwm_base, 1 << pwm_channel);
+        //BPWM_ForceStop(pwm_base, 1 << pwm_channel);
     }
 
     return result;
@@ -116,7 +117,6 @@ static rt_err_t nu_bpwm_set(struct rt_device_pwm *device, struct rt_pwm_configur
     }
 
     pwm_freq = 1000000000 / pwm_period;
-
 
     BPWM_ConfigOutputChannel(pwm_base, pwm_channel, pwm_freq, pwm_dutycycle) ;
 
@@ -175,14 +175,13 @@ static rt_err_t nu_bpwm_control(struct rt_device_pwm *device, int cmd, void *arg
     return -(RT_EINVAL);
 }
 
-int rt_hw_bpwm_init(void)
+static int rt_hw_bpwm_init(void)
 {
     rt_err_t ret;
     int i;
 
     for (i = (BPWM_START + 1); i < BPWM_CNT; i++)
     {
-
         CLK_EnableModuleClock(nu_bpwm_arr[i].modid);
 
         SYS_ResetModule(nu_bpwm_arr[i].rstidx);
@@ -195,4 +194,4 @@ int rt_hw_bpwm_init(void)
 
 INIT_DEVICE_EXPORT(rt_hw_bpwm_init);
 
-#endif
+#endif //#if defined(BSP_USING_BPWM)

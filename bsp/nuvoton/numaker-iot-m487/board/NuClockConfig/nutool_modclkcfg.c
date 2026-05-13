@@ -886,15 +886,15 @@ void nutool_modclkcfg_deinit_usci1(void)
 
 void nutool_modclkcfg_init_wdt(void)
 {
-    CLK_EnableModuleClock(WDT_MODULE);
-    CLK_SetModuleClock(WDT_MODULE, CLK_CLKSEL1_WDTSEL_LXT, MODULE_NoMsk);
+    CLK_EnableModuleClock(WDT0_MODULE);
+    CLK_SetModuleClock(WDT0_MODULE, CLK_CLKSEL1_WDT0SEL_LXT, MODULE_NoMsk);
 
     return;
 }
 
 void nutool_modclkcfg_deinit_wdt(void)
 {
-    CLK_DisableModuleClock(WDT_MODULE);
+    CLK_DisableModuleClock(WDT0_MODULE);
 
     return;
 }

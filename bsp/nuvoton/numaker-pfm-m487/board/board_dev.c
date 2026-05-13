@@ -140,11 +140,12 @@ static int rt_hw_spiflash_init(void)
         return -1;
 
 #if defined(RT_USING_SFUD)
-    if (rt_sfud_flash_probe("flash0", "qspi01") == RT_NULL)
+    if (rt_sfud_flash_probe(FAL_USING_NOR_FLASH_DEV_NAME, "qspi01") == RT_NULL)
     {
         return -(RT_ERROR);
     }
 #endif
+
     return 0;
 }
 INIT_COMPONENT_EXPORT(rt_hw_spiflash_init);

@@ -1,38 +1,88 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-3-15       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_UUART)
 
-#include <rtdevice.h>
-#include <rthw.h>
 #include "NuMicro.h"
+#include "drv_pdma.h"
+#include "rtdevice.h"
+#include "rthw.h"
+
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.uuart"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
 #if defined(RT_SERIAL_USING_DMA)
-    #include <drv_pdma.h>
+
+#if defined(BSP_USING_UUART0_TX_DMA)
+    #define UUART0_DMA_TX_INIT    .pdma_perp_tx = PDMA_USCI0_TX,
+#else
+    #define UUART0_DMA_TX_INIT    .pdma_perp_tx = NU_PDMA_UNUSED,
 #endif
 
-/* Private define ---------------------------------------------------------------*/
+#if defined(BSP_USING_UUART0_RX_DMA)
+#define UUART0_DMA_RX_INIT    .pdma_perp_rx = PDMA_USCI0_RX, \
+                              .rx_write_offset = 0,
+#else
+#define UUART0_DMA_RX_INIT    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_UUART1_TX_DMA)
+    #define UUART1_DMA_TX_INIT    .pdma_perp_tx = PDMA_USCI1_TX,
+#else
+    #define UUART1_DMA_TX_INIT    .pdma_perp_tx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_UUART1_RX_DMA)
+#define UUART1_DMA_RX_INIT    .pdma_perp_rx = PDMA_USCI1_RX, \
+                              .rx_write_offset = 0,
+#else
+#define UUART1_DMA_RX_INIT    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#endif
+
+#define DEFINE_NU_UUART(_idx, _rst, _irqn, _tx_init, _rx_init) \
+    {                                                           \
+        .name = "uuart" #_idx,                                 \
+        .uuart_base = UUART##_idx,                              \
+        .uuart_rst = _rst,                                      \
+        .uuart_irq_n = _irqn,                                   \
+        _tx_init                                                \
+        _rx_init                                                \
+    }
+
+#define DEFINE_UUART_IRQ_HANDLER(_idx)   \
+void USCI##_idx##_IRQHandler(void)       \
+{                                        \
+    rt_interrupt_enter();                \
+                                         \
+    nu_uuart_isr(&nu_uuart_arr[UUART##_idx##_IDX]); \
+                                         \
+    rt_interrupt_leave();                \
+}
+
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     UUART_START = -1,
 #if defined(BSP_USING_UUART0)
     UUART0_IDX,
 #endif
+#if defined(BSP_USING_UUART1)
+    UUART1_IDX,
+#endif
     UUART_CNT
 };
 
-/* Private typedef --------------------------------------------------------------*/
 struct nu_uuart
 {
     rt_serial_t dev;
@@ -55,23 +105,19 @@ struct nu_uuart
 };
 typedef struct nu_uuart *nu_uuart_t;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_uuart_configure(struct rt_serial_device *serial, struct serial_configure *cfg);
 static rt_err_t nu_uuart_control(struct rt_serial_device *serial, int cmd, void *arg);
 static int nu_uuart_send(struct rt_serial_device *serial, char c);
 static int nu_uuart_receive(struct rt_serial_device *serial);
 static void nu_uuart_isr(nu_uuart_t serial);
-
 #if defined(RT_SERIAL_USING_DMA)
     static rt_ssize_t nu_uuart_dma_transmit(struct rt_serial_device *serial, rt_uint8_t *buf, rt_size_t size, int direction);
     static void nu_pdma_uuart_rx_cb(void *pvOwner, uint32_t u32Events);
     static void nu_pdma_uuart_tx_cb(void *pvOwner, uint32_t u32Events);
 #endif
 
-/* Public functions ------------------------------------------------------------*/
-
-/* Private variables ------------------------------------------------------------*/
-
+/* Static Variables ----------------------------------------------------------*/
 static const struct rt_uart_ops nu_uuart_ops =
 {
     .configure = nu_uuart_configure,
@@ -88,47 +134,39 @@ static const struct rt_uart_ops nu_uuart_ops =
 static const struct serial_configure nu_uuart_default_config =
         RT_SERIAL_CONFIG_DEFAULT;
 
-
 static struct nu_uuart nu_uuart_arr [] =
 {
 #if defined(BSP_USING_UUART0)
-    {
-        .name = "uuart0",
-        .uuart_base = UUART0,
-        .uuart_rst = USCI0_RST,
-        .uuart_irq_n = USCI0_IRQn,
+    DEFINE_NU_UUART(0, USCI0_RST, USCI0_IRQn,
 #if defined(RT_SERIAL_USING_DMA)
-#if defined(BSP_USING_UUART0_TX_DMA)
-        .pdma_perp_tx = PDMA_USCI0_TX,
+                    UUART0_DMA_TX_INIT,
+                    UUART0_DMA_RX_INIT
 #else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
+                    ,
 #endif
-#if defined(BSP_USING_UUART0_RX_DMA)
-        .pdma_perp_rx = PDMA_USCI0_RX,
-        .rx_write_offset = 0,
+                   ),
+#endif
+
+#if defined(BSP_USING_UUART1)
+    DEFINE_NU_UUART(1, USCI1_RST, USCI1_IRQn,
+#if defined(RT_SERIAL_USING_DMA)
+                    UUART1_DMA_TX_INIT,
+                    UUART1_DMA_RX_INIT
 #else
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+                    ,
 #endif
-#endif
-    },
+                   ),
 #endif
 }; /* uuart nu_uuart */
 
-/* Interrupt Handle Function  ----------------------------------------------------*/
+/* Functions Implementation --------------------------------------------------*/
 #if defined(BSP_USING_UUART0)
-/* USCI0 interrupt entry */
-void USCI0_IRQHandler(void)
-{
-    /* enter interrupt */
-    rt_interrupt_enter();
-
-    nu_uuart_isr(&nu_uuart_arr[UUART0_IDX]);
-
-    /* leave interrupt */
-    rt_interrupt_leave();
-}
+    DEFINE_UUART_IRQ_HANDLER(0)
 #endif
 
+#if defined(BSP_USING_UUART1)
+    DEFINE_UUART_IRQ_HANDLER(1)
+#endif
 
 /**
  * All UUART interrupt service routine
@@ -147,8 +185,6 @@ static void nu_uuart_isr(nu_uuart_t serial)
         uuart_base->PROTSTS |= (UUART_PROTSTS_PARITYERR_Msk | UUART_PROTSTS_FRMERR_Msk | UUART_PROTSTS_BREAK_Msk);
         return;
     }
-
-    /* Handle RX event */
     if (u32IntSts & UUART_PROTSTS_RXENDIF_Msk)
     {
         rt_hw_serial_isr(&serial->dev, RT_SERIAL_EVENT_RX_IND);
@@ -196,11 +232,9 @@ static rt_err_t nu_uuart_configure(struct rt_serial_device *serial, struct seria
 
     default:
         rt_kprintf("Unsupported data length");
-        ret = -RT_EINVAL;
+        ret = RT_EINVAL;
         goto exit_nu_uuart_configure;
     }
-
-    /* Check stop bit */
     switch (cfg->stop_bits)
     {
     case STOP_BITS_1:
@@ -213,11 +247,9 @@ static rt_err_t nu_uuart_configure(struct rt_serial_device *serial, struct seria
 
     default:
         rt_kprintf("Unsupported stop bit\n");
-        ret = -RT_EINVAL;
+        ret = RT_EINVAL;
         goto exit_nu_uuart_configure;
     }
-
-    /* Check parity */
     switch (cfg->parity)
     {
     case PARITY_NONE:
@@ -234,10 +266,9 @@ static rt_err_t nu_uuart_configure(struct rt_serial_device *serial, struct seria
 
     default:
         rt_kprintf("Unsupported parity\n");
-        ret = -RT_EINVAL;
+        ret = RT_EINVAL;
         goto exit_nu_uuart_configure;
     }
-    /* Reset this module */
     SYS_ResetModule(((nu_uuart_t)serial)->uuart_rst);
 
     /* Open UUart and set UUART baud rate */
@@ -256,7 +287,6 @@ exit_nu_uuart_configure:
 
     return -(ret);
 }
-
 #if defined(RT_SERIAL_USING_DMA)
 static rt_err_t nu_pdma_uuart_rx_config(struct rt_serial_device *serial, uint8_t *pu8Buf, int32_t i32TriggerLen)
 {
@@ -311,16 +341,12 @@ static rt_err_t nu_pdma_uuart_rx_config(struct rt_serial_device *serial, uint8_t
         {
             goto exit_nu_pdma_uuart_rx_config;
         }
-
-        /* Assign head descriptor & go */
         result = nu_pdma_sg_transfer(psNuUUart->pdma_chanid_rx, psNuUUart->pdma_rx_desc, 1000);
         if (result != RT_EOK)
         {
             goto exit_nu_pdma_uuart_rx_config;
         }
     }
-
-    /* Enable Receive Line interrupt & Start DMA RX transfer. */
     UUART_EnableInt(uuart_base, UUART_RLS_INT_MASK);
     UUART_PDMA_ENABLE(uuart_base, UUART_PDMACTL_RXPDMAEN_Msk | UUART_PDMACTL_PDMAEN_Msk);
 
@@ -433,7 +459,7 @@ static rt_ssize_t nu_uuart_dma_transmit(struct rt_serial_device *serial, rt_uint
     }
     else
     {
-        result = -RT_ERROR;
+        result = RT_ERROR;
     }
 
     return result;
@@ -452,8 +478,6 @@ static int nu_hw_uuart_dma_allocate(nu_uuart_t puuart)
             puuart->dma_flag |= RT_DEVICE_FLAG_DMA_TX;
         }
     }
-
-    /* Allocate UUART_RX nu_dma channel */
     if (puuart->pdma_perp_rx != NU_PDMA_UNUSED)
     {
         puuart->pdma_chanid_rx = nu_pdma_channel_allocate(puuart->pdma_perp_rx);
@@ -461,7 +485,7 @@ static int nu_hw_uuart_dma_allocate(nu_uuart_t puuart)
         {
             rt_err_t ret = RT_EOK;
             puuart->dma_flag |= RT_DEVICE_FLAG_DMA_RX;
-            ret = nu_pdma_sgtbls_allocate(&puuart->pdma_rx_desc, 1);
+            ret = nu_pdma_sgtbls_allocate(puuart->pdma_chanid_rx, &puuart->pdma_rx_desc, 1);
             RT_ASSERT(ret == RT_EOK);
         }
     }
@@ -508,7 +532,6 @@ static rt_err_t nu_uuart_control(struct rt_serial_device *serial, int cmd, void 
             UUART_EnableInt(uuart_base, UUART_RXEND_INT_MASK);
         }
         break;
-
 #if defined(RT_SERIAL_USING_DMA)
     case RT_DEVICE_CTRL_CONFIG:
         if (ctrl_arg == RT_DEVICE_FLAG_DMA_RX) /* Configure and trigger DMA-RX */
@@ -528,7 +551,6 @@ static rt_err_t nu_uuart_control(struct rt_serial_device *serial, int cmd, void 
     case RT_DEVICE_CTRL_CLOSE:
         /* Disable NVIC interrupt. */
         NVIC_DisableIRQ(psNuUUart->uuart_irq_n);
-
 #if defined(RT_SERIAL_USING_DMA)
         UUART_DisableInt(uuart_base, UUART_RXEND_INT_MASK | UUART_RLS_INT_MASK);
         UUART_PDMA_DISABLE(uuart_base, UUART_PDMACTL_TXPDMAEN_Msk | UUART_PDMACTL_PDMAEN_Msk);
@@ -587,8 +609,6 @@ static int nu_uuart_receive(struct rt_serial_device *serial)
     {
         return -1;
     }
-
-    /* Get char from RX-FIFO */
     return UUART_READ(uuart_base);
 }
 
@@ -607,7 +627,6 @@ static int rt_hw_uuart_init(void)
 
         nu_uuart_arr[i].dev.ops    = &nu_uuart_ops;
         nu_uuart_arr[i].dev.config = nu_uuart_default_config;
-
 #if defined(RT_SERIAL_USING_DMA)
         nu_uuart_arr[i].dma_flag = 0;
         nu_hw_uuart_dma_allocate(&nu_uuart_arr[i]);
@@ -622,5 +641,4 @@ static int rt_hw_uuart_init(void)
 }
 
 INIT_DEVICE_EXPORT(rt_hw_uuart_init);
-
 #endif //#if defined(BSP_USING_UUART)

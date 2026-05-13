@@ -1,38 +1,161 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
-#include <rtconfig.h>
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_SPI)
 
-#define LOG_TAG                 "drv.spi"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME        LOG_TAG
-#define DBG_LEVEL               DBG_INFO
-#define DBG_COLOR
-#include <rtdbg.h>
+#include "drv_spi.h"
+#include "rtdef.h"
+#include "rtdevice.h"
+#include "rthw.h"
 
-#include <rthw.h>
-#include <rtdevice.h>
-#include <rtdef.h>
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.spi"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
-#include <drv_spi.h>
+#if defined(BSP_USING_SPI_PDMA)
 
-
-/* Private define ---------------------------------------------------------------*/
-
-#ifndef NU_SPI_USE_PDMA_MIN_THRESHOLD
-    #define NU_SPI_USE_PDMA_MIN_THRESHOLD (128)
+#if defined(BSP_USING_SPI0_PDMA)
+#define SPI0_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI0_TX,       \
+    .pdma_perp_rx = PDMA_SPI0_RX,
+#else
+#define SPI0_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
 #endif
 
+#if defined(BSP_USING_SPI1_PDMA)
+#define SPI1_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI1_TX,       \
+    .pdma_perp_rx = PDMA_SPI1_RX,
+#else
+#define SPI1_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI2_PDMA)
+#define SPI2_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI2_TX,       \
+    .pdma_perp_rx = PDMA_SPI2_RX,
+#else
+#define SPI2_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI3_PDMA)
+#define SPI3_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI3_TX,       \
+    .pdma_perp_rx = PDMA_SPI3_RX,
+#else
+#define SPI3_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI4_PDMA)
+#define SPI4_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI4_TX,       \
+    .pdma_perp_rx = PDMA_SPI4_RX,
+#else
+#define SPI4_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI5_PDMA)
+#define SPI5_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI5_TX,       \
+    .pdma_perp_rx = PDMA_SPI5_RX,
+#else
+#define SPI5_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI6_PDMA)
+#define SPI6_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI6_TX,       \
+    .pdma_perp_rx = PDMA_SPI6_RX,
+#else
+#define SPI6_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI7_PDMA)
+#define SPI7_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI7_TX,       \
+    .pdma_perp_rx = PDMA_SPI7_RX,
+#else
+#define SPI7_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI8_PDMA)
+#define SPI8_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI8_TX,       \
+    .pdma_perp_rx = PDMA_SPI8_RX,
+#else
+#define SPI8_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI9_PDMA)
+#define SPI9_PDMA_INIT                  \
+    .pdma_perp_tx = PDMA_SPI9_TX,       \
+    .pdma_perp_rx = PDMA_SPI9_RX,
+#else
+#define SPI9_PDMA_INIT                  \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_SPI10_PDMA)
+#define SPI10_PDMA_INIT                 \
+    .pdma_perp_tx = PDMA_SPI10_TX,      \
+    .pdma_perp_rx = PDMA_SPI10_RX,
+#else
+#define SPI10_PDMA_INIT                 \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#else
+
+#define SPI0_PDMA_INIT
+#define SPI1_PDMA_INIT
+#define SPI2_PDMA_INIT
+#define SPI3_PDMA_INIT
+#define SPI4_PDMA_INIT
+#define SPI5_PDMA_INIT
+#define SPI6_PDMA_INIT
+#define SPI7_PDMA_INIT
+#define SPI8_PDMA_INIT
+#define SPI9_PDMA_INIT
+#define SPI10_PDMA_INIT
+
+#endif
+
+#define DEFINE_NU_SPI(_idx, _pdma_init) \
+    {                                   \
+        .name = "spi" #_idx,           \
+        .spi_base = SPI##_idx,          \
+        .rstidx = SPI##_idx##_RST,      \
+        _pdma_init                      \
+    }
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     SPI_START = -1,
@@ -71,27 +194,19 @@ enum
 #endif
     SPI_CNT
 };
-
-/* Private typedef --------------------------------------------------------------*/
-
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
         uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word);
 static int nu_spi_register_bus(struct nu_spi *spi_bus, const char *name);
 static rt_ssize_t nu_spi_bus_xfer(struct rt_spi_device *device, struct rt_spi_message *message);
 static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device, struct rt_spi_configuration *configuration);
-
 #if defined(BSP_USING_SPI_PDMA)
     static void nu_pdma_spi_rx_cb_event(void *pvUserData, uint32_t u32EventFilter);
     static rt_err_t nu_pdma_spi_rx_config(struct nu_spi *spi_bus, uint8_t *pu8Buf, int32_t i32RcvLen, uint8_t bytes_per_word);
     static rt_err_t nu_pdma_spi_tx_config(struct nu_spi *spi_bus, const uint8_t *pu8Buf, int32_t i32SndLen, uint8_t bytes_per_word);
-    static rt_ssize_t nu_spi_pdma_transmit(struct nu_spi *spi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word);
+    static rt_size_t nu_spi_pdma_transmit(struct nu_spi *spi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word);
 #endif
-/* Public functions -------------------------------------------------------------*/
-void nu_spi_transfer(struct nu_spi *spi_bus, uint8_t *tx, uint8_t *rx, int length, uint8_t bytes_per_word);
-void nu_spi_drain_rxfifo(SPI_T *spi_base);
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct rt_spi_ops nu_spi_poll_ops =
 {
     .configure = nu_spi_bus_configure,
@@ -101,198 +216,43 @@ static struct rt_spi_ops nu_spi_poll_ops =
 static struct nu_spi nu_spi_arr [] =
 {
 #if defined(BSP_USING_SPI0)
-    {
-        .name = "spi0",
-        .spi_base = SPI0,
-        .rstidx = SPI0_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI0_PDMA)
-        .pdma_perp_tx = PDMA_SPI0_TX,
-        .pdma_perp_rx = PDMA_SPI0_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
-#endif
-#endif
-    },
+    DEFINE_NU_SPI(0, SPI0_PDMA_INIT),
 #endif
 #if defined(BSP_USING_SPI1)
-    {
-        .name = "spi1",
-        .spi_base = SPI1,
-        .rstidx = SPI1_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI1_PDMA)
-        .pdma_perp_tx = PDMA_SPI1_TX,
-        .pdma_perp_rx = PDMA_SPI1_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
-#endif
-#endif
-    },
+    DEFINE_NU_SPI(1, SPI1_PDMA_INIT),
 #endif
 #if defined(BSP_USING_SPI2)
-    {
-        .name = "spi2",
-        .spi_base = SPI2,
-        .rstidx = SPI2_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI2_PDMA)
-        .pdma_perp_tx = PDMA_SPI2_TX,
-        .pdma_perp_rx = PDMA_SPI2_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
-#endif
-#endif
-    },
+    DEFINE_NU_SPI(2, SPI2_PDMA_INIT),
 #endif
 #if defined(BSP_USING_SPI3)
-    {
-        .name = "spi3",
-        .spi_base = SPI3,
-        .rstidx = SPI3_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI3_PDMA)
-        .pdma_perp_tx = PDMA_SPI3_TX,
-        .pdma_perp_rx = PDMA_SPI3_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+    DEFINE_NU_SPI(3, SPI3_PDMA_INIT),
 #endif
-#endif
-    },
-#endif
-
 #if defined(BSP_USING_SPI4)
-    {
-        .name = "spi4",
-        .spi_base = SPI4,
-        .rstidx = SPI4_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI4_PDMA)
-        .pdma_perp_tx = PDMA_SPI4_TX,
-        .pdma_perp_rx = PDMA_SPI4_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+    DEFINE_NU_SPI(4, SPI4_PDMA_INIT),
 #endif
-#endif
-
-    },
-#endif
-
 #if defined(BSP_USING_SPI5)
-    {
-        .name = "spi5",
-        .spi_base = SPI5,
-        .rstidx = SPI5_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI5_PDMA)
-        .pdma_perp_tx = PDMA_SPI5_TX,
-        .pdma_perp_rx = PDMA_SPI5_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+    DEFINE_NU_SPI(5, SPI5_PDMA_INIT),
 #endif
-#endif
-
-    },
-#endif
-
 #if defined(BSP_USING_SPI6)
-    {
-        .name = "spi6",
-        .spi_base = SPI6,
-        .rstidx = SPI6_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI6_PDMA)
-        .pdma_perp_tx = PDMA_SPI6_TX,
-        .pdma_perp_rx = PDMA_SPI6_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+    DEFINE_NU_SPI(6, SPI6_PDMA_INIT),
 #endif
-#endif
-
-    },
-#endif
-
 #if defined(BSP_USING_SPI7)
-    {
-        .name = "spi7",
-        .spi_base = SPI7,
-        .rstidx = SPI7_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI7_PDMA)
-        .pdma_perp_tx = PDMA_SPI7_TX,
-        .pdma_perp_rx = PDMA_SPI7_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+    DEFINE_NU_SPI(7, SPI7_PDMA_INIT),
 #endif
-#endif
-
-    },
-#endif
-
 #if defined(BSP_USING_SPI8)
-    {
-        .name = "spi8",
-        .spi_base = SPI8,
-        .rstidx = SPI8_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI8_PDMA)
-        .pdma_perp_tx = PDMA_SPI8_TX,
-        .pdma_perp_rx = PDMA_SPI8_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+    DEFINE_NU_SPI(8, SPI8_PDMA_INIT),
 #endif
-#endif
-
-    },
-#endif
-
 #if defined(BSP_USING_SPI9)
-    {
-        .name = "spi9",
-        .spi_base = SPI9,
-        .rstidx = SPI9_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI9_PDMA)
-        .pdma_perp_tx = PDMA_SPI9_TX,
-        .pdma_perp_rx = PDMA_SPI9_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+    DEFINE_NU_SPI(9, SPI9_PDMA_INIT),
 #endif
-#endif
-
-    },
-#endif
-
 #if defined(BSP_USING_SPI10)
-    {
-        .name = "spi10",
-        .spi_base = SPI10,
-        .rstidx = SPI10_RST,
-#if defined(BSP_USING_SPI_PDMA)
-#if defined(BSP_USING_SPI10_PDMA)
-        .pdma_perp_tx = PDMA_SPI10_TX,
-        .pdma_perp_rx = PDMA_SPI10_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
+    DEFINE_NU_SPI(10, SPI10_PDMA_INIT),
 #endif
-#endif
-
-    },
-#endif
-
 }; /* spi nu_spi */
 
+/* Functions Implementation --------------------------------------------------*/
+void nu_spi_transfer(struct nu_spi *spi_bus, uint8_t *tx, uint8_t *rx, int length, uint8_t bytes_per_word);
+void nu_spi_drain_rxfifo(SPI_T *spi_base);
 static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device,
                                      struct rt_spi_configuration *configuration)
 {
@@ -324,34 +284,35 @@ static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device,
         u32SPIMode = SPI_MODE_3;
         break;
     default:
-        ret = -RT_EIO;
+        ret = RT_EIO;
         goto exit_nu_spi_bus_configure;
     }
-
-    /* Check data width */
     if (!(configuration->data_width == 8  ||
             configuration->data_width == 16 ||
             configuration->data_width == 24 ||
             configuration->data_width == 32))
     {
-        ret = -RT_EINVAL;
+        ret = RT_EINVAL;
         goto exit_nu_spi_bus_configure;
     }
-
-    /* Try to set clock and get actual spi bus clock */
     u32BusClock = SPI_SetBusClock(spi_bus->spi_base, configuration->max_hz);
     if (configuration->max_hz > u32BusClock)
     {
-        LOG_W("%s clock max frequency is %dHz (!= %dHz)\n", spi_bus->name, u32BusClock, configuration->max_hz);
+        LOG_I("%s clock max frequency is %dHz ( != %dHz)\n", spi_bus->name, u32BusClock, configuration->max_hz);
         configuration->max_hz = u32BusClock;
     }
-
-    /* Need to initialize new configuration? */
     if (rt_memcmp(configuration, &spi_bus->configuration, sizeof(*configuration)) != 0)
     {
         rt_memcpy(&spi_bus->configuration, configuration, sizeof(*configuration));
 
-        SPI_Open(spi_bus->spi_base, SPI_MASTER, u32SPIMode, configuration->data_width, u32BusClock);
+        SPI_Open(spi_bus->spi_base,
+                 (configuration->mode & RT_SPI_SLAVE) ? SPI_SLAVE : SPI_MASTER,
+                 u32SPIMode,
+                 configuration->data_width,
+                 configuration->max_hz);
+
+        /* Disable Auto-selection function. */
+        SPI_DisableAutoSS(spi_bus->spi_base);
 
         if (configuration->mode & RT_SPI_CS_HIGH)
         {
@@ -392,15 +353,12 @@ static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device,
             SPI_SET_LSB_FIRST(spi_bus->spi_base);
         }
     }
-
-    /* Clear SPI RX FIFO */
     nu_spi_drain_rxfifo(spi_bus->spi_base);
 
 exit_nu_spi_bus_configure:
 
     return -(ret);
 }
-
 #if defined(BSP_USING_SPI_PDMA)
 static void nu_pdma_spi_rx_cb_event(void *pvUserData, uint32_t u32EventFilter)
 {
@@ -450,13 +408,12 @@ static rt_err_t nu_pdma_spi_rx_config(struct nu_spi *spi_bus, uint8_t *pu8Buf, i
     sChnCB.m_eCBType = eCBType_Event;
     sChnCB.m_pfnCBHandler = nu_pdma_spi_rx_cb_event;
     sChnCB.m_pvUserData = (void *)spi_bus;
+
     result = nu_pdma_callback_register(spi_pdma_rx_chid, &sChnCB);
     if (result != RT_EOK)
     {
         goto exit_nu_pdma_spi_rx_config;
     }
-
-    /* Register Disable engine dma trigger callback function */
     sChnCB.m_eCBType = eCBType_Disable;
     sChnCB.m_pfnCBHandler = nu_pdma_spi_rx_cb_disable;
     sChnCB.m_pvUserData = (void *)spi_base;
@@ -469,7 +426,7 @@ static rt_err_t nu_pdma_spi_rx_config(struct nu_spi *spi_bus, uint8_t *pu8Buf, i
     if (pu8Buf == RT_NULL)
     {
         memctrl  = eMemCtl_SrcFix_DstFix;
-        dst_addr = (rt_uint8_t *) &spi_bus->dummy;
+        dst_addr = (rt_uint8_t *) &spi_bus->dummy[0];
     }
     else
     {
@@ -489,6 +446,7 @@ static rt_err_t nu_pdma_spi_rx_config(struct nu_spi *spi_bus, uint8_t *pu8Buf, i
                               (uint32_t)dst_addr,
                               i32RcvLen / bytes_per_word,
                               0);
+
 exit_nu_pdma_spi_rx_config:
 
     return result;
@@ -509,17 +467,15 @@ static rt_err_t nu_pdma_spi_tx_config(struct nu_spi *spi_bus, const uint8_t *pu8
 
     if (pu8Buf == RT_NULL)
     {
-        spi_bus->dummy = 0;
+        spi_bus->dummy[0] = 0;
         memctrl = eMemCtl_SrcFix_DstFix;
-        src_addr = (rt_uint8_t *)&spi_bus->dummy;
+        src_addr = (rt_uint8_t *)&spi_bus->dummy[0];
     }
     else
     {
         memctrl = eMemCtl_SrcInc_DstFix;
         src_addr = (rt_uint8_t *)pu8Buf;
     }
-
-    /* Register Disable engine dma trigger callback function */
     sChnCB.m_eCBType = eCBType_Trigger;
     sChnCB.m_pfnCBHandler = nu_pdma_spi_tx_cb_trigger;
     sChnCB.m_pvUserData = (void *)spi_base;
@@ -546,11 +502,10 @@ exit_nu_pdma_spi_tx_config:
     return result;
 }
 
-
 /**
  * SPI PDMA transfer
  */
-static rt_ssize_t nu_spi_pdma_transmit(struct nu_spi *spi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word)
+static rt_size_t nu_spi_pdma_transmit(struct nu_spi *spi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word)
 {
     rt_err_t result = RT_EOK;
 
@@ -574,7 +529,6 @@ rt_err_t nu_hw_spi_pdma_allocate(struct nu_spi *spi_bus)
     {
         goto exit_nu_hw_spi_pdma_allocate;
     }
-    /* Allocate SPI_RX nu_dma channel */
     else if ((spi_bus->pdma_chanid_rx = nu_pdma_channel_allocate(spi_bus->pdma_perp_rx)) < 0)
     {
         nu_pdma_channel_free(spi_bus->pdma_chanid_tx);
@@ -686,21 +640,19 @@ static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
             send_addr += nu_spi_write(spi_base, send_addr, bytes_per_word);
             length -= bytes_per_word;
         }
-    } // if (send_addr != RT_NULL && recv_addr == RT_NULL)
-    // Read-only
+    }
     else if ((send_addr == RT_NULL) && (recv_addr != RT_NULL))
     {
-        spi_bus->dummy = 0;
+        spi_bus->dummy[0] = 0;
         while (length > 0)
         {
             /* Input data to SPI TX FIFO */
-            length -= nu_spi_write(spi_base, (const uint8_t *)&spi_bus->dummy, bytes_per_word);
+            length -= nu_spi_write(spi_base, (const uint8_t *)&spi_bus->dummy[0], bytes_per_word);
 
             /* Read data from RX FIFO */
             recv_addr += nu_spi_read(spi_base, recv_addr, bytes_per_word);
         }
-    } // else if (send_addr == RT_NULL && recv_addr != RT_NULL)
-    // Read&Write
+    }
     else
     {
         while (length > 0)
@@ -712,9 +664,7 @@ static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
             /* Read data from RX FIFO */
             recv_addr += nu_spi_read(spi_base, recv_addr, bytes_per_word);
         }
-    } // else
-
-    /* Wait RX or drain RX-FIFO */
+    }
     if (recv_addr)
     {
         // Wait SPI transmission done
@@ -741,20 +691,27 @@ static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
 void nu_spi_transfer(struct nu_spi *spi_bus, uint8_t *tx, uint8_t *rx, int length, uint8_t bytes_per_word)
 {
     RT_ASSERT(spi_bus != RT_NULL);
-
 #if defined(BSP_USING_SPI_PDMA)
-    /* DMA transfer constrains */
+    /* Slave role, always use PDMA to get higher performance. */
     if ((spi_bus->pdma_chanid_rx >= 0) &&
             !((uint32_t)tx % bytes_per_word) &&
             !((uint32_t)rx % bytes_per_word) &&
             (bytes_per_word != 3) &&
-            (length >= NU_SPI_USE_PDMA_MIN_THRESHOLD))
+            ((spi_bus->spi_base->CTL & SPI_CTL_SLAVE_Msk) || (length >= NU_SPI_USE_PDMA_MIN_THRESHOLD)))
+        /* DMA transfer constrains */
         nu_spi_pdma_transmit(spi_bus, tx, rx, length, bytes_per_word);
     else
-        nu_spi_transmission_with_poll(spi_bus, tx, rx, length, bytes_per_word);
-#else
-    nu_spi_transmission_with_poll(spi_bus, tx, rx, length, bytes_per_word);
 #endif
+    {
+        if (spi_bus->spi_base->CTL & SPI_CTL_SLAVE_Msk)
+        {
+            /* Slave role */
+            /* please use PDMA to get higher performance. */
+            RT_ASSERT(0);
+        }
+
+        nu_spi_transmission_with_poll(spi_bus, tx, rx, length, bytes_per_word);
+    }
 }
 
 static rt_ssize_t nu_spi_bus_xfer(struct rt_spi_device *device, struct rt_spi_message *message)
@@ -784,6 +741,7 @@ static rt_ssize_t nu_spi_bus_xfer(struct rt_spi_device *device, struct rt_spi_me
     {
         if (message->cs_take && !(configuration->mode & RT_SPI_NO_CS))
         {
+
             if (pvUserData != RT_NULL)
             {
                 if (configuration->mode & RT_SPI_CS_HIGH)
@@ -860,23 +818,26 @@ static int rt_hw_spi_init(void)
     for (i = (SPI_START + 1); i < SPI_CNT; i++)
     {
         SYS_ResetModule(nu_spi_arr[i].rstidx);
-        nu_spi_register_bus(&nu_spi_arr[i], nu_spi_arr[i].name);
 #if defined(BSP_USING_SPI_PDMA)
         nu_spi_arr[i].pdma_chanid_tx = -1;
         nu_spi_arr[i].pdma_chanid_rx = -1;
+
         if ((nu_spi_arr[i].pdma_perp_tx != NU_PDMA_UNUSED) && (nu_spi_arr[i].pdma_perp_rx != NU_PDMA_UNUSED))
         {
             if (nu_hw_spi_pdma_allocate(&nu_spi_arr[i]) != RT_EOK)
             {
-                LOG_W("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.\n", nu_spi_arr[i].name);
+                LOG_I("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.\n", nu_spi_arr[i].name);
             }
         }
+
+        nu_spi_arr[i].dummy = rt_malloc_align(RT_ALIGN_SIZE, RT_ALIGN_SIZE);
+        RT_ASSERT(nu_spi_arr[i].dummy);
 #endif
+        nu_spi_register_bus(&nu_spi_arr[i], nu_spi_arr[i].name);
     }
 
     return 0;
 }
 
 INIT_DEVICE_EXPORT(rt_hw_spi_init);
-
 #endif //#if defined(BSP_USING_SPI)

@@ -12,6 +12,8 @@
 
 #include <rtthread.h>
 
+#if defined(RT_USING_DFS)
+
 #define LOG_TAG         "mnt"
 #define DBG_ENABLE
 #define DBG_SECTION_NAME "mnt"
@@ -171,3 +173,4 @@ exit_mnt_init_spiflash0:
 INIT_ENV_EXPORT(mnt_init_spiflash0);
 #endif
 
+#endif

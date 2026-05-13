@@ -13,7 +13,11 @@
 
     extern const struct fal_flash_dev g_falFMC_AP;
     extern const struct fal_flash_dev g_falFMC_LD;
+
+#if defined(FMC_DATA_FLASH_BASE)
     extern const struct fal_flash_dev g_falFMC_DF;
+#endif
+
 #endif
 
 int nu_fmc_read(long offset, uint8_t *buf, size_t size);

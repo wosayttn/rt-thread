@@ -1,36 +1,51 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-4-21       Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
+/* Includes ------------------------------------------------------------------*/
 #include "rtconfig.h"
-
 #if defined(BSP_USING_SDH)
 
-#include <rtdevice.h>
-#include <drivers/dev_mmcsd_core.h>
-#include <drivers/dev_sdio.h>
-
 #include "NuMicro.h"
+#include "rtdevice.h"
+#include "rthw.h"
 
-#define LOG_TAG    "drv.sdh"
-#undef  DBG_ENABLE
-#define DBG_SECTION_NAME   LOG_TAG
-#define DBG_LEVEL  LOG_LVL_ASSERT
-#define DBG_COLOR
-#include <rtdbg.h>
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.sdh"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
-#define SDH_ALIGN_LEN   4
+#if defined(RT_USING_CACHE)
+    #define SDH_ALIGN_LEN   32
+#else
+    #define SDH_ALIGN_LEN   4
+#endif
 #define SDH_BUFF_SIZE   512
-#define SDH_BLOCK_SIZE  512
+#define SDH_SetClock SDH_Set_clock
+#define DEFINE_NU_SDH(_idx, _cachebuf)  \
+    {                                   \
+        .name = "sdh" #_idx,           \
+        .base = SDH##_idx,              \
+        .irqn = SDH##_idx##_IRQn,       \
+        .rstidx = SDH##_idx##_RST,      \
+        .modid = SDH##_idx##_MODULE,    \
+        .cachebuf = (uint8_t *)(_cachebuf), \
+    }
 
+#define DEFINE_SDH_IRQ_HANDLER(_idx) \
+void SDH##_idx##_IRQHandler(void)    \
+{                                    \
+    rt_interrupt_enter();            \
+                                     \
+    nu_sdh_isr(&nu_sdh_arr[SDH##_idx##_IDX]); \
+                                     \
+    rt_interrupt_leave();            \
+}
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     SDH_START = -1,
@@ -43,6 +58,7 @@ enum
     SDH_CNT
 };
 
+/* Types / Structures ---------------------------------------------------------*/
 struct nu_sdh
 {
     struct rt_mmcsd_host  *host;
@@ -50,7 +66,7 @@ struct nu_sdh
     SDH_T           *base;
     IRQn_Type        irqn;
     uint32_t         rstidx;
-    uint32_t         modid;
+    uint64_t         modid;
 
     uint8_t         *cachebuf;
     uint32_t         u32CmdResp0;
@@ -60,33 +76,26 @@ struct nu_sdh
 };
 typedef struct nu_sdh *nu_sdh_t;
 
-/* Private variables ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
+static int SDH_SetBusWidth(SDH_T *sdh, uint32_t bw);
+static int SDH_GetBusStatus(SDH_T *sdh, uint32_t mask);
+
+/* Static Variables ----------------------------------------------------------*/
+#if defined(BSP_USING_SDH0)
+    static uint32_t g_au32CacheBuf_SDH0[SDH_BUFF_SIZE / 4];
+#endif
+
 static struct nu_sdh nu_sdh_arr [] =
 {
 #if defined(BSP_USING_SDH0)
-    {
-        .name = "sdh0",
-        .base = SDH0,
-        .irqn = SDH0_IRQn,
-        .rstidx = SDH0_RST,
-        .modid = SDH0_MODULE,
-        .cachebuf = RT_NULL,
-    },
+    DEFINE_NU_SDH(0, g_au32CacheBuf_SDH0),
 #endif
 #if defined(BSP_USING_SDH1)
-    {
-        .name = "sdh1",
-        .base = SDH1,
-        .irqn = SDH1_IRQn,
-        .rstidx = SDH1_RST,
-        .modid = SDH1_MODULE,
-        .cachebuf = RT_NULL,
-    },
+    DEFINE_NU_SDH(1, g_au32CacheBuf_SDH1),
 #endif
 }; /* struct nu_sdh nu_sdh_arr [] */
 
-#define SDH_SetClock SDH_Set_clock
-
+/* Functions Implementation --------------------------------------------------*/
 static int SDH_SetBusWidth(SDH_T *sdh, uint32_t bw)
 {
     if (bw == 4)
@@ -116,7 +125,8 @@ static int SDH_GetBusStatus(SDH_T *sdh, uint32_t mask)
     while (cnt-- > 0)
     {
         sdh->CTL |= SDH_CTL_CLK8OEN_Msk;
-        while (sdh->CTL & SDH_CTL_CLK8OEN_Msk) { }
+        while (sdh->CTL & SDH_CTL_CLK8OEN_Msk)
+        { }
 
         if (SDH_GET_INT_FLAG(sdh, SDH_INTSTS_DAT0STS_Msk))
             break;
@@ -156,7 +166,7 @@ static void SDH_Enable(SDH_T *sdh)
     sdh->DMAINTSTS = SDH_DMAINTSTS_ABORTIF_Msk | SDH_DMAINTSTS_WEOTIF_Msk;  // clear all interrupt flag
 
     sdh->GCTL = SDH_GCTL_GCTLRST_Msk;
-    while ((sdh->GCTL & SDH_GCTL_GCTLRST_Msk) == SDH_GCTL_GCTLRST_Msk) { }// clear all interrupt flag
+    while ((sdh->GCTL & SDH_GCTL_GCTLRST_Msk) == SDH_GCTL_GCTLRST_Msk) { }
     sdh->GINTSTS = SDH_GINTSTS_DTAIF_Msk;
     sdh->GCTL = SDH_GCTL_SDEN_Msk;
 
@@ -179,7 +189,7 @@ static void nu_sdh_sendcmd_done(SDH_T *sdh, struct rt_mmcsd_cmd *cmd)
 {
     if (resp_type(cmd) == RESP_R2)
     {
-        uint8_t *c = (uint8_t *)&sdh->FB[0];
+        volatile uint8_t *c = (volatile uint8_t *)&sdh->FB[0];
         int i, j, tmp[5];
 
         for (i = 0, j = 0; j < 5; i += 4, j++)
@@ -252,10 +262,9 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
     default:
         return -1;
     }
-
-    /* Reset sdh and its DMA engine at first. */
     sdh->DMACTL |= SDH_DMACTL_DMARST_Msk | SDH_DMACTL_DMAEN_Msk;
     while ((sdh->DMACTL & SDH_DMACTL_DMARST_Msk) == SDH_DMACTL_DMARST_Msk) { }
+
     sdh->DMACTL = SDH_DMACTL_DMAEN_Msk;
     sdh->DMAINTSTS = SDH_DMAINTSTS_ABORTIF_Msk | SDH_DMAINTSTS_WEOTIF_Msk;  // clear all interrupt flag
 
@@ -271,8 +280,6 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
         }
         tout = 0xFFFF;
     }
-
-    /* Set SDNWR and BLK_CNT to 1 */
     ctl |= ((9 << SDH_CTL_SDNWR_Pos) | (1 << SDH_CTL_BLKCNT_Pos));
     ctl |= ((cmd->cmd_code << SDH_CTL_CMDCODE_Pos) | SDH_CTL_COEN_Msk);
 
@@ -308,8 +315,6 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
     else if (resp_type(cmd) == RESP_R1B)
     {
     }
-
-    /* Clear response-timeout flag first for safty and reset new timeout value. */
     SDH_CLR_INT_FLAG(sdh, SDH_INTSTS_RTOIF_Msk);
     sdh->TOUT   = tout;
 
@@ -347,9 +352,6 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
                     goto exit_nu_sdh_sendcmd;
                 }
             }
-
-            /* TOFIX: ISSUE: Sometimes, SDH's RIEN is cleared automatically by controller after host sending CMD5 to SD card. */
-            /* Workaround: To check previous cmd's response with CMD's.  */
             if (cmd->cmd_code == 5)
             {
                 if ((NuSdh->u32CmdResp0 == sdh->RESP0) && (NuSdh->u32CmdResp1 == sdh->RESP1))
@@ -362,8 +364,6 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
             NuSdh->u32CmdResp0 = sdh->RESP0;
             NuSdh->u32CmdResp1 = sdh->RESP1;
         }
-
-        /* Get response from FB or register */
         nu_sdh_sendcmd_done(sdh, cmd);
     }
 
@@ -380,8 +380,6 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
             goto exit_nu_sdh_sendcmd;
         }
     }
-
-    /* Handle CRC flag */
     if (SDH_GET_INT_FLAG(sdh, SDH_INTSTS_CRCIF_Msk))   // Fault
     {
         uint32_t u32INTSTS = sdh->INTSTS;
@@ -402,7 +400,6 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
     }
 
     return 0;
-
 
 exit_nu_sdh_sendcmd:
 
@@ -472,15 +469,6 @@ static void nu_sdh_request(struct rt_mmcsd_host *host, struct rt_mmcsd_req *req)
             IsNonaligned = (((rt_uint32_t)data->buf & (SDH_ALIGN_LEN - 1)) > 0) ? 1 : 0;
             if (IsNonaligned)
             {
-                /* Allocate memory temp buffer on demand. */
-                RT_ASSERT(size <= SDH_BUFF_SIZE);
-
-                if (NuSdh->cachebuf == RT_NULL)
-                {
-                    NuSdh->cachebuf = rt_malloc_align(SDH_BUFF_SIZE, SDH_ALIGN_LEN);
-                    RT_ASSERT(NuSdh->cachebuf);
-                }
-
                 data->buf = (rt_uint32_t *)NuSdh->cachebuf;
                 if (data->flags & DATA_DIR_WRITE)
                 {
@@ -488,8 +476,17 @@ static void nu_sdh_request(struct rt_mmcsd_host *host, struct rt_mmcsd_req *req)
                     rt_memcpy(data->buf, org_data_buf, size);
                 }
             }
+#if defined(RT_USING_CACHE)
+            if (!IsNonaligned)
+                rt_hw_cpu_dcache_ops(RT_HW_CACHE_FLUSH_INVALIDATE, (void *)data->buf, size);
 
             cmd->err = nu_sdh_sendcmd(host, cmd, data);
+
+            if (!IsNonaligned)
+                rt_hw_cpu_dcache_ops(RT_HW_CACHE_INVALIDATE, (void *)data->buf, size);
+#else
+            cmd->err = nu_sdh_sendcmd(host, cmd, data);
+#endif
 
             if (!cmd->err && IsNonaligned)
             {
@@ -595,8 +592,6 @@ static void nu_sdh_iocfg(struct rt_mmcsd_host *host, struct rt_mmcsd_io_cfg *io_
     default:
         break;
     }
-
-    /* Bus width */
     switch ((io_cfg->bus_width))
     {
     case MMCSD_BUS_WIDTH_1:
@@ -653,38 +648,17 @@ static void nu_sdh_isr(nu_sdh_t NuSdh)
             NuSdh->LastNotice = cur_tick;
             mmcsd_change(NuSdh->host);
         }
-
-        /* Clear CDIF interrupt flag */
         SDH_CLR_INT_FLAG(sdh, SDH_INTSTS_CDIF_Msk);
     }
 }
 
 #if defined(BSP_USING_SDH0)
-void SDH0_IRQHandler(void)
-{
-    /* enter interrupt */
-    rt_interrupt_enter();
-
-    nu_sdh_isr(&nu_sdh_arr[SDH0_IDX]);
-
-    /* leave interrupt */
-    rt_interrupt_leave();
-}
+    DEFINE_SDH_IRQ_HANDLER(0)
 #endif
 
 #if defined(BSP_USING_SDH1)
-void SDH1_IRQHandler(void)
-{
-    /* enter interrupt */
-    rt_interrupt_enter();
-
-    nu_sdh_isr(&nu_sdh_arr[SDH1_IDX]);
-
-    /* leave interrupt */
-    rt_interrupt_leave();
-}
+    DEFINE_SDH_IRQ_HANDLER(1)
 #endif
-
 
 /**
   * @brief  This function update sdh interrupt.
@@ -792,5 +766,4 @@ void nu_sd_regdump(void)
     }
 }
 MSH_CMD_EXPORT(nu_sd_regdump, dump sdh registers);
-
 #endif

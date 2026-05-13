@@ -187,7 +187,7 @@ SECTIONS
   } > SRAM
   PROVIDE(__stack = __StackTop);
 
-  .heap (NOLOAD) :
+  .heap (__StackTop) (NOLOAD) :
   {
     . = ALIGN(8);
     __end__ = .;
@@ -199,7 +199,7 @@ SECTIONS
 
 
 
-  .data : AT (__etext)
+  .data __HeapLimit : AT (__etext)
   {
     __data_start__ = .;
     *(vtable)

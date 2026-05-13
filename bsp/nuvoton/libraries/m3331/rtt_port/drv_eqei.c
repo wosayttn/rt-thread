@@ -43,10 +43,10 @@ void EQEI##_idx##_IRQHandler(void)         \
 enum
 {
     EQEI_START = -1,
-#if defined(BSP_USING_EQEI0) && defined(EQEI0)
+#if defined(BSP_USING_EQEI0)
     EQEI0_IDX,
 #endif
-#if defined(BSP_USING_EQEI1) && defined(EQEI1)
+#if defined(BSP_USING_EQEI1)
     EQEI1_IDX,
 #endif
     EQEI_CNT
@@ -59,7 +59,7 @@ struct nu_qei
     EQEI_T *base;
     IRQn_Type   irqn;
     uint32_t    rstidx;
-    uint64_t    modid;
+    uint32_t    modid;
 
     rt_uint32_t max_cntval;
     rt_uint32_t cmp_val;
@@ -79,11 +79,11 @@ static int rt_hw_qei_init(void);
 /* Static Variables ----------------------------------------------------------*/
 static struct nu_qei nu_eqei_arr [] =
 {
-#if defined(BSP_USING_EQEI0) && defined(EQEI0)
+#if defined(BSP_USING_EQEI0)
     DEFINE_NU_EQEI(0),
 #endif
 
-#if defined(BSP_USING_EQEI1) && defined(EQEI1)
+#if defined(BSP_USING_EQEI1)
     DEFINE_NU_EQEI(1),
 #endif
 };
@@ -97,11 +97,11 @@ static const struct rt_pulse_encoder_ops nu_eqei_ops =
 };
 
 /* Functions Implementation --------------------------------------------------*/
-#if defined(BSP_USING_EQEI0) && defined(EQEI0)
+#if defined(BSP_USING_EQEI0)
     DEFINE_EQEI_IRQ_HANDLER(0)
 #endif
 
-#if defined(BSP_USING_EQEI1) && defined(EQEI1)
+#if defined(BSP_USING_EQEI1)
     DEFINE_EQEI_IRQ_HANDLER(1)
 #endif
 

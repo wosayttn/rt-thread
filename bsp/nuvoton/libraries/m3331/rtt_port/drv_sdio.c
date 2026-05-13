@@ -55,6 +55,7 @@ enum
     SDH_CNT
 };
 
+/* Types / Structures ---------------------------------------------------------*/
 struct nu_sdh
 {
     struct rt_mmcsd_host  *host;

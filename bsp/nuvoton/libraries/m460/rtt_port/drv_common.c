@@ -1,45 +1,42 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-3-15       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-#include <rtthread.h>
+/* Includes ------------------------------------------------------------------*/
 #include "NuMicro.h"
-#include "drv_uart.h"
-#include "drv_gpio.h"
 #include "board.h"
-#include "nutool_modclkcfg.h"
+#include "drv_common.h"
+#include "drv_uart.h"
+#include <stdio.h>
+#include "rtthread.h"
 
-#define LOG_TAG    "drv.common"
-#undef  DBG_ENABLE
-#define DBG_SECTION_NAME   LOG_TAG
-#define DBG_LEVEL      LOG_LVL_DBG
-#define DBG_COLOR
-#include <rtdbg.h>
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.common"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
-extern void nutool_pincfg_init(void);
+
+/* Types / Structures ---------------------------------------------------------*/
+
+/* Static Function Prototypes ------------------------------------------------*/
+
+/* Static Variables ----------------------------------------------------------*/
+
+/* Functions Implementation --------------------------------------------------*/
 /**
  * This function will initial.
  */
 rt_weak void rt_hw_board_init(void)
 {
-    uint32_t u32RegLockBackup = SYS_IsRegLocked();
-
-    /* Unlock protected registers */
-    SYS_UnlockReg();
-
     /* Init System/modules clock */
+    void nutool_modclkcfg_init();
     nutool_modclkcfg_init();
 
     /* Init all pin function setting */
+    void nutool_pincfg_init(void);
     nutool_pincfg_init();
 
     /* Configure SysTick */
@@ -48,22 +45,9 @@ rt_weak void rt_hw_board_init(void)
     /* Update System Core Clock */
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
     SystemCoreClockUpdate();
-
-#if defined(BSP_USING_EADC)
-    /* Vref connect to internal */
-    SYS->VREFCTL = (SYS->VREFCTL & ~SYS_VREFCTL_VREFCTL_Msk) | SYS_VREFCTL_VREF_3_0V;
-#endif
-
-    if (u32RegLockBackup)
-    {
-        /* Lock protected registers */
-        SYS_LockReg();
-    }
-
-#ifdef RT_USING_HEAP
+#if defined(RT_USING_HEAP)
     rt_system_heap_init(HEAP_BEGIN, HEAP_END);
 #endif /* RT_USING_HEAP */
-
 #if defined(BSP_USING_UART)
     rt_hw_uart_init();
 #endif
@@ -72,9 +56,7 @@ rt_weak void rt_hw_board_init(void)
     rt_console_set_device(RT_CONSOLE_DEVICE_NAME);
 #endif
 
-    NVIC_SetPriorityGrouping(7);
-
-#ifdef RT_USING_COMPONENTS_INIT
+#if defined(RT_USING_COMPONENTS_INIT)
     rt_components_board_init();
 #endif
 }
@@ -114,9 +96,7 @@ void rt_hw_us_delay(rt_uint32_t us)
     }
 }
 
-#define NU_MFP_POS(PIN)   ((PIN % 4) * 8)
-#define NU_MFP_MSK(PIN)   (0x1ful << NU_MFP_POS(PIN))
-void nu_pin_set_function(rt_base_t pin, int data)
+void nu_pin_func(rt_base_t pin, int data)
 {
     uint32_t GPx_MFPx_org;
     uint32_t pin_index      = NU_GET_PINS(pin);
@@ -127,7 +107,23 @@ void nu_pin_set_function(rt_base_t pin, int data)
     GPx_MFPx_org = *GPx_MFPx;
     *GPx_MFPx    = (GPx_MFPx_org & (~MFP_Msk)) | data;
 
-    /* rt_kprintf("Port[%d]-Pin[%d] Addr[%08x] Data[%08x] %08x -> %08x\n", port_index, pin_index, GPx_MFPx, data, GPx_MFPx_org, *GPx_MFPx); */
+    //rt_kprintf("Port[%d]-Pin[%d] Addr[%08x] Data[%08x] %08x -> %08x\n", port_index, pin_index, GPx_MFPx, data, GPx_MFPx_org, *GPx_MFPx);
+}
+
+void nu_read_uid(uint32_t *id)
+{
+    /* Enable FMC ISP function */
+    FMC_Open();
+
+    /* Read Unique ID */
+    id[0] = FMC_ReadUID(0);
+    id[1] = FMC_ReadUID(1);
+    id[2] = FMC_ReadUID(2);
+    id[3] = 0;
+
+    /* Disable FMC ISP function */
+    FMC_Close();
+
 }
 
 /**
@@ -155,8 +151,46 @@ int reboot(int argc, char **argv)
 }
 MSH_CMD_EXPORT(reboot, Reboot System);
 
+#if defined(RT_USING_SPI)
+/**
+  * Attach the spi device to SPI bus, this function must be used after initialization.
+  */
+rt_err_t rt_hw_spi_device_attach(const char *bus_name, const char *device_name, rt_base_t pin)
+{
+    RT_ASSERT(bus_name != RT_NULL);
+    RT_ASSERT(device_name != RT_NULL);
+
+    rt_err_t ret = RT_EOK;
+    struct rt_spi_device *spi_device = (struct rt_spi_device *)
+                                       rt_malloc(sizeof(struct rt_spi_device));
+    RT_ASSERT(spi_device != RT_NULL);
+
+    rt_uint32_t *cs_pin = (rt_uint32_t *)
+                          rt_malloc(sizeof(rt_uint32_t));
+    RT_ASSERT(cs_pin != RT_NULL);
+
+    *cs_pin = pin;
+    rt_pin_mode(pin, PIN_MODE_OUTPUT);
+    rt_pin_write(pin, PIN_HIGH);
+
+    ret = rt_spi_bus_attach_device(spi_device, device_name, bus_name, (void *)cs_pin);
+    RT_ASSERT(ret == RT_EOK);
+
+    return ret;
+}
+#endif
+
 void devmem(int argc, char *argv[])
 {
+    /**
+     * @brief  This function may interact with critical system registers. Use with caution.
+     *
+     * @details
+     * This function has the potential to access and modify important system registers
+     * as part of its operation. Ensure proper validation and system state checks
+     * before calling this function. Improper or careless usage may lead to system
+     * instability or unintended behavior.
+    */
     volatile unsigned int u32Addr;
     unsigned int value = 0, mode = 0;
 
@@ -191,8 +225,19 @@ exit_devmem:
 }
 MSH_CMD_EXPORT(devmem, dump device registers);
 
+#if defined(RT_USING_ULOG)
 void devmem2(int argc, char *argv[])
 {
+    /**
+     * @brief  This function may interact with critical system registers. Use with caution.
+     *
+     * @details
+     * This function has the potential to access and modify important system registers
+     * as part of its operation. Ensure proper validation and system state checks
+     * before calling this function. Improper or careless usage may lead to system
+     * instability or unintended behavior.
+    */
+
     volatile unsigned int u32Addr;
     unsigned int value = 0, word_count = 1;
 
@@ -213,9 +258,9 @@ void devmem2(int argc, char *argv[])
     else if (!u32Addr || u32Addr & (4 - 1))
         goto exit_devmem;
 
-    if ( word_count > 0 )
+    if (word_count > 0)
     {
-        LOG_HEX("devmem", 16, (void *)u32Addr, word_count*sizeof(rt_base_t));
+        LOG_HEX("devmem", 16, (void *)u32Addr, word_count * sizeof(rt_base_t));
     }
 
     return;
@@ -224,3 +269,4 @@ exit_devmem:
     return;
 }
 MSH_CMD_EXPORT(devmem2, dump device registers);
+#endif

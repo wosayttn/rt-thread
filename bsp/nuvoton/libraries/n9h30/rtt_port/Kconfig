@@ -7,10 +7,6 @@ config SOC_SERIES_N9H30
     select PKG_USING_NUVOTON_SERIES_DRIVER
     default y
 
-    config BSP_USE_STDDRIVER_SOURCE
-        bool "Build StdDriver source"
-        default n
-
     config BSP_USING_MMU
         bool "Enable MMU"
         select ARCH_ARM_MMU

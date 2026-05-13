@@ -1,83 +1,74 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if (defined(BSP_USING_SOFT_I2C) && defined(RT_USING_I2C_BITOPS) && defined(RT_USING_I2C) && defined(RT_USING_PIN))
 
-#include <rtthread.h>
-#include <rthw.h>
-#include <rtdevice.h>
 #include "NuMicro.h"
+#include "rtdevice.h"
+#include "rthw.h"
+#include "rtthread.h"
 
-/* Private define ---------------------------------------------------------------*/
-#define LOG_TAG          "drv.softi2c"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME LOG_TAG
-#define DBG_LEVEL        DBG_INFO
-#include <rtdbg.h>
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.softi2c"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
-#ifdef BSP_USING_SOFT_I2C0
-#define NU_SOFT_I2C0_BUS_CONFIG                          \
+#define DEFINE_NU_SOFT_I2C_BUS_CONFIG(_idx, _scl, _sda) \
     {                                                    \
-        .scl = BSP_SOFT_I2C0_SCL_PIN,                    \
-        .sda = BSP_SOFT_I2C0_SDA_PIN,                    \
-        .bus_name = "softi2c0",                         \
+        .scl = _scl,                                     \
+        .sda = _sda,                                     \
+        .bus_name = "softi2c" #_idx,                    \
     }
+
+#if defined(BSP_USING_SOFT_I2C0)
+#define NU_SOFT_I2C0_BUS_CONFIG \
+    DEFINE_NU_SOFT_I2C_BUS_CONFIG(0, BSP_SOFT_I2C0_SCL_PIN, BSP_SOFT_I2C0_SDA_PIN)
 #endif
 
-#ifdef BSP_USING_SOFT_I2C1
-#define NU_SOFT_I2C1_BUS_CONFIG                          \
-    {                                                    \
-        .scl = BSP_SOFT_I2C1_SCL_PIN,                    \
-        .sda = BSP_SOFT_I2C1_SDA_PIN,                    \
-        .bus_name = "softi2c1",                         \
-    }
+#if defined(BSP_USING_SOFT_I2C1)
+#define NU_SOFT_I2C1_BUS_CONFIG \
+    DEFINE_NU_SOFT_I2C_BUS_CONFIG(1, BSP_SOFT_I2C1_SCL_PIN, BSP_SOFT_I2C1_SDA_PIN)
 #endif
 
 #if (!defined(BSP_USING_SOFT_I2C0) && !defined(BSP_USING_SOFT_I2C1))
     #error "Please define at least one BSP_USING_SOFT_I2Cx"
-    /* this driver can be disabled at menuconfig ? RT-Thread Components ? Device Drivers */
 #endif
 
-/* Private typedef --------------------------------------------------------------*/
-/* soft i2c config class */
+
+/* Types / Structures ---------------------------------------------------------*/
 struct nu_soft_i2c_config
 {
     rt_uint8_t scl;
     rt_uint8_t sda;
     const char *bus_name;
 };
-/* soft i2c driver class */
+
 struct nu_soft_i2c
 {
     struct rt_i2c_bit_ops ops;
     struct rt_i2c_bus_device soft_i2c_bus;
 };
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static void nu_soft_i2c_udelay(rt_uint32_t us);
 static void nu_soft_i2c_set_sda(void *data, rt_int32_t state);
 static void nu_soft_i2c_set_scl(void *data, rt_int32_t state);
 static rt_int32_t nu_soft_i2c_get_sda(void *data);
 static rt_int32_t nu_soft_i2c_get_scl(void *data);
 
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static const struct nu_soft_i2c_config nu_soft_i2c_cfg[] =
 {
-#ifdef BSP_USING_SOFT_I2C0
+#if defined(BSP_USING_SOFT_I2C0)
     NU_SOFT_I2C0_BUS_CONFIG,
 #endif
-#ifdef BSP_USING_SOFT_I2C1
+#if defined(BSP_USING_SOFT_I2C1)
     NU_SOFT_I2C1_BUS_CONFIG,
 #endif
 };
@@ -96,8 +87,7 @@ static const struct rt_i2c_bit_ops nu_soft_i2c_bit_ops =
     .timeout  = 100
 };
 
-/* Functions define ------------------------------------------------------------*/
-
+/* Functions Implementation --------------------------------------------------*/
 /**
  * The time delay function.
  *
@@ -200,8 +190,6 @@ static rt_int32_t nu_soft_i2c_get_scl(void *data)
 
     return rt_pin_read(cfg->scl);
 }
-
-/* Soft I2C initialization function */
 int rt_soft_i2c_init(void)
 {
     rt_size_t obj_num = sizeof(nu_soft_i2c_obj) / sizeof(struct nu_soft_i2c);
@@ -228,5 +216,4 @@ int rt_soft_i2c_init(void)
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_soft_i2c_init);
-
 #endif //#if (defined(BSP_USING_SOFT_I2C) && defined(RT_USING_I2C_BITOPS) && defined(RT_USING_I2C) && defined(RT_USING_PIN))

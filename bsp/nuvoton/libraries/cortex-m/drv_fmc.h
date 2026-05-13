@@ -1,0 +1,27 @@
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#ifndef __DRV_FMC_H__
+#define __DRV_FMC_H__
+#include "rtconfig.h"
+
+#if defined(RT_USING_FAL)
+    #include "fal.h"
+    #include "NuMicro.h"
+
+    extern const struct fal_flash_dev g_falFMC_AP;
+    extern const struct fal_flash_dev g_falFMC_LD;
+
+#if defined(FMC_DATA_FLASH_BASE)
+    extern const struct fal_flash_dev g_falFMC_DF;
+#endif
+
+#endif
+
+int nu_fmc_read(long offset, uint8_t *buf, size_t size);
+int nu_fmc_write(long offset, const uint8_t *buf, size_t size);
+int nu_fmc_erase(long offset, size_t size);
+#endif /* __DRV_FMC_H__ */

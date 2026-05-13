@@ -1,25 +1,43 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_TIMER) && defined(RT_USING_CLOCK_TIME)
 
-#include <rtdevice.h>
 #include "NuMicro.h"
+#include "rtdevice.h"
 
-/* Private define ---------------------------------------------------------------*/
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.timer"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
 #define NU_TIMER_DEVICE(timer) (nu_timer_t)(timer)
+#define DEFINE_NU_TIMER(_idx)                   \
+    {                                           \
+        .name = "timer" #_idx,                 \
+        .base = TIMER##_idx,                    \
+        .irqn = TMR##_idx##_IRQn,               \
+        .rstidx = TMR##_idx##_RST,              \
+        .modid = TMR##_idx##_MODULE             \
+    }
+#define DEFINE_TIMER_IRQ_HANDLER(_idx)            \
+void TMR##_idx##_IRQHandler(void)                 \
+{                                                 \
+    rt_interrupt_enter();                         \
+                                                  \
+    nu_timer_isr((void *)&nu_timer_arr[TIMER##_idx##_IDX]); \
+                                                  \
+    rt_interrupt_leave();                         \
+}
 
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     TIMER_START = -1,
@@ -38,7 +56,6 @@ enum
     TIMER_CNT
 };
 
-/* Private typedef --------------------------------------------------------------*/
 struct nu_timer
 {
     rt_clock_timer_t  parent;
@@ -50,30 +67,27 @@ struct nu_timer
 };
 typedef struct nu_timer *nu_timer_t;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static void nu_timer_init(rt_clock_timer_t *timer, rt_uint32_t state);
 static rt_err_t nu_timer_start(rt_clock_timer_t *timer, rt_uint32_t cnt, rt_clock_timer_mode_t opmode);
 static void nu_timer_stop(rt_clock_timer_t *timer);
 static rt_uint32_t nu_timer_count_get(rt_clock_timer_t *timer);
 static rt_err_t nu_timer_control(rt_clock_timer_t *timer, rt_uint32_t cmd, void *args);
 
-/* Public functions -------------------------------------------------------------*/
-
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct nu_timer nu_timer_arr [] =
 {
 #if defined(BSP_USING_TIMER0)
-    { .name = "timer0", .base  = TIMER0, .irqn = TMR0_IRQn, .rstidx = TMR0_RST, .modid = TMR0_MODULE  },
+    DEFINE_NU_TIMER(0),
 #endif
 #if defined(BSP_USING_TIMER1)
-    { .name = "timer1", .base  = TIMER1, .irqn = TMR1_IRQn, .rstidx = TMR1_RST, .modid = TMR1_MODULE  },
+    DEFINE_NU_TIMER(1),
 #endif
 #if defined(BSP_USING_TIMER2)
-    { .name = "timer2", .base  = TIMER2, .irqn = TMR2_IRQn, .rstidx = TMR2_RST, .modid = TMR2_MODULE  },
+    DEFINE_NU_TIMER(2),
 #endif
 #if defined(BSP_USING_TIMER3)
-    { .name = "timer3", .base  = TIMER3, .irqn = TMR3_IRQn, .rstidx = TMR3_RST, .modid = TMR3_MODULE  },
+    DEFINE_NU_TIMER(3),
 #endif
 };
 
@@ -94,7 +108,7 @@ static struct rt_clock_timer_ops nu_timer_ops =
     nu_timer_control
 };
 
-/* Functions define ------------------------------------------------------------*/
+/* Functions Implementation --------------------------------------------------*/
 static void nu_timer_init(rt_clock_timer_t *timer, rt_uint32_t state)
 {
     nu_timer_t psNuTmr = NU_TIMER_DEVICE(timer);
@@ -122,7 +136,7 @@ static void nu_timer_init(rt_clock_timer_t *timer, rt_uint32_t state)
 
 static rt_err_t nu_timer_start(rt_clock_timer_t *timer, rt_uint32_t cnt, rt_clock_timer_mode_t opmode)
 {
-    rt_err_t ret = -RT_EINVAL;
+    rt_err_t ret = RT_EINVAL;
     rt_uint32_t u32OpMode;
 
     nu_timer_t psNuTmr = NU_TIMER_DEVICE(timer);
@@ -205,7 +219,7 @@ static rt_err_t nu_timer_control(rt_clock_timer_t *timer, rt_uint32_t cmd, void 
         break;
 
     default:
-        ret = -RT_EINVAL;
+        ret = RT_EINVAL;
         break;
     }
 
@@ -226,7 +240,7 @@ static void nu_timer_isr(nu_timer_t psNuTmr)
     }
 }
 
-int rt_hw_timer_init(void)
+static int rt_hw_timer_init(void)
 {
     int i;
     rt_err_t ret = RT_EOK;
@@ -250,49 +264,20 @@ int rt_hw_timer_init(void)
 }
 
 INIT_BOARD_EXPORT(rt_hw_timer_init);
-
 #if defined(BSP_USING_TIMER0)
-void TMR0_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_timer_isr((void *)&nu_timer_arr[TIMER0_IDX]);
-
-    rt_interrupt_leave();
-}
+    DEFINE_TIMER_IRQ_HANDLER(0)
 #endif
 
 #if defined(BSP_USING_TIMER1)
-void TMR1_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_timer_isr((void *)&nu_timer_arr[TIMER1_IDX]);
-
-    rt_interrupt_leave();
-}
+    DEFINE_TIMER_IRQ_HANDLER(1)
 #endif
 
 #if defined(BSP_USING_TIMER2)
-void TMR2_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_timer_isr((void *)&nu_timer_arr[TIMER2_IDX]);
-
-    rt_interrupt_leave();
-}
+    DEFINE_TIMER_IRQ_HANDLER(2)
 #endif
 
 #if defined(BSP_USING_TIMER3)
-void TMR3_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_timer_isr((void *)&nu_timer_arr[TIMER3_IDX]);
-
-    rt_interrupt_leave();
-}
+    DEFINE_TIMER_IRQ_HANDLER(3)
 #endif
 
 #endif //#if (defined(BSP_USING_TIMER) && defined(RT_USING_CLOCK_TIME))

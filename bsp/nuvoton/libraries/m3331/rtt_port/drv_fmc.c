@@ -43,9 +43,12 @@
     static int ldrom_write(long offset, const uint8_t *buf, size_t size);
     static int ldrom_erase(long offset, size_t size);
 
+#if defined(FMC_DATA_FLASH_BASE)
     static int dataflash_read(long offset, uint8_t *buf, size_t size);
     static int dataflash_write(long offset, const uint8_t *buf, size_t size);
     static int dataflash_erase(long offset, size_t size);
+#endif
+
 #endif  /* RT_USING_FAL */
 static int nu_fmc_init(void);
 
@@ -81,6 +84,7 @@ const struct fal_flash_dev g_falFMC_LD =
     }
 };
 
+#if defined(FMC_DATA_FLASH_BASE)
 const struct fal_flash_dev g_falFMC_DF =
 {
     "FMC_DF",
@@ -94,6 +98,8 @@ const struct fal_flash_dev g_falFMC_DF =
         dataflash_erase
     }
 };
+#endif
+
 #endif  /* RT_USING_FAL */
 
 /* Functions Implementation --------------------------------------------------*/
@@ -160,8 +166,10 @@ int nu_fmc_write(long addr, const uint8_t *buf, size_t size)
         FMC_ENABLE_AP_UPDATE();
     else if ((addr < FMC_LDROM_END) && addr >= FMC_LDROM_BASE)
         FMC_ENABLE_LD_UPDATE();
+#if defined(FMC_DATA_FLASH_BASE)
     else if ((addr < FMC_DATA_FLASH_END) && addr >= FMC_DATA_FLASH_BASE)
         FMC_ENABLE_DF_UPDATE();
+#endif
     else
         goto Exit2;
 
@@ -205,7 +213,9 @@ int nu_fmc_write(long addr, const uint8_t *buf, size_t size)
 
     FMC_DISABLE_AP_UPDATE();
     FMC_DISABLE_LD_UPDATE();
+#if defined(FMC_DATA_FLASH_BASE)
     FMC_DISABLE_DF_UPDATE();
+#endif
 
 Exit2:
 
@@ -268,8 +278,10 @@ int nu_fmc_erase(long addr, size_t size)
         FMC_ENABLE_AP_UPDATE();
     else if ((addr < FMC_LDROM_END) && addr >= FMC_LDROM_BASE)
         FMC_ENABLE_LD_UPDATE();
+#if defined(FMC_DATA_FLASH_BASE)
     else if ((addr < FMC_DATA_FLASH_END) && addr >= FMC_DATA_FLASH_BASE)
         FMC_ENABLE_DF_UPDATE();
+#endif
     else
         goto Exit2;
 
@@ -353,6 +365,7 @@ static int ldrom_erase(long offset, size_t size)
     return nu_fmc_erase(g_falFMC_LD.addr + offset, size);
 }
 
+#if defined(FMC_DATA_FLASH_BASE)
 static int dataflash_read(long offset, uint8_t *buf, size_t size)
 {
     return nu_fmc_read(g_falFMC_DF.addr + offset, buf, size);
@@ -367,6 +380,8 @@ static int dataflash_erase(long offset, size_t size)
 {
     return nu_fmc_erase(g_falFMC_DF.addr + offset, size);
 }
+#endif
+
 #endif /* RT_USING_FAL */
 
 static int nu_fmc_init(void)

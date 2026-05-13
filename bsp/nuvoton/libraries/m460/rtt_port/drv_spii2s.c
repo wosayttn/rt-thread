@@ -1,30 +1,45 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_SPII2S)
 
-#include <rtdevice.h>
-#include <drv_pdma.h>
-#include <drv_i2s.h>
+#include "drv_i2s.h"
+#include "drv_pdma.h"
+#include "rtdbg.h"
+#include "rtdevice.h"
 
-/* Private define ---------------------------------------------------------------*/
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.spii2s"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
 #define DBG_ENABLE
 #define DBG_LEVEL DBG_LOG
 #define DBG_SECTION_NAME  "spii2s"
 #define DBG_COLOR
-#include <rtdbg.h>
 
+#define DEFINE_NU_SPII2S(_idx)                \
+    {                                         \
+        .name = "spii2s" #_idx,              \
+        .i2s_base = (void *)SPI##_idx,        \
+        .i2s_rst = SPI##_idx##_RST,           \
+        .i2s_dais = {                         \
+            [NU_I2S_DAI_PLAYBACK] = {         \
+                .pdma_perp = PDMA_SPI##_idx##_TX, \
+            },                                \
+            [NU_I2S_DAI_CAPTURE] = {          \
+                .pdma_perp = PDMA_SPI##_idx##_RX, \
+            }                                 \
+        }                                     \
+    }
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     SPII2S_START = -1,
@@ -64,198 +79,63 @@ enum
     SPII2S_CNT
 };
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_spii2s_getcaps(struct rt_audio_device *audio, struct rt_audio_caps *caps);
 static rt_err_t nu_spii2s_configure(struct rt_audio_device *audio, struct rt_audio_caps *caps);
 static rt_err_t nu_spii2s_init(struct rt_audio_device *audio);
 static rt_err_t nu_spii2s_start(struct rt_audio_device *audio, int stream);
 static rt_err_t nu_spii2s_stop(struct rt_audio_device *audio, int stream);
 static void nu_spii2s_buffer_info(struct rt_audio_device *audio, struct rt_audio_buf_info *info);
-/* Public functions -------------------------------------------------------------*/
-rt_err_t nu_spii2s_acodec_register(struct rt_audio_device *audio, nu_acodec_ops_t);
+static int rt_hw_spii2s_init(void);
 
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct nu_i2s g_nu_spii2s_arr [] =
 {
-
 #if defined(BSP_USING_SPII2S0)
-    {
-        .name = "spii2s0",
-        .i2s_base  = (I2S_T *)SPI0, //Avoid warning
-        .i2s_rst   = SPI0_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI0_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI0_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(0),
 #endif
-
 #if defined(BSP_USING_SPII2S1)
-    {
-        .name = "spii2s1",
-        .i2s_base  = (I2S_T *)SPI1, //Avoid warning
-        .i2s_rst   = SPI1_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI1_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI1_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(1),
 #endif
-
 #if defined(BSP_USING_SPII2S2)
-    {
-        .name = "spii2s2",
-        .i2s_base  = (I2S_T *)SPI2, //Avoid warning
-        .i2s_rst   = SPI2_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI2_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI2_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(2),
 #endif
 
 #if defined(BSP_USING_SPII2S3)
-    {
-        .name = "spii2s3",
-        .i2s_base  = (I2S_T *)SPI3, //Avoid warning
-        .i2s_rst   = SPI3_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI3_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI3_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(3),
 #endif
 
 #if defined(BSP_USING_SPII2S4)
-    {
-        .name = "spii2s4",
-        .i2s_base  = (I2S_T *)SPI4, //Avoid warning
-        .i2s_rst   = SPI4_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI4_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI4_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(4),
 #endif
 
 #if defined(BSP_USING_SPII2S5)
-    {
-        .name = "spii2s5",
-        .i2s_base  = (I2S_T *)SPI5, //Avoid warning
-        .i2s_rst   = SPI5_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI5_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI5_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(5),
 #endif
 
 #if defined(BSP_USING_SPII2S6)
-    {
-        .name = "spii2s6",
-        .i2s_base  = (I2S_T *)SPI6, //Avoid warning
-        .i2s_rst   = SPI6_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI6_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI6_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(6),
 #endif
 
 #if defined(BSP_USING_SPII2S7)
-    {
-        .name = "spii2s7",
-        .i2s_base  = (I2S_T *)SPI7, //Avoid warning
-        .i2s_rst   = SPI7_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI7_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI7_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(7),
 #endif
 
 #if defined(BSP_USING_SPII2S8)
-    {
-        .name = "spii2s8",
-        .i2s_base  = (I2S_T *)SPI8, //Avoid warning
-        .i2s_rst   = SPI8_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI8_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI8_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(8),
 #endif
 
 #if defined(BSP_USING_SPII2S9)
-    {
-        .name = "spii2s9",
-        .i2s_base  = (I2S_T *)SPI9, //Avoid warning
-        .i2s_rst   = SPI9_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI9_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI9_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(9),
 #endif
 
 #if defined(BSP_USING_SPII2S10)
-    {
-        .name = "spii2s10",
-        .i2s_base  = (I2S_T *)SPI10, //Avoid warning
-        .i2s_rst   = SPI10_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_SPI10_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_SPI10_RX,
-            }
-        }
-    },
+    DEFINE_NU_SPII2S(10),
 #endif
 
 };
 
+/* Functions Implementation --------------------------------------------------*/
 static void nu_pdma_spii2s_rx_cb(void *pvUserData, uint32_t u32EventFilter)
 {
     nu_i2s_t psNuSPII2s = (nu_i2s_t)pvUserData;
@@ -323,7 +203,6 @@ static rt_err_t nu_spii2s_pdma_sc_config(nu_i2s_t psNuSPII2s, E_NU_I2S_DAI dai)
     default:
         return -RT_EINVAL;
     }
-    /* Register ISR callback function */
     sChnCB.m_eCBType = eCBType_Event;
     sChnCB.m_pfnCBHandler = pfm_pdma_cb;
     sChnCB.m_pvUserData = (void *)psNuSPII2s;
@@ -345,8 +224,6 @@ static rt_err_t nu_spii2s_pdma_sc_config(nu_i2s_t psNuSPII2s, E_NU_I2S_DAI dai)
                                     0);  // Interrupt assert when every SG-table done.
         RT_ASSERT(result == RT_EOK);
     }
-
-    /* Assign head descriptor */
     result = nu_pdma_sg_transfer(psNuSPII2sDai->pdma_chanid, psNuSPII2sDai->pdma_descs[0], 0);
     RT_ASSERT(result == RT_EOK);
 
@@ -462,7 +339,7 @@ static rt_err_t nu_spii2s_getcaps(struct rt_audio_device *audio, struct rt_audio
         default:
             result = -RT_ERROR;
             break;
-        } // switch (caps->sub_type)
+        }
         break;
 
     case AUDIO_TYPE_MIXER:
@@ -476,9 +353,9 @@ static rt_err_t nu_spii2s_getcaps(struct rt_audio_device *audio, struct rt_audio
 
             default:
                 return pNuACodecOps->nu_acodec_mixer_query(caps->sub_type, (rt_uint32_t *)&caps->udata.value);
-            } // switch (caps->sub_type)
+            }
 
-        } // if (pNuACodecOps->nu_acodec_mixer_query)
+        }
 
         result = -RT_ERROR;
         break;
@@ -505,14 +382,14 @@ static rt_err_t nu_spii2s_getcaps(struct rt_audio_device *audio, struct rt_audio
         default:
             result = -RT_ERROR;
             break;
-        } // switch (caps->sub_type)
+        }
         break;
 
     default:
         result = -RT_ERROR;
         break;
 
-    } // switch (caps->main_type)
+    }
 
     return result;
 }
@@ -579,7 +456,7 @@ static rt_err_t nu_spii2s_configure(struct rt_audio_device *audio, struct rt_aud
         default:
             result = -RT_ERROR;
             break;
-        } // switch (caps->sub_type)
+        }
 
         if (bNeedReset)
         {
@@ -591,7 +468,7 @@ static rt_err_t nu_spii2s_configure(struct rt_audio_device *audio, struct rt_aud
     default:
         result = -RT_ERROR;
         break;
-    } // switch (caps->main_type)
+    }
 
     return result;
 }
@@ -694,8 +571,6 @@ static rt_err_t nu_spii2s_stop(struct rt_audio_device *audio, int stream)
     default:
         return -RT_EINVAL;
     }
-
-    /* Stop DMA transfer. */
     nu_pdma_channel_terminate(psNuSPII2sDai->pdma_chanid);
 
     /* Close SPII2S */
@@ -705,8 +580,6 @@ static rt_err_t nu_spii2s_stop(struct rt_audio_device *audio, int stream)
         SPII2S_Close(spii2s_base);
         LOG_I("Close SPII2S.");
     }
-
-    /* Silence */
     rt_memset((void *)psNuSPII2sDai->fifo, 0, NU_I2S_DMA_FIFO_SIZE);
     psNuSPII2sDai->fifo_block_idx = 0;
 
@@ -755,7 +628,7 @@ nu_hw_spii2s_pdma_allocate:
     return -(RT_ERROR);
 }
 
-int rt_hw_spii2s_init(void)
+static int rt_hw_spii2s_init(void)
 {
     int j = 0;
     nu_i2s_dai_t psNuSPII2sDai;
@@ -775,10 +648,8 @@ int rt_hw_spii2s_init(void)
             psNuSPII2sDai->pdma_chanid = -1;
             psNuSPII2sDai->fifo_block_idx = 0;
             RT_ASSERT(nu_hw_spii2s_pdma_allocate(psNuSPII2sDai) == RT_EOK);
-            RT_ASSERT(nu_pdma_sgtbls_allocate(&psNuSPII2sDai->pdma_descs[0], NU_I2S_DMA_BUF_BLOCK_NUMBER) == RT_EOK);
+            RT_ASSERT(nu_pdma_sgtbls_allocate(psNuSPII2sDai->pdma_chanid, &psNuSPII2sDai->pdma_descs[0], NU_I2S_DMA_BUF_BLOCK_NUMBER) == RT_EOK);
         }
-
-        /* Register ops of audio device */
         g_nu_spii2s_arr[j].audio.ops  = &nu_spii2s_audio_ops;
 
         /* Register device, RW: it is with replay and record functions. */
@@ -787,5 +658,6 @@ int rt_hw_spii2s_init(void)
 
     return RT_EOK;
 }
+
 INIT_DEVICE_EXPORT(rt_hw_spii2s_init);
 #endif //#if defined(BSP_USING_SPII2S)

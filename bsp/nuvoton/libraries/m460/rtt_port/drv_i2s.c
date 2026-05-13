@@ -1,30 +1,44 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_I2S)
 
-#include <rtdevice.h>
-#include <drv_pdma.h>
-#include <drv_i2s.h>
+#include "drv_i2s.h"
+#include "drv_pdma.h"
+#include "rtdevice.h"
 
-/* Private define ---------------------------------------------------------------*/
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.i2s"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
 #define DBG_ENABLE
 #define DBG_LEVEL DBG_LOG
 #define DBG_SECTION_NAME  "i2s"
 #define DBG_COLOR
-#include <rtdbg.h>
 
+#define DEFINE_NU_I2S(_idx)                         \
+    {                                               \
+        .name = "sound" #_idx,                      \
+        .i2s_base = I2S##_idx,                      \
+        .i2s_rst = I2S##_idx##_RST,                 \
+        .i2s_dais = {                               \
+            [NU_I2S_DAI_PLAYBACK] = {               \
+                .pdma_perp = PDMA_I2S##_idx##_TX,   \
+            },                                      \
+            [NU_I2S_DAI_CAPTURE] = {                \
+                .pdma_perp = PDMA_I2S##_idx##_RX,   \
+            }                                       \
+        }                                           \
+    }
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     I2S_START = -1,
@@ -37,51 +51,27 @@ enum
     I2S_CNT
 };
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_i2s_getcaps(struct rt_audio_device *audio, struct rt_audio_caps *caps);
 static rt_err_t nu_i2s_configure(struct rt_audio_device *audio, struct rt_audio_caps *caps);
 static rt_err_t nu_i2s_init(struct rt_audio_device *audio);
 static rt_err_t nu_i2s_start(struct rt_audio_device *audio, int stream);
 static rt_err_t nu_i2s_stop(struct rt_audio_device *audio, int stream);
 static void nu_i2s_buffer_info(struct rt_audio_device *audio, struct rt_audio_buf_info *info);
-/* Public functions -------------------------------------------------------------*/
-rt_err_t nu_i2s_acodec_register(nu_acodec_ops_t);
 
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct nu_i2s nu_i2s_arr[] =
 {
 #if defined(BSP_USING_I2S0)
-    {
-        .name = "sound0",
-        .i2s_base  = I2S0,
-        .i2s_rst   = I2S0_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_I2S0_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_I2S0_RX,
-            }
-        }
-    },
+    DEFINE_NU_I2S(0),
 #endif
 #if defined(BSP_USING_I2S1)
-    {
-        .name = "sound1",
-        .i2s_base  = I2S1,
-        .i2s_rst   = I2S1_RST,
-        .i2s_dais = {
-            [NU_I2S_DAI_PLAYBACK] = {
-                .pdma_perp = PDMA_I2S1_TX,
-            },
-            [NU_I2S_DAI_CAPTURE] = {
-                .pdma_perp = PDMA_I2S1_RX,
-            }
-        }
-    },
+    DEFINE_NU_I2S(1),
 #endif
 };
 
+/* Functions Implementation --------------------------------------------------*/
+rt_err_t nu_i2s_acodec_register(nu_acodec_ops_t);
 static void nu_pdma_i2s_rx_cb(void *pvUserData, uint32_t u32EventFilter)
 {
     nu_i2s_t psNuI2s = (nu_i2s_t)pvUserData;
@@ -149,7 +139,6 @@ static rt_err_t nu_i2s_pdma_sc_config(nu_i2s_t psNuI2s, E_NU_I2S_DAI dai)
     default:
         return -RT_EINVAL;
     }
-    /* Register ISR callback function */
     sChnCB.m_eCBType = eCBType_Event;
     sChnCB.m_pfnCBHandler = pfm_pdma_cb;
     sChnCB.m_pvUserData = (void *)psNuI2s;
@@ -172,8 +161,6 @@ static rt_err_t nu_i2s_pdma_sc_config(nu_i2s_t psNuI2s, E_NU_I2S_DAI dai)
                                     0);  // Interrupt assert when every SG-table done.
         RT_ASSERT(result == RT_EOK);
     }
-
-    /* Assign head descriptor */
     result = nu_pdma_sg_transfer(psNuI2sDai->pdma_chanid, psNuI2sDai->pdma_descs[0], 0);
     RT_ASSERT(result == RT_EOK);
 
@@ -186,7 +173,7 @@ static rt_bool_t nu_i2s_capacity_check(struct rt_audio_configure *pconfig)
     {
     case  8:
     case 16:
-    /* case 24: PDMA constrain */
+    case 24:
     case 32:
         break;
     default:
@@ -254,9 +241,6 @@ static rt_err_t nu_i2s_dai_setup(nu_i2s_t psNuI2s, struct rt_audio_configure *pc
         {
             LOG_W("Real sample rate: %d Hz != preferred sample rate: %d Hz\n", real_samplerate, pconfig->samplerate);
         }
-
-        /* Set MCLK and enable MCLK */
-        /* The target MCLK is related to audio codec setting. */
         I2S_EnableMCLK(psNuI2s->i2s_base, 12000000);
 
         /* Set unmute */
@@ -297,7 +281,7 @@ static rt_err_t nu_i2s_getcaps(struct rt_audio_device *audio, struct rt_audio_ca
         default:
             result = -RT_ERROR;
             break;
-        } // switch (caps->sub_type)
+        }
         break;
 
     case AUDIO_TYPE_MIXER:
@@ -311,9 +295,9 @@ static rt_err_t nu_i2s_getcaps(struct rt_audio_device *audio, struct rt_audio_ca
 
             default:
                 return pNuACodecOps->nu_acodec_mixer_query(caps->sub_type, (rt_uint32_t *)&caps->udata.value);
-            } // switch (caps->sub_type)
+            }
 
-        } // if (pNuACodecOps->nu_acodec_mixer_query)
+        }
 
         result = -RT_ERROR;
         break;
@@ -340,14 +324,14 @@ static rt_err_t nu_i2s_getcaps(struct rt_audio_device *audio, struct rt_audio_ca
         default:
             result = -RT_ERROR;
             break;
-        } // switch (caps->sub_type)
+        }
         break;
 
     default:
         result = -RT_ERROR;
         break;
 
-    } // switch (caps->main_type)
+    }
 
     return result;
 }
@@ -373,7 +357,6 @@ static rt_err_t nu_i2s_configure(struct rt_audio_device *audio, struct rt_audio_
         if (psNuI2s->AcodecOps->nu_acodec_mixer_control)
             psNuI2s->AcodecOps->nu_acodec_mixer_control(caps->sub_type, caps->udata.value);
         break;
-
 
     case AUDIO_TYPE_INPUT:
         stream = AUDIO_STREAM_RECORD;
@@ -417,7 +400,7 @@ static rt_err_t nu_i2s_configure(struct rt_audio_device *audio, struct rt_audio_
         default:
             result = -RT_ERROR;
             break;
-        } // switch (caps->sub_type)
+        }
 
         if (bNeedReset)
         {
@@ -428,7 +411,7 @@ static rt_err_t nu_i2s_configure(struct rt_audio_device *audio, struct rt_audio_
     default:
         result = -RT_ERROR;
         break;
-    } // switch (caps->main_type)
+    }
 
     return result;
 }
@@ -532,8 +515,6 @@ static rt_err_t nu_i2s_stop(struct rt_audio_device *audio, int stream)
     default:
         return -RT_EINVAL;
     }
-
-    /* Stop DMA transfer. */
     nu_pdma_channel_terminate(psNuI2sDai->pdma_chanid);
 
     /* Close I2S */
@@ -543,8 +524,6 @@ static rt_err_t nu_i2s_stop(struct rt_audio_device *audio, int stream)
         I2S_Close(psNuI2s->i2s_base);
         LOG_I("Close I2S.");
     }
-
-    /* Silence */
     rt_memset((void *)psNuI2sDai->fifo, 0, NU_I2S_DMA_FIFO_SIZE);
     psNuI2sDai->fifo_block_idx = 0;
 
@@ -610,6 +589,7 @@ int rt_hw_i2s_init(void)
         for (i = 0; i < NU_I2S_DAI_CNT; i++)
         {
             uint8_t *pu8ptr = rt_malloc(NU_I2S_DMA_FIFO_SIZE);
+            RT_ASSERT(pu8ptr != RT_NULL);
             psNuI2sDai = &nu_i2s_arr[j].i2s_dais[i];
             psNuI2sDai->fifo = pu8ptr;
             rt_memset(pu8ptr, 0, NU_I2S_DMA_FIFO_SIZE);
@@ -620,10 +600,8 @@ int rt_hw_i2s_init(void)
             psNuI2sDai->fifo_block_idx = 0;
             RT_ASSERT(nu_hw_i2s_pdma_allocate(psNuI2sDai) == RT_EOK);
 
-            RT_ASSERT(nu_pdma_sgtbls_allocate(&psNuI2sDai->pdma_descs[0], NU_I2S_DMA_BUF_BLOCK_NUMBER) == RT_EOK);
+            RT_ASSERT(nu_pdma_sgtbls_allocate(psNuI2sDai->pdma_chanid, &psNuI2sDai->pdma_descs[0], NU_I2S_DMA_BUF_BLOCK_NUMBER) == RT_EOK);
         }
-
-        /* Register ops of audio device */
         nu_i2s_arr[j].audio.ops  = &nu_i2s_audio_ops;
 
         /* Register device, RW: it is with replay and record functions. */

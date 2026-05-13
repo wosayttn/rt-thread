@@ -57,6 +57,7 @@ enum
 #endif
     SPII2S_CNT
 };
+
 /* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_spii2s_getcaps(struct rt_audio_device *audio, struct rt_audio_caps *caps);
 static rt_err_t nu_spii2s_configure(struct rt_audio_device *audio, struct rt_audio_caps *caps);

@@ -13,7 +13,7 @@
 #ifndef _FAL_CFG_H_
 #define _FAL_CFG_H_
 
-#include <fal.h>
+#include "fal.h"
 #include "drv_fmc.h"
 #include "rtconfig.h"
 

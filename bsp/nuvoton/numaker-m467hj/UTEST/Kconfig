@@ -1,0 +1,8 @@
+config UTEST_CMD_PREFIX
+    string
+    default "numicro.bsp.utest." if BOARD_USE_UTEST
+
+config BOARD_USE_UTEST
+    bool
+    select RT_USING_UTEST
+    default y

@@ -19,6 +19,7 @@
 #define DBG_COLOR
 #include <rtdbg.h>
 
+#if defined(RT_USING_DFS)
 #include <dfs_fs.h>
 #include <dfs_file.h>
 #include <unistd.h>
@@ -53,12 +54,6 @@ const void   *data;
 
 const struct dfs_mount_tbl mount_table[] =
 {
-#if defined(PKG_USING_RAMDISK)
-    { RAMDISK_UDC, "/mnt/ram_usbd", "elm", 0, RT_NULL },
-#endif
-#if defined(RT_USING_DFS_UFFS)
-    { "nand1", "/mnt/filesystem", "uffs", 0, RT_NULL },
-#endif
     { "sd0", "/mnt/sd0", "elm", 0, RT_NULL },
     { "sd0p0", "/mnt/sd0p0", "elm", 0, RT_NULL },
     { "sd0p1", "/mnt/sd0p1", "elm", 0, RT_NULL },
@@ -269,5 +264,7 @@ exit_mnt_init_spiflash0:
     return 0;
 }
 INIT_APP_EXPORT(mnt_init_spiflash0);
+
 #endif
 
+#endif

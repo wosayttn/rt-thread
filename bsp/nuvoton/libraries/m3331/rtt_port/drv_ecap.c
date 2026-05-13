@@ -32,6 +32,13 @@
         .modid = ECAP##_mod##_MODULE \
     }
 
+#define DEFINE_ECAP_IRQ_HANDLER(_idx)            \
+void ECAP##_idx##_IRQHandler(void)               \
+{                                                \
+    rt_interrupt_enter();                        \
+    nu_ecap_isr(&nu_ecap_arr[ECAP##_idx##_IDX]); \
+    rt_interrupt_leave();                        \
+}
 
 /* Types / Structures ---------------------------------------------------------*/
 enum
@@ -93,14 +100,7 @@ static struct rt_inputcapture_ops nu_ecap_ops =
 
 /* Functions Implementation --------------------------------------------------*/
 #if defined(BSP_USING_ECAP0)
-void ECAP0_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_ecap_isr((void *)&nu_ecap_arr[ECAP0_IDX]);
-
-    rt_interrupt_leave();
-}
+DEFINE_ECAP_IRQ_HANDLER(0)
 #endif
 
 static void nu_ecap_isr(nu_ecap_t psNuEcapBase)

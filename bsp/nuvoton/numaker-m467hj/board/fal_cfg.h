@@ -4,61 +4,67 @@
 *
 * SPDX-License-Identifier: Apache-2.0
 *
-* Change Logs:
-* Date            Author       Notes
-* 2022-4-1        Wayne        First version
 *
 ******************************************************************************/
 
 #ifndef _FAL_CFG_H_
 #define _FAL_CFG_H_
 
-#include <rtconfig.h>
-#include <board.h>
+#include "fal.h"
+#include "drv_fmc.h"
+#include "rtconfig.h"
 
 /* ===================== Flash device Configuration ========================= */
 #if defined(FAL_PART_HAS_TABLE_CFG)
 
+/* ---------------- FMC ---------------- */
 #if defined(BSP_USING_FMC)
-    extern const struct fal_flash_dev Onchip_aprom_flash;
-    extern const struct fal_flash_dev Onchip_ldrom_flash;
-#endif
-
-#if defined(FAL_USING_SFUD_PORT)
-    extern struct fal_flash_dev nor_flash0;
-#endif
-
-#if defined(BSP_USING_FMC) && defined(FAL_USING_SFUD_PORT)
-#define FAL_FLASH_DEV_TABLE         \
-{                                   \
-    &Onchip_aprom_flash,            \
-      &Onchip_ldrom_flash,            \
-    &nor_flash0,                    \
-}
-#elif defined(BSP_USING_FMC)
-#define FAL_FLASH_DEV_TABLE         \
-{                                   \
-    &Onchip_aprom_flash,            \
-      &Onchip_ldrom_flash,            \
-    &nor_flash0,                    \
-}
-#elif defined(FAL_USING_SFUD_PORT)
-#define FAL_FLASH_DEV_TABLE         \
-{                                   \
-    &nor_flash0,                    \
-}
+#define IFDEF_BOARD_USING_FMC   &g_falFMC_AP, &g_falFMC_LD,
+#define FAL_PART_FMC  \
+            {FAL_PART_MAGIC_WORD, "ldrom",     "FMC_LD",  0x0,    (8*1024),   0},  \
+            {FAL_PART_MAGIC_WORD, "aprom",     "FMC_AP",  0x0,    (1*1024*1024), 0},
 #else
-#define FAL_FLASH_DEV_TABLE         \
-{                                   \
-}
+#define IFDEF_BOARD_USING_FMC
+#define FAL_PART_FMC
 #endif
 
-#define FAL_PART_TABLE                                                        \
-{                                                                             \
-    {FAL_PART_MAGIC_WORD,   "filesystem",     FAL_USING_NOR_FLASH_DEV_NAME,    0,   8*1024*1024, 0},  \
-    {FAL_PART_MAGIC_WORD,        "ldrom",     "OnChip_LDROM",                  0,        0x1000, 0},  \
-    {FAL_PART_MAGIC_WORD,        "aprom",     "OnChip_APROM",            0x60000,       0x20000, 0},  \
-}
+/* ---------------- QSPI ---------------- */
+#if defined(BOARD_USING_QSPI_FLASH)
+extern struct fal_flash_dev        nor_flash0;
+#define IFDEF_BOARD_USING_QSPI     &nor_flash0,
+#define FAL_PART_QSPI \
+            {FAL_PART_MAGIC_WORD, "filesystem", FAL_USING_NOR_FLASH_DEV_NAME, 0, (2 * 1024 * 1024), 0},
+#else
+#define IFDEF_BOARD_USING_QSPI
+#define FAL_PART_QSPI
+#endif
+
+/* ---------------- Device Table ---------------- */
+#if defined(BSP_USING_FMC) || defined(BOARD_USING_QSPI_FLASH)
+#define FAL_FLASH_DEV_TABLE     \
+        {                               \
+            IFDEF_BOARD_USING_FMC       \
+            IFDEF_BOARD_USING_QSPI      \
+        }
+#else
+#define FAL_FLASH_DEV_TABLE { }
+#endif
+
+/* ---------------- Partition Table ---------------- */
+#if defined(BSP_USING_FMC) || defined(BOARD_USING_QSPI_FLASH)
+#define FAL_PART_TABLE          \
+        {                               \
+            FAL_PART_FMC                \
+            FAL_PART_QSPI               \
+        }
+#else
+#define FAL_PART_TABLE { }
+#endif
+
+#else   /* !FAL_PART_HAS_TABLE_CFG */
+
+#define FAL_FLASH_DEV_TABLE  { }
+#define FAL_PART_TABLE  { }
 
 #endif /* FAL_PART_HAS_TABLE_CFG */
 

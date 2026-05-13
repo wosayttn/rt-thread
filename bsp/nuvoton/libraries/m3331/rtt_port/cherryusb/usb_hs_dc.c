@@ -1,4 +1,10 @@
-/* Includes ------------------------------------------------------------------*/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 #include "NuMicro.h"
 #include "usbd_core.h"
@@ -9,13 +15,6 @@
 #define LOG_TAG "drv.usb.hs.dc"
 #define DBG_TAG LOG_TAG
 #include "drv_log.h"
-
-/* Functions Implementation --------------------------------------------------*/
-/*
- * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
 #define EPADR_SW2HW(address)    ((address == 0) ? (CEP) : (USB_EP_GET_IDX(address) - 1))
 #define EPADR_HW2SW(address)    (address + 1)
@@ -83,6 +82,8 @@ static const char *szCEPIF[] =
     "BUFEMPTYIF",
     "BIT9-RESERVED"
 };
+
+/* Functions Implementation --------------------------------------------------*/
 
 __STATIC_INLINE uint32_t HSUSBD_GetEpBufAddr(uint32_t u32HWEP)
 {
@@ -173,7 +174,6 @@ int usb_dc_init(uint8_t busid)
 
     usb_dc_low_level_init();
 
-    /*****************************************************/
     /* Initial USB engine */
     HSUSBD_ENABLE_PHY();
     /* wait PHY clock ready */

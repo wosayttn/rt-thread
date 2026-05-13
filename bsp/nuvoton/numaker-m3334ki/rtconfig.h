@@ -544,7 +544,5 @@
 #define NU_PKG_USING_UTILS
 /* end of Nuvoton Packages Config */
 /* end of Hardware Drivers Config */
-#define UTEST_CMD_PREFIX "bsp.nuvoton.utest."
-#define BOARD_USE_UTEST
 
 #endif

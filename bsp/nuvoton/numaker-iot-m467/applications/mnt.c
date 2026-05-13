@@ -19,6 +19,7 @@
 #define DBG_COLOR
 #include <rtdbg.h>
 
+#if defined(RT_USING_DFS)
 #include <dfs_fs.h>
 #include <dfs_file.h>
 #include <unistd.h>
@@ -159,5 +160,7 @@ exit_mnt_init_spiflash0:
     return 0;
 }
 INIT_APP_EXPORT(mnt_init_spiflash0);
+
 #endif
 
+#endif

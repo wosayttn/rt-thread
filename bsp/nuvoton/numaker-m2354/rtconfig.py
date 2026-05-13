@@ -8,7 +8,7 @@ CROSS_TOOL='gcc'
 if os.getenv('RTT_CC'):
 	CROSS_TOOL = os.getenv('RTT_CC')
 if os.getenv('RTT_ROOT'):
-    RTT_ROOT = os.getenv('RTT_ROOT')
+	RTT_ROOT = os.getenv('RTT_ROOT')
 
 # cross_tool provides the cross compiler
 # EXEC_PATH is the compiler execute path, for example, CodeSourcery, Keil MDK, IAR
@@ -19,9 +19,6 @@ if  CROSS_TOOL == 'gcc':
 elif CROSS_TOOL == 'keil':
 	PLATFORM 	= 'armclang'
 	EXEC_PATH 	= r'C:\Keil_v5'
-elif CROSS_TOOL == 'iar':
-	PLATFORM  = 'iccarm'
-	EXEC_PATH 	= r'C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.2'
 
 if os.getenv('RTT_EXEC_PATH'):
 	EXEC_PATH = os.getenv('RTT_EXEC_PATH')
@@ -46,7 +43,7 @@ if PLATFORM == 'gcc':
     DEVICE = ' -mcpu=cortex-m23 -mthumb -ffunction-sections -fdata-sections -Wuninitialized'
     CFLAGS = DEVICE + ' -Dgcc' # -D' + PART_TYPE
     AFLAGS = ' -c' + DEVICE + ' -x assembler-with-cpp -Wa,-mimplicit-it=thumb '
-    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread.map,-cref,-u,Reset_Handler -T ./linking_scripts/m2354_link.ld'
+    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread.map,-cref,-u,Reset_Handler -T ./linking_scripts/M2354.ld'
 
     CPATH = ''
     LPATH = ''
@@ -57,7 +54,7 @@ if PLATFORM == 'gcc':
     else:
         CFLAGS += ' -O2'
 
-    CXXFLAGS = CFLAGS 
+    CXXFLAGS = CFLAGS
 
     POST_ACTION = OBJCPY + ' -O binary $TARGET rtthread.bin\n' + SIZE + ' $TARGET \n'
 
@@ -72,7 +69,7 @@ elif PLATFORM == 'armclang':
     DEVICE = ' --cpu Cortex-M23'
     CFLAGS = DEVICE + ' --apcs=interwork'
     AFLAGS = DEVICE
-    LFLAGS = DEVICE + ' --info sizes --info totals --info unused --info veneers --list rtthread.map --scatter ./linking_scripts/m2354_flash.sct'
+    LFLAGS = DEVICE + ' --info sizes --info totals --info unused --info veneers --list rtthread.map --scatter ./linking_scripts/M2354.sct'
 
     LFLAGS += ' --keep *.o(.rti_fn.*)   --keep *.o(FSymTab) --keep *.o(VSymTab)'
 
@@ -86,47 +83,6 @@ elif PLATFORM == 'armclang':
         CFLAGS += ' -O2'
 
     POST_ACTION = 'fromelf --bin $TARGET --output rtthread.bin \nfromelf -z $TARGET'
-
-elif PLATFORM == 'iccarm':
-    # toolchains
-    CC = 'iccarm'
-    AS = 'iasmarm'
-    AR = 'iarchive'
-    LINK = 'ilinkarm'
-    TARGET_EXT = 'out'
-
-    CFLAGS = DEVICE
-    CFLAGS += ' --diag_suppress Pa050'
-    CFLAGS += ' --no_cse'
-    CFLAGS += ' --no_unroll'
-    CFLAGS += ' --no_inline'
-    CFLAGS += ' --no_code_motion'
-    CFLAGS += ' --no_tbaa'
-    CFLAGS += ' --no_clustering'
-    CFLAGS += ' --no_scheduling'
-    CFLAGS += ' --debug'
-    CFLAGS += ' --endian=little'
-    CFLAGS += ' --cpu=Cortex-M23'
-    CFLAGS += ' -e'
-    CFLAGS += ' --fpu=None'
-    CFLAGS += ' --dlib_config "' + EXEC_PATH + '/arm/INC/c/DLib_Config_Normal.h"'
-    CFLAGS += ' -Ol'
-    CFLAGS += ' --use_c++_inline'
-
-    AFLAGS = ''
-    AFLAGS += ' -s+'
-    AFLAGS += ' -w+'
-    AFLAGS += ' -r'
-    AFLAGS += ' --cpu Cortex-M23'
-    AFLAGS += ' --fpu None'
-
-    LFLAGS = ' --config ./linking_scripts/m2354_flash.icf'
-    LFLAGS += ' --redirect _Printf=_PrintfTiny'
-    LFLAGS += ' --redirect _Scanf=_ScanfSmall'
-    LFLAGS += ' --entry __iar_program_start'
-
-    EXEC_PATH += '/arm/bin/'
-    POST_ACTION = ''
 
 def dist_handle(BSP_ROOT, dist_dir):
     import sys

@@ -1,4 +1,10 @@
-/* Includes ------------------------------------------------------------------*/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ /* Includes ------------------------------------------------------------------*/
 #include "rtconfig.h"
 #include "rtdevice.h"
 #include "NuMicro.h"
@@ -10,11 +16,6 @@
 #include "drv_log.h"
 
 /* Functions Implementation --------------------------------------------------*/
-/*
- * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
 #if defined(BSP_USING_HSOTG)
 

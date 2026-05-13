@@ -1,32 +1,24 @@
-/**************************************************************************//**
- *
- * @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date            Author       Notes
- * 2022-3-16       Wayne        First version
- *
- ******************************************************************************/
+ */
 
+/* Includes ------------------------------------------------------------------*/
 #include <rtconfig.h>
 
 #if defined(BSP_USING_SCUART)
 
 #include "NuMicro.h"
+#include <drv_sys.h>
 #include <rtdevice.h>
 #include <rthw.h>
-#include <drv_sys.h>
 
-/* Private definition
- * ---------------------------------------------------------------*/
-#define LOG_TAG "drv.scuart"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME "drv.scuart"
-#define DBG_LEVEL DBG_ERROR
-#define DBG_COLOR
-#include <rtdbg.h>
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG                 "drv.scuart"
+#define DBG_TAG                 LOG_TAG
+#include "drv_log.h"
 
 enum
 {
@@ -43,8 +35,7 @@ enum
     SCUART_CNT
 };
 
-/* Private typedef
- * --------------------------------------------------------------*/
+/* Types / Structures ---------------------------------------------------------*/
 struct nu_scuart
 {
     rt_serial_t dev;
@@ -56,8 +47,7 @@ struct nu_scuart
 };
 typedef struct nu_scuart *nu_scuart_t;
 
-/* Private functions
- * ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_scuart_configure(struct rt_serial_device *serial,
                                     struct serial_configure *cfg);
 static rt_err_t nu_scuart_control(struct rt_serial_device *serial, int cmd,
@@ -66,6 +56,7 @@ static int nu_scuart_send(struct rt_serial_device *serial, char c);
 static int nu_scuart_receive(struct rt_serial_device *serial);
 static void nu_scuart_isr(nu_scuart_t psNuSCUart);
 
+/* Static Variables ----------------------------------------------------------*/
 static const struct rt_uart_ops nu_scuart_ops =
 {
     .configure = nu_scuart_configure,
@@ -98,6 +89,8 @@ static struct nu_scuart nu_scuart_arr[] =
 }; /* scuart nu_scuart */
 
 #if defined(BSP_USING_SCUART0)
+
+/* Functions Implementation --------------------------------------------------*/
 void SC0_IRQHandler(void)
 {
     rt_interrupt_enter();

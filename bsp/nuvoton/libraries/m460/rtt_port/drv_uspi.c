@@ -1,51 +1,74 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2020-7-15       YHkuo            First version
-*
-******************************************************************************/
-#include <rtconfig.h>
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_USPI)
 
-#define LOG_TAG                 "drv.uspi"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME        LOG_TAG
-#define DBG_LEVEL               DBG_INFO
-#define DBG_COLOR
-#include <rtdbg.h>
-
-#include <rthw.h>
-#include <rtdevice.h>
-#include <rtdef.h>
-
 #include "NuMicro.h"
-#include <nu_bitutil.h>
+#include "drv_pdma.h"
+#include "nu_bitutil.h"
+#include "rtdef.h"
+#include "rtdevice.h"
+#include "rthw.h"
 
-#if defined(BSP_USING_USPI_PDMA)
-    #include <drv_pdma.h>
-#endif
-/* Private define ---------------------------------------------------------------*/
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.uspi"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
 #ifndef NU_SPI_USE_PDMA_MIN_THRESHOLD
     #define NU_SPI_USE_PDMA_MIN_THRESHOLD (128)
 #endif
 
+#if defined(BSP_USING_USPI_PDMA)
+#if defined(BSP_USING_USPI0_PDMA)
+#define USPI0_PDMA_INIT                 \
+    .pdma_perp_tx = PDMA_USCI0_TX,      \
+    .pdma_perp_rx = PDMA_USCI0_RX,
+#else
+#define USPI0_PDMA_INIT                 \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#if defined(BSP_USING_USPI1_PDMA)
+#define USPI1_PDMA_INIT                 \
+    .pdma_perp_tx = PDMA_USCI1_TX,      \
+    .pdma_perp_rx = PDMA_USCI1_RX,
+#else
+#define USPI1_PDMA_INIT                 \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+#else
+#define USPI0_PDMA_INIT
+#define USPI1_PDMA_INIT
+#endif
+
+#define DEFINE_NU_USPI(_idx, _pdma_init)    \
+    {                                       \
+        .name = "uspi" #_idx,              \
+        .uspi_base = USPI##_idx,            \
+        _pdma_init                          \
+    }
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     USPI_START = -1,
 #if defined(BSP_USING_USPI0)
     USPI0_IDX,
 #endif
+#if defined(BSP_USING_USPI1)
+    USPI1_IDX,
+#endif
     USPI_CNT
 };
-
-/* Private typedef --------------------------------------------------------------*/
 struct nu_uspi
 {
     struct  rt_spi_bus  dev;
@@ -63,25 +86,22 @@ struct nu_uspi
 };
 typedef struct nu_uspi *uspi_t;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_uspi_bus_configure(struct rt_spi_device *device, struct rt_spi_configuration *configuration);
-static rt_uint32_t nu_uspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_message *message);
+static rt_ssize_t nu_uspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_message *message);
 static void nu_uspi_transmission_with_poll(struct nu_uspi *uspi_bus,
         uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word);
 static int nu_uspi_register_bus(struct nu_uspi *uspi_bus, const char *name);
 static void nu_uspi_drain_rxfifo(USPI_T *uspi_base);
-
 #if defined(BSP_USING_USPI_PDMA)
     static void nu_pdma_uspi_rx_cb_event(void *pvUserData, uint32_t u32EventFilter);
     static rt_err_t nu_pdma_uspi_rx_config(struct nu_uspi *uspi_bus, uint8_t *pu8Buf, int32_t i32RcvLen, uint8_t bytes_per_word);
     static rt_err_t nu_pdma_uspi_tx_config(struct nu_uspi *uspi_bus, const uint8_t *pu8Buf, int32_t i32SndLen, uint8_t bytes_per_word);
-    static rt_ssize_t nu_uspi_pdma_transmit(struct nu_uspi *uspi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word);
+    static rt_size_t nu_uspi_pdma_transmit(struct nu_uspi *uspi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word);
     static rt_err_t nu_hw_uspi_pdma_allocate(struct nu_uspi *uspi_bus);
 #endif
-/* Public functions -------------------------------------------------------------*/
 
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct rt_spi_ops nu_uspi_poll_ops =
 {
     .configure = nu_uspi_bus_configure,
@@ -91,23 +111,14 @@ static struct rt_spi_ops nu_uspi_poll_ops =
 static struct nu_uspi nu_uspi_arr [] =
 {
 #if defined(BSP_USING_USPI0)
-    {
-        .name = "uspi0",
-        .uspi_base = USPI0,
-
-#if defined(BSP_USING_USPI_PDMA)
-#if defined(BSP_USING_USPI0_PDMA)
-        .pdma_perp_tx = PDMA_USCI0_TX,
-        .pdma_perp_rx = PDMA_USCI0_RX,
-#else
-        .pdma_perp_tx = NU_PDMA_UNUSED,
-        .pdma_perp_rx = NU_PDMA_UNUSED,
-#endif  //BSP_USING_USPI0_PDMA
-#endif  //BSP_USING_USPI_PDMA
-    },
+    DEFINE_NU_USPI(0, USPI0_PDMA_INIT),
+#endif
+#if defined(BSP_USING_USPI1)
+    DEFINE_NU_USPI(1, USPI1_PDMA_INIT),
 #endif
 }; /* uspi nu_uspi */
 
+/* Functions Implementation --------------------------------------------------*/
 static rt_err_t nu_uspi_bus_configure(struct rt_spi_device *device,
                                       struct rt_spi_configuration *configuration)
 {
@@ -139,27 +150,21 @@ static rt_err_t nu_uspi_bus_configure(struct rt_spi_device *device,
         u32SPIMode = USPI_MODE_3;
         break;
     default:
-        ret = -RT_EIO;
+        ret = RT_EIO;
         goto exit_nu_uspi_bus_configure;
     }
-
-    /* Check data width */
     if (!(configuration->data_width == 8  ||
             configuration->data_width == 16))
     {
-        ret = -RT_EINVAL;
+        ret = RT_EINVAL;
         goto exit_nu_uspi_bus_configure;
     }
-
-    /* Try to set clock and get actual uspi bus clock */
     u32BusClock = USPI_SetBusClock(uspi_bus->uspi_base, configuration->max_hz);
     if (configuration->max_hz > u32BusClock)
     {
-        LOG_W("%s clock max frequency is %dHz (!= %dHz)\n", uspi_bus->name, u32BusClock, configuration->max_hz);
+        LOG_W("%s clock max frequency is %dHz ( != %dHz)\n", uspi_bus->name, u32BusClock, configuration->max_hz);
         configuration->max_hz = u32BusClock;
     }
-
-    /* Need to initialize new configuration? */
     if (rt_memcmp(configuration, &uspi_bus->configuration, sizeof(*configuration)) != 0)
     {
         rt_memcpy(&uspi_bus->configuration, configuration, sizeof(*configuration));
@@ -205,8 +210,6 @@ static rt_err_t nu_uspi_bus_configure(struct rt_spi_device *device,
             USPI_SET_LSB_FIRST(uspi_bus->uspi_base);
         }
     }
-
-    /* Clear USPI RX FIFO */
     nu_uspi_drain_rxfifo(uspi_bus->uspi_base);
 
 exit_nu_uspi_bus_configure:
@@ -268,8 +271,6 @@ static rt_err_t nu_pdma_uspi_rx_config(struct nu_uspi *uspi_bus, uint8_t *pu8Buf
     {
         goto exit_nu_pdma_uspi_rx_config;
     }
-
-    /* Register Disable engine dma trigger callback function */
     sChnCB.m_eCBType = eCBType_Disable;
     sChnCB.m_pfnCBHandler = nu_pdma_uspi_rx_cb_disable;
     sChnCB.m_pvUserData = (void *)uspi_base;
@@ -331,8 +332,6 @@ static rt_err_t nu_pdma_uspi_tx_config(struct nu_uspi *uspi_bus, const uint8_t *
         memctrl = eMemCtl_SrcInc_DstFix;
         src_addr = (rt_uint8_t *)pu8Buf;
     }
-
-    /* Register Disable engine dma trigger callback function */
     sChnCB.m_eCBType = eCBType_Trigger;
     sChnCB.m_pfnCBHandler = nu_pdma_uspi_tx_cb_trigger;
     sChnCB.m_pvUserData = (void *)uspi_base;
@@ -358,11 +357,10 @@ exit_nu_pdma_uspi_tx_config:
     return result;
 }
 
-
 /**
  * USPI PDMA transfer
  **/
-static rt_ssize_t nu_uspi_pdma_transmit(struct nu_uspi *uspi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word)
+static rt_size_t nu_uspi_pdma_transmit(struct nu_uspi *uspi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word)
 {
     rt_err_t result = RT_EOK;
 
@@ -386,7 +384,6 @@ static rt_err_t nu_hw_uspi_pdma_allocate(struct nu_uspi *uspi_bus)
     {
         goto exit_nu_hw_uspi_pdma_allocate;
     }
-    /* Allocate USPI_RX nu_dma channel */
     else if ((uspi_bus->pdma_chanid_rx = nu_pdma_channel_allocate(uspi_bus->pdma_perp_rx)) < 0)
     {
         nu_pdma_channel_free(uspi_bus->pdma_chanid_tx);
@@ -402,7 +399,6 @@ exit_nu_hw_uspi_pdma_allocate:
 
     return -(RT_ERROR);
 }
-
 #endif
 
 static void nu_uspi_drain_rxfifo(USPI_T *uspi_base)
@@ -485,8 +481,7 @@ static void nu_uspi_transmission_with_poll(struct nu_uspi *uspi_bus,
             send_addr += nu_uspi_write(uspi_base, send_addr, bytes_per_word);
             length -= bytes_per_word;
         }
-    } // if (send_addr != RT_NULL && recv_addr == RT_NULL)
-    // Read-only
+    }
     else if ((send_addr == RT_NULL) && (recv_addr != RT_NULL))
     {
         uspi_bus->dummy = 0;
@@ -499,8 +494,7 @@ static void nu_uspi_transmission_with_poll(struct nu_uspi *uspi_bus,
             while (USPI_GET_RX_EMPTY_FLAG(uspi_base));
             recv_addr += nu_uspi_read(uspi_base, recv_addr, bytes_per_word);
         }
-    } // else if (send_addr == RT_NULL && recv_addr != RT_NULL)
-    // Read&Write
+    }
     else
     {
         while (length > 0)
@@ -513,9 +507,7 @@ static void nu_uspi_transmission_with_poll(struct nu_uspi *uspi_bus,
             while (USPI_GET_RX_EMPTY_FLAG(uspi_base));
             recv_addr += nu_uspi_read(uspi_base, recv_addr, bytes_per_word);
         }
-    } // else
-
-    /* Wait USPI RX or drain USPI RX-FIFO */
+    }
     if (recv_addr)
     {
         // Wait USPI transmission done
@@ -542,7 +534,6 @@ static void nu_uspi_transmission_with_poll(struct nu_uspi *uspi_bus,
 static void nu_uspi_transfer(struct nu_uspi *uspi_bus, uint8_t *tx, uint8_t *rx, int length, uint8_t bytes_per_word)
 {
     RT_ASSERT(uspi_bus != RT_NULL);
-
 #if defined(BSP_USING_USPI_PDMA)
     /* PDMA transfer constrains */
     if ((uspi_bus->pdma_chanid_rx >= 0) &&
@@ -557,7 +548,7 @@ static void nu_uspi_transfer(struct nu_uspi *uspi_bus, uint8_t *tx, uint8_t *rx,
 #endif
 }
 
-static rt_uint32_t nu_uspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_message *message)
+static rt_ssize_t nu_uspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_message *message)
 {
     struct nu_uspi *uspi_bus;
     struct rt_spi_configuration *configuration;

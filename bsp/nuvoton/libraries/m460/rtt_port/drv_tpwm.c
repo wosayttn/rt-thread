@@ -1,33 +1,37 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-* Note: 2 channels of a tpwm have the same output.
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
+#if defined(BSP_USING_TPWM)
 
-#if (defined(BSP_USING_TPWM) && defined(RT_USING_PWM))
+#include "NuMicro.h"
+#include "rtdevice.h"
 
-#define LOG_TAG                 "drv.tpwm"
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.tpwm"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
 #define DBG_ENABLE
 #define DBG_SECTION_NAME        LOG_TAG
 #define DBG_LEVEL               DBG_INFO
-#define TPWM_CHANNEL_NUM        2
-#include <rtdbg.h>
-
-#include <rtdevice.h>
-#include "NuMicro.h"
-
-/* Private define ---------------------------------------------------------------*/
+#define TPWM_CHANNEL_NUM        1
 #define NU_TPWM_DEVICE(tpwm) (nu_tpwm_t)(tpwm)
+#define DEFINE_NU_TPWM(_idx)            \
+    {                                   \
+        .name = "tpwm" #_idx,          \
+        .base = TIMER##_idx,            \
+        .rstidx = TMR##_idx##_RST,      \
+        .modid = TMR##_idx##_MODULE     \
+    }
 
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     TPWM_START = -1,
@@ -46,7 +50,6 @@ enum
     TPWM_CNT
 };
 
-/* Private typedef --------------------------------------------------------------*/
 struct nu_tpwm
 {
     struct rt_device_pwm  tpwm_dev;
@@ -54,31 +57,31 @@ struct nu_tpwm
     TIMER_T              *base;
     uint32_t              rstidx;
     uint32_t              modid;
-    rt_uint32_t           channel_mask; //TPWM_CH0 | TPWM_CH1
+    rt_uint32_t           channel_mask;
 } ;
 
 typedef struct nu_tpwm *nu_tpwm_t;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_tpwm_enable(struct rt_device_pwm *tpwm_dev, struct rt_pwm_configuration *tpwm_config, rt_bool_t enable);
 static rt_err_t nu_tpwm_set(struct rt_device_pwm *tpwm_dev, struct rt_pwm_configuration *tpwm_config);
 static rt_err_t nu_tpwm_get(struct rt_device_pwm *tpwm_dev, struct rt_pwm_configuration *tpwm_config);
 static rt_err_t nu_tpwm_control(struct rt_device_pwm *tpwm_dev, int cmd, void *arg);
 
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct nu_tpwm nu_tpwm_arr [] =
 {
 #if defined(BSP_USING_TPWM0)
-    { .name = "tpwm0", .base  = TIMER0, .rstidx = TMR0_RST, .modid = TMR0_MODULE  },
+    DEFINE_NU_TPWM(0),
 #endif
 #if defined(BSP_USING_TPWM1)
-    { .name = "tpwm1", .base  = TIMER1, .rstidx = TMR1_RST, .modid = TMR1_MODULE  },
+    DEFINE_NU_TPWM(1),
 #endif
 #if defined(BSP_USING_TPWM2)
-    { .name = "tpwm2", .base  = TIMER2, .rstidx = TMR2_RST, .modid = TMR2_MODULE  },
+    DEFINE_NU_TPWM(2),
 #endif
 #if defined(BSP_USING_TPWM3)
-    { .name = "tpwm3", .base  = TIMER3, .rstidx = TMR3_RST, .modid = TMR3_MODULE  },
+    DEFINE_NU_TPWM(3),
 #endif
 };
 
@@ -87,7 +90,7 @@ static struct rt_pwm_ops nu_tpwm_ops =
     nu_tpwm_control
 };
 
-/* Functions define ------------------------------------------------------------*/
+/* Functions Implementation --------------------------------------------------*/
 static rt_err_t nu_tpwm_enable(struct rt_device_pwm *tpwm_dev, struct rt_pwm_configuration *tpwm_config, rt_bool_t enable)
 {
     rt_err_t result = RT_EOK;
@@ -213,4 +216,4 @@ int rt_hw_tpwm_init(void)
 
 INIT_DEVICE_EXPORT(rt_hw_tpwm_init);
 
-#endif //#if (defined(BSP_USING_TPWM) && defined(RT_USING_PWM))
+#endif //#if defined(BSP_USING_TPWM)

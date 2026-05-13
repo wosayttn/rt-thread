@@ -1,44 +1,68 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if (defined(BSP_USING_GPIO) && defined(RT_USING_PIN))
 
-#include <rtdevice.h>
-#include <rthw.h>
 #include "NuMicro.h"
-#include <nu_bitutil.h>
-#include <drv_gpio.h>
+#include "drv_gpio.h"
+#include "nu_bitutil.h"
 #include <stdlib.h>
+#include "rtdevice.h"
+#include "rthw.h"
 
-/* Private define ---------------------------------------------------------------*/
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.gpio"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
 #define PORT_OFFSET         0x40
+
 #define IRQ_MAX_NUM         16            //Max support 32
+
 #define MAX_PORTH_PIN_MAX   11
 
-/* Private functions ------------------------------------------------------------*/
+#define DEFINE_GPIO_IRQ_HANDLER(_port)        \
+void GP##_port##_IRQHandler(void)             \
+{                                             \
+    rt_uint32_t int_status;                   \
+                                              \
+    rt_interrupt_enter();                     \
+                                              \
+    int_status = P##_port->INTSRC;            \
+    pin_irq_hdr(int_status, NU_P##_port);     \
+    P##_port->INTSRC = int_status;            \
+                                              \
+    rt_interrupt_leave();                     \
+}
 
+#if !defined(GPIO_PIN_DATA)
+    #define GPIO_PIN_DATA   GPIO_PIN_DATA_S
+#endif
+
+/* Types / Structures ---------------------------------------------------------*/
+
+/* Static Function Prototypes ------------------------------------------------*/
 static void nu_gpio_mode(struct rt_device *device, rt_base_t pin, rt_uint8_t mode);
 static void nu_gpio_write(struct rt_device *device, rt_base_t pin, rt_uint8_t value);
 static rt_ssize_t nu_gpio_read(struct rt_device *device, rt_base_t pin);
-static rt_err_t nu_gpio_attach_irq(struct rt_device *device, rt_int32_t pin, rt_uint8_t mode, void (*hdr)(void *args), void *args);
-static rt_err_t nu_gpio_detach_irq(struct rt_device *device, rt_int32_t pin);
+static rt_err_t nu_gpio_attach_irq(struct rt_device *device, rt_base_t pin, rt_uint8_t mode, void (*hdr)(void *args), void *args);
+static rt_err_t nu_gpio_detach_irq(struct rt_device *device, rt_base_t pin);
 static rt_err_t nu_gpio_irq_enable(struct rt_device *device, rt_base_t pin, rt_uint8_t enabled);
 static rt_base_t nu_gpio_pin_get(const char *name);
+static rt_err_t nu_port_check(rt_int32_t pin);
+static rt_int32_t nu_find_irqindex(rt_uint32_t pin_index);
+static void pin_irq_hdr(rt_uint32_t irq_status, rt_uint32_t port_index);
+static int rt_hw_gpio_init(void);
 
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct rt_pin_irq_hdr pin_irq_hdr_tab[IRQ_MAX_NUM];
+
 static struct rt_pin_ops nu_gpio_ops =
 {
     nu_gpio_mode,
@@ -50,17 +74,78 @@ static struct rt_pin_ops nu_gpio_ops =
     nu_gpio_pin_get,
 };
 
-static IRQn_Type au32GPIRQ[NU_PORT_CNT] = {GPA_IRQn, GPB_IRQn, GPC_IRQn, GPD_IRQn, GPE_IRQn, GPF_IRQn, GPG_IRQn, GPH_IRQn, GPI_IRQn, GPJ_IRQn};
+static IRQn_Type au32GPIRQ[NU_PORT_CNT] = 
+{
+    GPA_IRQn,
+    GPB_IRQn,
+    GPC_IRQn,
+    GPD_IRQn,
+    GPE_IRQn,
+    GPF_IRQn,
+    GPG_IRQn,
+#if defined(GPIOH_BASE)
+    GPH_IRQn,
+#endif
+#if defined(GPIOI_BASE)
+    GPI_IRQn,
+#endif
+#if defined(GPIOJ_BASE)
+    GPJ_IRQn,
+#endif
+#if defined(GPIOK_BASE)
+    GPK_IRQn,
+#endif
+#if defined(GPIOL_BASE)
+    GPL_IRQn,
+#endif
+#if defined(GPIOM_BASE)
+    GPM_IRQn,
+#endif
+#if defined(GPION_BASE)
+    GPN_IRQn,
+#endif
+};
 
 static rt_uint32_t g_u32PinIrqMask = 0x0;
 
-/* Functions define ------------------------------------------------------------*/
+/* Functions Implementation --------------------------------------------------*/
+
+DEFINE_GPIO_IRQ_HANDLER(A)
+DEFINE_GPIO_IRQ_HANDLER(B)
+DEFINE_GPIO_IRQ_HANDLER(C)
+DEFINE_GPIO_IRQ_HANDLER(D)
+DEFINE_GPIO_IRQ_HANDLER(E)
+DEFINE_GPIO_IRQ_HANDLER(F)
+DEFINE_GPIO_IRQ_HANDLER(G)
+#if defined(GPIOH_BASE)
+DEFINE_GPIO_IRQ_HANDLER(H)
+#endif
+#if defined(GPIOI_BASE)
+DEFINE_GPIO_IRQ_HANDLER(I)
+#endif
+#if defined(GPIOJ_BASE)
+DEFINE_GPIO_IRQ_HANDLER(J)
+#endif
+#if defined(GPIOK_BASE)
+DEFINE_GPIO_IRQ_HANDLER(K)
+#endif
+#if defined(GPIOL_BASE)
+DEFINE_GPIO_IRQ_HANDLER(L)
+#endif
+#if defined(GPIOM_BASE)
+DEFINE_GPIO_IRQ_HANDLER(M)
+#endif
+#if defined(GPION_BASE)
+DEFINE_GPIO_IRQ_HANDLER(N)
+#endif
+
+
 
 static rt_err_t nu_port_check(rt_int32_t pin)
 {
     if (NU_GET_PORT(pin) >= NU_PORT_CNT)
         return -(RT_ERROR);
-    else if ((NU_GET_PORT(pin) == NU_PJ) && (NU_GET_PINS(pin) > MAX_PORTH_PIN_MAX))
+    else if ((NU_GET_PORT(pin) == (NU_PORT_CNT-1)) && (NU_GET_PINS(pin) > MAX_PORTH_PIN_MAX))
         return -(RT_ERROR);
 
     return RT_EOK;
@@ -72,7 +157,7 @@ static rt_int32_t nu_find_irqindex(rt_uint32_t pin_index)
     rt_int32_t u32PinIrqStatus = g_u32PinIrqMask;
 
     // Find index of pin is attached in pool.
-    while ((irqindex = nu_ctz(u32PinIrqStatus)) < IRQ_MAX_NUM) // Count Trailing Zeros ==> Find First One
+    while ((irqindex = nu_ctz(u32PinIrqStatus)) < IRQ_MAX_NUM) // Count Trailing Zeros == > Find First One
     {
         if (pin_irq_hdr_tab[irqindex].pin == pin_index)
             return irqindex;
@@ -88,7 +173,7 @@ static void pin_irq_hdr(rt_uint32_t irq_status, rt_uint32_t port_index)
     rt_int32_t irqindex, i;
     rt_int32_t pinindex = port_index * GPIO_PIN_MAX ;
 
-    while ((i = nu_ctz(irq_status)) < GPIO_PIN_MAX)// Count Trailing Zeros ==> Find First One
+    while ((i = nu_ctz(irq_status)) < GPIO_PIN_MAX)// Count Trailing Zeros == > Find First One
     {
         int pin_mask = (1 << i);
         irqindex = nu_find_irqindex(pinindex + i);
@@ -99,14 +184,13 @@ static void pin_irq_hdr(rt_uint32_t irq_status, rt_uint32_t port_index)
                 pin_irq_hdr_tab[irqindex].hdr(pin_irq_hdr_tab[irqindex].args);
             }
         }
-        // Clear the served bit.
         irq_status &= ~pin_mask;
     }
 }
 
 static rt_base_t nu_gpio_pin_get(const char *name)
 {
-    /* Get pin number by name,such as PA.0, PF12 */
+    /* Get pin number by name, such as PA.0, PF12 */
     if ((name[2] == '\0') || ((name[2] == '.') && (name[3] == '\0')))
         return -(RT_EINVAL);
 
@@ -182,7 +266,7 @@ static rt_ssize_t nu_gpio_read(struct rt_device *device, rt_base_t pin)
     return GPIO_PIN_DATA(NU_GET_PORT(pin), NU_GET_PINS(pin));
 }
 
-static rt_err_t nu_gpio_attach_irq(struct rt_device *device, rt_int32_t pin, rt_uint8_t mode, void (*hdr)(void *args), void *args)
+static rt_err_t nu_gpio_attach_irq(struct rt_device *device, rt_base_t pin, rt_uint8_t mode, void (*hdr)(void *args), void *args)
 {
     rt_base_t level;
     rt_int32_t irqindex;
@@ -197,7 +281,7 @@ static rt_err_t nu_gpio_attach_irq(struct rt_device *device, rt_int32_t pin, rt_
         goto exit_nu_gpio_attach_irq;
 
     // Find available index of pin in pool.
-    if ((irqindex = nu_cto(g_u32PinIrqMask)) < IRQ_MAX_NUM)  // Count Trailing Ones ==> Find First Zero
+    if ((irqindex = nu_cto(g_u32PinIrqMask)) < IRQ_MAX_NUM)  // Count Trailing Ones == > Find First Zero
         goto exit_nu_gpio_attach_irq;
 
     rt_hw_interrupt_enable(level);
@@ -217,7 +301,7 @@ exit_nu_gpio_attach_irq:
     return RT_EOK;
 }
 
-static rt_err_t nu_gpio_detach_irq(struct rt_device *device, rt_int32_t pin)
+static rt_err_t nu_gpio_detach_irq(struct rt_device *device, rt_base_t pin)
 {
     rt_base_t level;
     rt_int32_t irqindex;
@@ -231,7 +315,7 @@ static rt_err_t nu_gpio_detach_irq(struct rt_device *device, rt_int32_t pin)
     u32PinIrqStatus = g_u32PinIrqMask;
 
     // Find index of pin is attached in pool.
-    while ((irqindex = nu_ctz(u32PinIrqStatus)) < IRQ_MAX_NUM)// Count Trailing Zeros ==> Find First One
+    while ((irqindex = nu_ctz(u32PinIrqStatus)) < IRQ_MAX_NUM)// Count Trailing Zeros == > Find First One
     {
         if (pin_irq_hdr_tab[irqindex].pin == pin)
         {
@@ -265,7 +349,7 @@ static rt_err_t nu_gpio_irq_enable(struct rt_device *device, rt_base_t pin, rt_u
     irqindex = nu_find_irqindex(pin);
     if (irqindex == -(RT_ERROR))
     {
-        ret = -RT_ERROR;
+        ret = RT_ERROR;
         goto exit_nu_gpio_irq_enable;
     }
 
@@ -301,7 +385,7 @@ exit_nu_gpio_irq_enable:
     return -(ret);
 }
 
-int rt_hw_gpio_init(void)
+static int rt_hw_gpio_init(void)
 {
     rt_int32_t irqindex;
     for (irqindex = 0; irqindex < IRQ_MAX_NUM ; irqindex++)
@@ -316,135 +400,5 @@ int rt_hw_gpio_init(void)
 }
 
 INIT_BOARD_EXPORT(rt_hw_gpio_init);
-
-void GPA_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PA->INTSRC;
-    pin_irq_hdr(int_status, NU_PA);
-    PA->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPB_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PB->INTSRC;
-    pin_irq_hdr(int_status, NU_PB);
-    PB->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPC_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PC->INTSRC;
-    pin_irq_hdr(int_status, NU_PC);
-    PC->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPD_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PD->INTSRC;
-    pin_irq_hdr(int_status, NU_PD);
-    PD->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPE_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PE->INTSRC;
-    pin_irq_hdr(int_status, NU_PE);
-    PE->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPF_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PF->INTSRC;
-    pin_irq_hdr(int_status, NU_PF);
-    PF->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPG_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PG->INTSRC;
-    pin_irq_hdr(int_status, NU_PG);
-    PG->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPH_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PH->INTSRC;
-    pin_irq_hdr(int_status, NU_PH);
-    PH->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPI_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PI->INTSRC;
-    pin_irq_hdr(int_status, NU_PI);
-    PI->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
-
-void GPJ_IRQHandler(void)
-{
-    rt_uint32_t int_status;
-
-    rt_interrupt_enter();
-
-    int_status = PJ->INTSRC;
-    pin_irq_hdr(int_status, NU_PJ);
-    PJ->INTSRC = int_status;
-
-    rt_interrupt_leave();
-}
 
 #endif //#if (defined(BSP_USING_GPIO) && defined(RT_USING_PIN))

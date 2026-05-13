@@ -1,26 +1,31 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-3-15       Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_WDT)
-#include <rthw.h>
-#include <rtdevice.h>
-#include <rtdbg.h>
-#include "NuMicro.h"
 
-/*-------------------------------------------------------------------------------*/
+#include "NuMicro.h"
+#include "rtdbg.h"
+#include "rtdevice.h"
+#include "rthw.h"
+
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.wdt"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
+
+/* Types / Structures ---------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
+
+/* Functions Implementation --------------------------------------------------*/
 /* watchdog timer timeout look up table                                          */
-/*-------------------------------------------------------------------------------*/
 /* clock = LIRC 32000Hz.                                                         */
 /*                                                                               */
 /*      working hz   toutsel     exp     cycles      timeout (s)                 */
@@ -33,7 +38,6 @@
 /*                   6           16      65536       2.0480                      */
 /*                   7           18      262144      8.1920                      */
 /*                   8           20      1048576     32.7680                     */
-/*-------------------------------------------------------------------------------*/
 /* clock = LXT 32768Hz.                                                          */
 /*                                                                               */
 /*      working hz   toutsel     exp     cycles      timeout (s)                 */
@@ -46,23 +50,6 @@
 /*                   6           16      65536       2.0000                      */
 /*                   7           18      262144      8.0000                      */
 /*                   8           20      1048576     32.000                      */
-/*-------------------------------------------------------------------------------*/
-/* clock = 96MHz HCLK divide 2048 = 93750 Hz.                                    */
-/*                                                                               */
-/*      working hz   toutsel     exp     cycles      timeout (s)                 */
-/*      46875        0           4       16          0.00034                     */
-/*                   1           6       64          0.00137                     */
-/*                   2           8       256         0.00546                     */
-/*                   3           10      1024        0.02185                     */
-/*                   4           12      4096        0.08738                     */
-/*                   5           14      16384       0.34953                     */
-/*                   6           16      65536       1.39810                     */
-/*                   7           18      262144      5.59241                     */
-/*                   8           20      1048576     22.3696                     */
-/*-------------------------------------------------------------------------------*/
-
-/* Private define ---------------------------------------------------------------*/
-
 /* Pick a suitable wdt timeout interval, it is a trade-off between the
    consideration of timeout accuracy and the system performance. The MIN_CYCLES
    parameter is a numerical value of the toutsel setting, and it must be set to
@@ -70,14 +57,12 @@
 #define MIN_TOUTSEL                 (WDT_TIMEOUT_2POW10)
 #define MIN_CYCLES                  (1024)
 
-
 /* Macros to convert the value between the timeout interval and the soft time iterations. */
 #define ROUND_TO_INTEGER(value)         ((int)(((value) * 10 + 5) / 10))
 #define CONV_SEC_TO_IT(hz, secs)        (ROUND_TO_INTEGER((float)((secs) * (hz)) / (float)(MIN_CYCLES)))
 #define CONV_IT_TO_SEC(hz, iterations)  (ROUND_TO_INTEGER((float)((iterations) * (MIN_CYCLES)) / (float)(hz)))
 
-
-/* Private typedef --------------------------------------------------------------*/
+/* Types / Structures ---------------------------------------------------------*/
 struct soft_time_handle
 {
     int clock_hz;
@@ -91,7 +76,7 @@ struct soft_time_handle
 
 typedef volatile struct soft_time_handle soft_time_handle_t;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t wdt_init(rt_watchdog_t *dev);
 static rt_err_t wdt_control(rt_watchdog_t *dev, int cmd, void *args);
 static uint32_t wdt_get_module_clock(void);
@@ -99,17 +84,14 @@ static uint32_t wdt_get_working_hz(void);
 static void soft_time_init(soft_time_handle_t *const soft_time);
 static void soft_time_setup(uint32_t wanted_sec, uint32_t hz, soft_time_handle_t *const soft_time);
 static void soft_time_feed_dog(soft_time_handle_t *const soft_time);
-
 #if defined(RT_USING_PM)
-    static int wdt_pm_suspend(const struct rt_device *device, rt_uint8_t mode);
+    static rt_err_t wdt_pm_suspend(const struct rt_device *device, rt_uint8_t mode);
     static void wdt_pm_resume(const struct rt_device *device, rt_uint8_t mode);
-    static int wdt_pm_frequency_change(const struct rt_device *device, rt_uint8_t mode);
+    static rt_err_t wdt_pm_frequency_change(const struct rt_device *device, rt_uint8_t mode);
     static void soft_time_freqeucy_change(uint32_t new_hz, soft_time_handle_t *const soft_time);
 #endif
 
-/* Public functions -------------------------------------------------------------*/
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct soft_time_handle soft_time;
 static struct rt_watchdog_device device_wdt;
 static struct rt_watchdog_ops ops_wdt =
@@ -117,7 +99,6 @@ static struct rt_watchdog_ops ops_wdt =
     .init = wdt_init,
     .control = wdt_control,
 };
-
 #if defined(RT_USING_PM)
 
 static struct rt_device_pm_ops device_pm_ops =
@@ -128,11 +109,12 @@ static struct rt_device_pm_ops device_pm_ops =
 };
 #endif
 
+/* Functions Implementation --------------------------------------------------*/
 
 #if defined(RT_USING_PM)
 
 /* device pm suspend() entry. */
-static int wdt_pm_suspend(const struct rt_device *device, rt_uint8_t mode)
+static rt_err_t wdt_pm_suspend(const struct rt_device *device, rt_uint8_t mode)
 {
     switch (mode)
     {
@@ -144,26 +126,16 @@ static int wdt_pm_suspend(const struct rt_device *device, rt_uint8_t mode)
 
     case PM_SLEEP_MODE_LIGHT:
     case PM_SLEEP_MODE_DEEP:
-    {
-        uint32_t u32RegLockBackup = SYS_IsRegLocked();
-        SYS_UnlockReg();
-
         WDT->CTL &= ~WDT_CTL_WDTEN_Msk;
 
-        if (u32RegLockBackup)
-            SYS_LockReg();
-
         break;
-    }
+
     default:
         break;
     }
 
     return (int)RT_EOK;
 }
-
-
-/* device pm resume() entry. */
 static void wdt_pm_resume(const struct rt_device *device, rt_uint8_t mode)
 {
     switch (mode)
@@ -176,31 +148,21 @@ static void wdt_pm_resume(const struct rt_device *device, rt_uint8_t mode)
 
     case PM_SLEEP_MODE_LIGHT:
     case PM_SLEEP_MODE_DEEP:
-    {
-        uint32_t u32RegLockBackup = SYS_IsRegLocked();
-        SYS_UnlockReg();
         WDT->CTL |= WDT_CTL_WDTEN_Msk;
-
-        if (u32RegLockBackup)
-            SYS_LockReg();
-    }
-    break;
+        break;
 
     default:
         break;
     }
 }
-
-
-/* device pm frequency_change() entry. */
-static int wdt_pm_frequency_change(const struct rt_device *device, rt_uint8_t mode)
+static rt_err_t wdt_pm_frequency_change(const struct rt_device *device, rt_uint8_t mode)
 {
     uint32_t clk, new_hz;
 
     new_hz = wdt_get_working_hz();
     clk = wdt_get_module_clock();
 
-    if (clk == CLK_CLKSEL1_WDTSEL_HCLK_DIV2048)
+    if (clk == CLK_CLKSEL1_WDT0SEL_HCLK_DIV2048)
     {
         if (new_hz == soft_time.clock_hz)
             return (int)(RT_EOK);
@@ -211,7 +173,6 @@ static int wdt_pm_frequency_change(const struct rt_device *device, rt_uint8_t mo
 
     return (int)(RT_EOK);
 }
-
 
 static void soft_time_freqeucy_change(uint32_t new_hz, soft_time_handle_t *const soft_time)
 {
@@ -248,26 +209,16 @@ static void soft_time_freqeucy_change(uint32_t new_hz, soft_time_handle_t *const
 }
 #endif
 
-
 static void hw_wdt_init(void)
 {
-    uint32_t u32RegLockBackup = SYS_IsRegLocked();
-    SYS_UnlockReg();
-
-    if (WDT_GET_RESET_FLAG())
+    if (WDT_GET_RESET_FLAG(WDT))
     {
         LOG_W("System re-boots from watchdog timer reset.\n");
-        WDT_CLEAR_RESET_FLAG();
+        WDT_CLEAR_RESET_FLAG(WDT);
     }
 
-    if (u32RegLockBackup)
-        SYS_LockReg();
-
-    NVIC_EnableIRQ(WDT_IRQn);
+    NVIC_EnableIRQ(WDT0_IRQn);
 }
-
-
-/* wdt device driver initialize. */
 int rt_hw_wdt_init(void)
 {
     rt_err_t ret;
@@ -276,7 +227,6 @@ int rt_hw_wdt_init(void)
 
     device_wdt.ops = &ops_wdt;
     ret = rt_hw_watchdog_register(&device_wdt, "wdt", RT_DEVICE_FLAG_RDWR, RT_NULL);
-
 #if defined(RT_USING_PM)
 
     rt_pm_device_register((struct rt_device *)&device_wdt, &device_pm_ops);
@@ -285,7 +235,6 @@ int rt_hw_wdt_init(void)
     return (int)ret;
 }
 INIT_BOARD_EXPORT(rt_hw_wdt_init);
-
 
 /* Register rt-thread device.init() entry. */
 static rt_err_t wdt_init(rt_watchdog_t *dev)
@@ -296,12 +245,10 @@ static rt_err_t wdt_init(rt_watchdog_t *dev)
     return RT_EOK;
 }
 
-
 static uint32_t wdt_get_module_clock(void)
 {
-    return (CLK_GetModuleClockSource(WDT_MODULE) << CLK_CLKSEL1_WDTSEL_Pos);
+    return (CLK_GetModuleClockSource(WDT0_MODULE) << CLK_CLKSEL1_WDT0SEL_Pos);
 }
-
 
 static uint32_t wdt_get_working_hz(void)
 {
@@ -311,15 +258,16 @@ static uint32_t wdt_get_working_hz(void)
 
     switch (clk)
     {
-    case CLK_CLKSEL1_WDTSEL_LIRC:
+
+    case CLK_CLKSEL1_WDT0SEL_LIRC:
         hz = __LIRC;
         break;
 
-    case CLK_CLKSEL1_WDTSEL_LXT:
+    case CLK_CLKSEL1_WDT0SEL_LXT:
         hz = __LXT;
         break;
 
-    case CLK_CLKSEL1_WDTSEL_HCLK_DIV2048:
+    case CLK_CLKSEL1_WDT0SEL_HCLK_DIV2048:
         hz = CLK_GetHCLKFreq() / 2048;
         break;
 
@@ -330,13 +278,10 @@ static uint32_t wdt_get_working_hz(void)
     return hz;
 }
 
-
 static void soft_time_init(soft_time_handle_t *const soft_time)
 {
     rt_memset((void *)soft_time, 0, sizeof(struct soft_time_handle));
-
 }
-
 
 static void soft_time_setup(uint32_t wanted_sec, uint32_t hz, soft_time_handle_t *const soft_time)
 {
@@ -355,27 +300,18 @@ static void soft_time_setup(uint32_t wanted_sec, uint32_t hz, soft_time_handle_t
     rt_hw_interrupt_enable(level);
 }
 
-
 static void soft_time_feed_dog(soft_time_handle_t *const soft_time)
 {
     soft_time->feed_dog = RT_TRUE;
 }
-
-
-/* Register rt-thread device.control() entry. */
 static rt_err_t wdt_control(rt_watchdog_t *dev, int cmd, void *args)
 {
     uint32_t wanted_sec, hz;
     uint32_t *buf;
     rt_err_t ret = RT_EOK;
-    uint32_t u32RegLockBackup;
 
     if (dev == NULL)
         return -(RT_EINVAL);
-
-    u32RegLockBackup = SYS_IsRegLocked();
-
-    SYS_UnlockReg();
 
     hz = wdt_get_working_hz();
 
@@ -385,7 +321,7 @@ static rt_err_t wdt_control(rt_watchdog_t *dev, int cmd, void *args)
 
         if (args == RT_NULL)
         {
-            ret = -RT_EINVAL;
+            ret = RT_EINVAL;
             break;
         }
 
@@ -399,7 +335,7 @@ static rt_err_t wdt_control(rt_watchdog_t *dev, int cmd, void *args)
 
         if (wanted_sec == 0)
         {
-            ret = -RT_EINVAL;
+            ret = RT_EINVAL;
             break;
         }
 
@@ -410,7 +346,7 @@ static rt_err_t wdt_control(rt_watchdog_t *dev, int cmd, void *args)
 
         if (args == RT_NULL)
         {
-            ret = -RT_EINVAL;
+            ret = RT_EINVAL;
             break;
         }
 
@@ -426,49 +362,41 @@ static rt_err_t wdt_control(rt_watchdog_t *dev, int cmd, void *args)
 
     case RT_DEVICE_CTRL_WDT_START:
 
-        WDT_RESET_COUNTER();
-        WDT_Open(MIN_TOUTSEL, WDT_RESET_DELAY_1026CLK, TRUE, TRUE);
-        WDT_EnableInt();
+        WDT_RESET_COUNTER(WDT);
+        WDT_Open(WDT, MIN_TOUTSEL, WDT_RESET_DELAY_1026CLK, TRUE, TRUE);
+        WDT_EnableInt(WDT);
         break;
 
     case RT_DEVICE_CTRL_WDT_STOP:
 
-        WDT_Close();
+        WDT_Close(WDT);
         break;
 
     default:
-        ret = -RT_ERROR;
+        ret = RT_ERROR;
     }
-
-    if (u32RegLockBackup)
-        SYS_LockReg();
 
     return -(ret);
 }
-
-
-/* wdt interrupt entry */
-void WDT_IRQHandler(void)
+void WDT0_IRQHandler(void)
 {
     rt_interrupt_enter();
 
     /* Clear wdt interrupt flag */
-    if (WDT_GET_TIMEOUT_INT_FLAG())
+    if (WDT_GET_TIMEOUT_INT_FLAG(WDT))
     {
-        WDT_CLEAR_TIMEOUT_INT_FLAG();
+        WDT_CLEAR_TIMEOUT_INT_FLAG(WDT);
     }
-
-    /* Clear wdt wakeup flag */
-    if (WDT_GET_TIMEOUT_WAKEUP_FLAG())
+    if (WDT_GET_TIMEOUT_WAKEUP_FLAG(WDT))
     {
-        WDT_CLEAR_TIMEOUT_WAKEUP_FLAG();
+        WDT_CLEAR_TIMEOUT_WAKEUP_FLAG(WDT);
     }
 
     /* The soft time has not reached the configured timeout yet. Clear the wdt counter
        any way to prevent the system from hardware wdt reset. */
     if (soft_time.left_iterations-- > 0)
     {
-        WDT_RESET_COUNTER();
+        WDT_RESET_COUNTER(WDT);
     }
 
     /* The soft time reaches the configured timeout boundary. Clear the wdt
@@ -477,7 +405,7 @@ void WDT_IRQHandler(void)
     {
         if ((soft_time.feed_dog) && (!soft_time.expired))
         {
-            WDT_RESET_COUNTER();
+            WDT_RESET_COUNTER(WDT);
             soft_time.feed_dog =  RT_FALSE;
             soft_time.left_iterations = soft_time.full_iterations;
         }
@@ -490,7 +418,4 @@ void WDT_IRQHandler(void)
 
     rt_interrupt_leave();
 }
-
 #endif /* BSP_USING_WDT */
-
-

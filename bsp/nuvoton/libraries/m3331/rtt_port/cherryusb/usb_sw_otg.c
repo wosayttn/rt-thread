@@ -1,4 +1,10 @@
-/* Includes ------------------------------------------------------------------*/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ /* Includes ------------------------------------------------------------------*/
 #include "rtthread.h"
 #include "rtdevice.h"
 #include "NuMicro.h"
@@ -11,11 +17,6 @@
 #include "drv_log.h"
 
 /* Functions Implementation --------------------------------------------------*/
-/*
- * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
 #if defined(BOARD_USING_USB_SWOTG) && defined(RT_USING_ADC) && defined(RT_USING_PIN)
 

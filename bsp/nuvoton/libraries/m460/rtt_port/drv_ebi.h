@@ -1,18 +1,12 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2020-7-9        Philo            First version
-*
-******************************************************************************/
-#ifndef __DRV_EBI_H___
-#define __DRV_EBI_H___
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtdevice.h>
+#ifndef __DRV_EBI_H__
+#define __DRV_EBI_H__
+#include "rtdevice.h"
 #include "NuMicro.h"
 
 /**

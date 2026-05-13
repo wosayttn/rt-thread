@@ -6,6 +6,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "rtconfig.h"
+
 #if defined(BSP_USING_LLSI)
 
 #include "drv_llsi.h"

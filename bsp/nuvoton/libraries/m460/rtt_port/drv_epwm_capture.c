@@ -1,25 +1,58 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2021-10-19      Wayne            First version
-*
-******************************************************************************/
-#include <rtconfig.h>
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
 #if defined(BSP_USING_EPWM_CAPTURE)
 
-#include <rtdevice.h>
 #include "drv_sys.h"
+#include "rtdevice.h"
 
-/* Private typedef --------------------------------------------------------------*/
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.epwmcap"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
+#define STR(x) #x
+#define XSTR(x) STR(x)
+#define CONCAT3(a, b, c) a##b##c
+#define XCONCAT3(a, b, c) CONCAT3(a, b, c)
+#define MAKE_EPWM_CAPTURE_NAME(x, y) XSTR(XCONCAT3(epwm, x, y))
+
+#define MAKE_EPWM_CAPTURE_INSTANCE(x, y, z) \
+    { \
+        .name  = MAKE_EPWM_CAPTURE_NAME(x, y), \
+        .base  = EPWM##x, \
+        .irqn = EPWM##x##P##z##_IRQn, \
+        .rstidx = EPWM##x##_RST, \
+        .modid = EPWM##x##_MODULE, \
+    },
+
+#define FOR_EACH_EPWM_CHANNEL(x) \
+    MAKE_EPWM_CAPTURE_INSTANCE(x, i0, 0) \
+    MAKE_EPWM_CAPTURE_INSTANCE(x, i1, 0) \
+    MAKE_EPWM_CAPTURE_INSTANCE(x, i2, 1) \
+    MAKE_EPWM_CAPTURE_INSTANCE(x, i3, 1) \
+    MAKE_EPWM_CAPTURE_INSTANCE(x, i4, 2) \
+    MAKE_EPWM_CAPTURE_INSTANCE(x, i5, 2)
+
+#define MAKE_EPWM_ISR(x, y, z) \
+    void EPWM##x##P##y##_IRQHandler(void) \
+    { \
+       rt_interrupt_enter(); \
+       nu_epwmcap_isr(&nu_epwmcap_arr[EPWM##x##I##z##_IDX]); \
+       nu_epwmcap_isr(&nu_epwmcap_arr[EPWM##x##I##z##_IDX + 1]); \
+       rt_interrupt_leave(); \
+    }
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
-    EPWM_START = -1,
+    EPWM_IDX_START = -1,
 #if defined(BSP_USING_EPWM0_CAPTURE)
     EPWM0I0_IDX,
     EPWM0I1_IDX,
@@ -36,7 +69,7 @@ enum
     EPWM1I4_IDX,
     EPWM1I5_IDX,
 #endif
-    EPWM_CNT
+    EPWM_IDX_CNT
 };
 
 struct nu_epwmcap
@@ -46,7 +79,7 @@ struct nu_epwmcap
     char        *name;
     IRQn_Type    irqn;
     uint32_t     rstidx;
-    uint32_t     modid;
+    uint64_t     modid;
 
     uint8_t     u8Channel;
     uint32_t    u32CurrentRisingCnt;
@@ -55,114 +88,35 @@ struct nu_epwmcap
 };
 typedef struct nu_epwmcap *nu_epwmcap_t;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_epwmcap_init(struct rt_inputcapture_device *inputcapture);
 static rt_err_t nu_epwmcap_open(struct rt_inputcapture_device *inputcapture);
 static rt_err_t nu_epwmcap_close(struct rt_inputcapture_device *inputcapture);
 static rt_err_t nu_epwmcap_get_pulsewidth(struct rt_inputcapture_device *inputcapture, rt_uint32_t *pulsewidth_us);
 static rt_err_t CalPulseWidth(nu_epwmcap_t psNuEpwmCap);
 static void nu_epwmcap_isr(nu_epwmcap_t psNuEpwmCap);
+static int rt_hw_epwmcap_init(void);
 
-/* Public functions -------------------------------------------------------------*/
-
-
-/* Private variables ------------------------------------------------------------*/
+/* Static Variables ----------------------------------------------------------*/
 static struct nu_epwmcap nu_epwmcap_arr [] =
 {
 #if defined(BSP_USING_EPWM0_CAPTURE)
-    {  .base = EPWM0, .name = "epwm0i0", .irqn = EPWM0P0_IRQn, .rstidx = EPWM0_RST, .modid = EPWM0_MODULE },
-    {  .base = EPWM0, .name = "epwm0i1", .irqn = EPWM0P0_IRQn, .rstidx = EPWM0_RST, .modid = EPWM0_MODULE },
-    {  .base = EPWM0, .name = "epwm0i2", .irqn = EPWM0P1_IRQn, .rstidx = EPWM0_RST, .modid = EPWM0_MODULE },
-    {  .base = EPWM0, .name = "epwm0i3", .irqn = EPWM0P1_IRQn, .rstidx = EPWM0_RST, .modid = EPWM0_MODULE },
-    {  .base = EPWM0, .name = "epwm0i4", .irqn = EPWM0P2_IRQn, .rstidx = EPWM0_RST, .modid = EPWM0_MODULE },
-    {  .base = EPWM0, .name = "epwm0i5", .irqn = EPWM0P2_IRQn, .rstidx = EPWM0_RST, .modid = EPWM0_MODULE },
+    FOR_EACH_EPWM_CHANNEL(0)
 #endif
 #if defined(BSP_USING_EPWM1_CAPTURE)
-    {  .base = EPWM1, .name = "epwm1i0", .irqn = EPWM1P0_IRQn, .rstidx = EPWM1_RST, .modid = EPWM1_MODULE },
-    {  .base = EPWM1, .name = "epwm1i1", .irqn = EPWM1P0_IRQn, .rstidx = EPWM1_RST, .modid = EPWM1_MODULE },
-    {  .base = EPWM1, .name = "epwm1i2", .irqn = EPWM1P1_IRQn, .rstidx = EPWM1_RST, .modid = EPWM1_MODULE },
-    {  .base = EPWM1, .name = "epwm1i3", .irqn = EPWM1P1_IRQn, .rstidx = EPWM1_RST, .modid = EPWM1_MODULE },
-    {  .base = EPWM1, .name = "epwm1i4", .irqn = EPWM1P2_IRQn, .rstidx = EPWM1_RST, .modid = EPWM1_MODULE },
-    {  .base = EPWM1, .name = "epwm1i5", .irqn = EPWM1P2_IRQn, .rstidx = EPWM1_RST, .modid = EPWM1_MODULE },
-#endif
-#if (EPWM_CNT==0)
-    0
+    FOR_EACH_EPWM_CHANNEL(1)
 #endif
 };
 
 static struct rt_inputcapture_ops nu_epwmcap_ops =
 {
-    .init   =   nu_epwmcap_init,
-    .open   =   nu_epwmcap_open,
-    .close  =   nu_epwmcap_close,
-    .get_pulsewidth =   nu_epwmcap_get_pulsewidth,
+    .init   = nu_epwmcap_init,
+    .open   = nu_epwmcap_open,
+    .close  = nu_epwmcap_close,
+    .get_pulsewidth = nu_epwmcap_get_pulsewidth,
 };
 
-/* Functions define ------------------------------------------------------------*/
-#if defined(BSP_USING_EPWM0_CAPTURE)
-void EPWM0P0_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM0I0_IDX]);
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM0I1_IDX]);
-
-    rt_interrupt_leave();
-}
-
-void EPWM0P1_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM0I2_IDX]);
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM0I3_IDX]);
-
-    rt_interrupt_leave();
-}
-
-void EPWM0P2_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM0I4_IDX]);
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM0I5_IDX]);
-
-    rt_interrupt_leave();
-}
-#endif
-
-#if defined(BSP_USING_EPWM1_CAPTURE)
-void EPWM1P0_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM1I0_IDX]);
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM1I1_IDX]);
-
-    rt_interrupt_leave();
-}
-
-void EPWM1P1_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM1I2_IDX]);
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM1I3_IDX]);
-
-    rt_interrupt_leave();
-}
-
-void EPWM1P2_IRQHandler(void)
-{
-    rt_interrupt_enter();
-
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM1I4_IDX]);
-    nu_epwmcap_isr(&nu_epwmcap_arr[EPWM1I5_IDX]);
-
-    rt_interrupt_leave();
-}
-#endif
-
+/* Functions Implementation --------------------------------------------------*/
 static void nu_epwmcap_isr(nu_epwmcap_t psNuEpwmCap)
 {
     if (EPWM_GetCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel) != 0)
@@ -175,6 +129,18 @@ static void nu_epwmcap_isr(nu_epwmcap_t psNuEpwmCap)
     }
 }
 
+#if defined(BSP_USING_EPWM0_CAPTURE)
+    MAKE_EPWM_ISR(0, 0, 0);
+    MAKE_EPWM_ISR(0, 1, 2);
+    MAKE_EPWM_ISR(0, 2, 4);
+#endif
+
+#if defined(BSP_USING_EPWM1_CAPTURE)
+    MAKE_EPWM_ISR(1, 0, 0);
+    MAKE_EPWM_ISR(1, 1, 2);
+    MAKE_EPWM_ISR(1, 2, 4);
+#endif
+
 static rt_err_t CalPulseWidth(nu_epwmcap_t psNuEpwmCap)
 {
     rt_bool_t bWrapAroundFlag = RT_FALSE;
@@ -185,8 +151,6 @@ static rt_err_t CalPulseWidth(nu_epwmcap_t psNuEpwmCap)
         EPWM_ClearWrapAroundFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel);
         bWrapAroundFlag = RT_TRUE;
     }
-
-    /* Read the capture counter value if falling/rising edge */
     if (EPWM_GetCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel) == 1)//Rising edge
     {
         EPWM_ClearCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_RISING_LATCH);
@@ -239,7 +203,7 @@ static rt_err_t nu_epwmcap_get_pulsewidth(struct rt_inputcapture_device *inputca
     }
     else
     {
-        ret = -RT_ERROR;
+        ret = RT_ERROR;
     }
     return -(ret);
 }
@@ -302,13 +266,12 @@ static rt_err_t nu_epwmcap_close(struct rt_inputcapture_device *inputcapture)
     return ret;
 }
 
-/* Init and register epwm capture */
-int rt_hw_epwmcap_init(void)
+static int rt_hw_epwmcap_init(void)
 {
     int i;
     rt_err_t ret = RT_EOK;
 
-    for (i = (EPWM_START + 1); i < EPWM_CNT; i++)
+    for (i = (EPWM_IDX_START + 1); i < EPWM_IDX_CNT; i++)
     {
         nu_epwmcap_t psNuEpwmCap = &nu_epwmcap_arr[i];
 
@@ -323,8 +286,6 @@ int rt_hw_epwmcap_init(void)
             CLK_EnableModuleClock(psNuEpwmCap->modid);
             SYS_ResetModule(psNuEpwmCap->rstidx);
         }
-
-        /* register inputcapture device */
         ret = rt_device_inputcapture_register(&psNuEpwmCap->parent, psNuEpwmCap->name, psNuEpwmCap);
         RT_ASSERT(ret == RT_EOK);
     }
@@ -332,5 +293,4 @@ int rt_hw_epwmcap_init(void)
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_hw_epwmcap_init);
-
 #endif //#if defined(BSP_USING_EPWM_CAPTURE)

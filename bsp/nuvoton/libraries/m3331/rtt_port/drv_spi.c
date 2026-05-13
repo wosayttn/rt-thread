@@ -20,6 +20,7 @@
 #include "drv_log.h"
 
 #if defined(BSP_USING_SPI_PDMA)
+
 #if defined(BSP_USING_SPI0_PDMA)
 #define SPI0_PDMA_INIT                  \
     .pdma_perp_tx = PDMA_SPI0_TX,       \
@@ -49,10 +50,13 @@
     .pdma_perp_tx = NU_PDMA_UNUSED,     \
     .pdma_perp_rx = NU_PDMA_UNUSED,
 #endif
+
 #else
+
 #define SPI0_PDMA_INIT
 #define SPI1_PDMA_INIT
 #define SPI2_PDMA_INIT
+
 #endif
 
 #define DEFINE_NU_SPI(_idx, _pdma_init) \
@@ -62,7 +66,6 @@
         .rstidx = SPI##_idx##_RST,      \
         _pdma_init                      \
     }
-
 
 /* Types / Structures ---------------------------------------------------------*/
 enum

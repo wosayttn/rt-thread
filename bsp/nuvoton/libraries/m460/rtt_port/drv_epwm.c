@@ -1,30 +1,33 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2021-9-22       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
+/* Includes ------------------------------------------------------------------*/
+#include "rtconfig.h"
+#if defined(BSP_USING_EPWM)
 
-#if (defined(BSP_USING_EPWM) && defined(RT_USING_PWM))
-
-#define LOG_TAG                 "drv.epwm"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME        LOG_TAG
-#define DBG_LEVEL               DBG_INFO
-#define DBG_COLOR
-#include <rtdbg.h>
-
-#include <rtdevice.h>
-#include <rthw.h>
 #include "NuMicro.h"
+#include "rtdevice.h"
+#include "rthw.h"
 
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.epwm"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
+#define MAKE_EPWM_NAME(x)         #x
+#define MAKE_EPWM_INSTANCE(x) \
+    { \
+        .name  = MAKE_EPWM_NAME(epwm##x), \
+        .base  = EPWM##x, \
+        .rstidx = EPWM##x##_RST, \
+        .modid = EPWM##x##_MODULE, \
+    },
+
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     EPWM_START = -1,
@@ -45,30 +48,30 @@ struct nu_epwm
     uint32_t             rstidx;
     uint32_t             modid;
 };
-
 typedef struct nu_epwm *nu_epwm_t;
+
+/* Static Function Prototypes ------------------------------------------------*/
+static rt_err_t nu_epwm_control(struct rt_device_pwm *device, int cmd, void *arg);
+static int rt_hw_epwm_init(void);
+
+/* Static Variables ----------------------------------------------------------*/
 
 static struct nu_epwm nu_epwm_arr [] =
 {
 #if defined(BSP_USING_EPWM0)
-    { .name = "epwm0", .base = EPWM0, .rstidx = EPWM0_RST, .modid = EPWM0_MODULE },
+    MAKE_EPWM_INSTANCE(0)
 #endif
-
 #if defined(BSP_USING_EPWM1)
-    { .name = "epwm1", .base = EPWM1, .rstidx = EPWM1_RST, .modid = EPWM1_MODULE },
-#endif
-
-#if (EPWM_CNT==0)
-    0
+    MAKE_EPWM_INSTANCE(1)
 #endif
 }; /* epwm nu_epwm */
-
-static rt_err_t nu_epwm_control(struct rt_device_pwm *device, int cmd, void *arg);
 
 static struct rt_pwm_ops nu_epwm_ops =
 {
     .control = nu_epwm_control
 };
+
+/* Functions Implementation --------------------------------------------------*/
 
 static rt_err_t nu_epwm_enable(struct rt_device_pwm *device, struct rt_pwm_configuration *configuration, rt_bool_t enable)
 {
@@ -182,7 +185,7 @@ static rt_err_t nu_epwm_control(struct rt_device_pwm *device, int cmd, void *arg
     return -(RT_EINVAL);
 }
 
-int rt_hw_epwm_init(void)
+static int rt_hw_epwm_init(void)
 {
     rt_err_t ret;
     int i;
@@ -203,4 +206,4 @@ int rt_hw_epwm_init(void)
 
 INIT_DEVICE_EXPORT(rt_hw_epwm_init);
 
-#endif
+#endif //#if defined(BSP_USING_EPWM)

@@ -37,6 +37,7 @@ static rt_uint32_t nu_crc_run(uint32_t u32OpMode,
 static struct rt_mutex s_CRC_mutex;
 
 /* Functions Implementation --------------------------------------------------*/
+#if defined (NU_CRC_USE_DEDICATED_DMA)
 void CRC_IRQHandler(void)
 {
     uint32_t u32CRCDMAStatus;
@@ -62,6 +63,7 @@ void CRC_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif
 
 /**
  * @brief  Run CRC calculation on input data buffer.

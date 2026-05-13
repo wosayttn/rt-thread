@@ -1,34 +1,26 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-8-16       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
+/* Includes ------------------------------------------------------------------*/
 #include <rtconfig.h>
 
 #if defined(BSP_USING_CCAP)
 
-#include <rthw.h>
 #include "NuMicro.h"
-#include "ccap_sensor.h"
 #include "drv_ccap.h"
+#include "ccap_sensor.h"
+#include <rthw.h>
 
-#define LOG_TAG    "drv.ccap"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME   LOG_TAG
-#define DBG_LEVEL   LOG_LVL_INFO
-#define DBG_COLOR
-#include <rtdbg.h>
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG                 "drv.ccap"
+#define DBG_TAG                 LOG_TAG
+#include "drv_log.h"
 
-
-/* Private Typedef --------------------------------------------------------------*/
-
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     CCAP_START = -1,
@@ -52,6 +44,10 @@ struct nu_ccap
 };
 typedef struct nu_ccap *nu_ccap_t;
 
+/* Static Function Prototypes ------------------------------------------------*/
+static void nu_ccap_isr(nu_ccap_t ccap);
+
+/* Static Variables ----------------------------------------------------------*/
 static struct nu_ccap nu_ccap_arr [] =
 {
 #if defined(BSP_USING_CCAP0)
@@ -66,6 +62,7 @@ static struct nu_ccap nu_ccap_arr [] =
 #endif
 };
 
+/* Functions Implementation --------------------------------------------------*/
 static void nu_ccap_isr(nu_ccap_t ccap)
 {
     CCAP_T *base = ccap->base;
@@ -124,12 +121,6 @@ static rt_err_t ccap_init(rt_device_t dev)
 
 static void ccap_sensor_setfreq(nu_ccap_t psNuCcap, uint32_t u32SensorFreq)
 {
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
-
-    /* Unlock protected registers */
-    if (u32RegLockLevel)
-        SYS_UnlockReg();
-
     if (u32SensorFreq > 0)
     {
         int32_t i32Div;
@@ -143,7 +134,6 @@ static void ccap_sensor_setfreq(nu_ccap_t psNuCcap, uint32_t u32SensorFreq)
         CLK_EnableModuleClock(psNuCcap->modid_ccap);
         CLK_SetModuleClock(psNuCcap->modid_ccap, CLK_CLKSEL0_CCAPSEL_HCLK, MODULE_NoMsk);
 
-
         CLK_EnableModuleClock(psNuCcap->modid_sensor);
         CLK_SetModuleClock(psNuCcap->modid_sensor, MODULE_NoMsk, CLK_CLKDIV3_VSENSE(i32Div));
         LOG_I("CCAP Engine clock:%d", CLK_GetHCLKFreq());
@@ -155,10 +145,6 @@ static void ccap_sensor_setfreq(nu_ccap_t psNuCcap, uint32_t u32SensorFreq)
         CLK_DisableModuleClock(psNuCcap->modid_ccap);
         CLK_DisableModuleClock(psNuCcap->modid_sensor);
     }
-
-    /* Lock protected registers */
-    if (u32RegLockLevel)
-        SYS_LockReg();
 }
 
 static rt_err_t ccap_pipe_configure(nu_ccap_t psNuCcap, ccap_view_info_t psViewInfo)
@@ -284,21 +270,11 @@ static rt_err_t ccap_open(rt_device_t dev, rt_uint16_t oflag)
 {
     nu_ccap_t psNuCcap = (nu_ccap_t)dev;
 
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
-
-    /* Unlock protected registers */
-    if (u32RegLockLevel)
-        SYS_UnlockReg();
-
     /* Enable clock */
     ccap_sensor_setfreq(psNuCcap, 24000000);
 
     /* Reset IP */
     SYS_ResetModule(psNuCcap->rstidx);
-
-    /* Lock protected registers */
-    if (u32RegLockLevel)
-        SYS_LockReg();
 
     /* Unmask External CCAP Interrupt */
     NVIC_EnableIRQ(psNuCcap->irqn);

@@ -20,11 +20,13 @@
 #include "drv_log.h"
 
 #if defined(RT_SERIAL_USING_DMA)
+
 #if defined(BSP_USING_UUART0_TX_DMA)
     #define UUART0_DMA_TX_INIT    .pdma_perp_tx = PDMA_USCI0_TX,
 #else
     #define UUART0_DMA_TX_INIT    .pdma_perp_tx = NU_PDMA_UNUSED,
 #endif
+
 #if defined(BSP_USING_UUART0_RX_DMA)
 #define UUART0_DMA_RX_INIT    .pdma_perp_rx = PDMA_USCI0_RX, \
                               .rx_write_offset = 0,
@@ -37,12 +39,14 @@
 #else
     #define UUART1_DMA_TX_INIT    .pdma_perp_tx = NU_PDMA_UNUSED,
 #endif
+
 #if defined(BSP_USING_UUART1_RX_DMA)
 #define UUART1_DMA_RX_INIT    .pdma_perp_rx = PDMA_USCI1_RX, \
                               .rx_write_offset = 0,
 #else
 #define UUART1_DMA_RX_INIT    .pdma_perp_rx = NU_PDMA_UNUSED,
 #endif
+
 #endif
 
 #define DEFINE_NU_UUART(_idx, _rst, _irqn, _tx_init, _rx_init) \
@@ -78,6 +82,7 @@ enum
 #endif
     UUART_CNT
 };
+
 struct nu_uuart
 {
     rt_serial_t dev;

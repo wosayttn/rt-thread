@@ -48,6 +48,14 @@
     MAKE_BPWM_CAPTURE_INSTANCE(x, i4) \
     MAKE_BPWM_CAPTURE_INSTANCE(x, i5)
 
+#define MAKE_BPWM_CAPTURE_ISR(x) \
+    void BPWM##x##_IRQHandler(void) \
+    { \
+       rt_interrupt_enter(); \
+       nu_bpwmcap_isr(&nu_bpwmcap_arr[BPWM##x##I0_IDX]); \
+       rt_interrupt_leave(); \
+    }
+
 /* Types / Structures ---------------------------------------------------------*/
 enum
 {
@@ -215,14 +223,6 @@ static void nu_bpwmcap_isr(nu_bpwmcap_t psNuBpwmCapBase)
 
     }
 }
-
-#define MAKE_BPWM_CAPTURE_ISR(x) \
-    void BPWM##x##_IRQHandler(void) \
-    { \
-       rt_interrupt_enter(); \
-       nu_bpwmcap_isr(&nu_bpwmcap_arr[BPWM##x##I0_IDX]); \
-       rt_interrupt_leave(); \
-    }
 
 #if defined(BSP_USING_BPWM0_CAPTURE)
     MAKE_BPWM_CAPTURE_ISR(0);

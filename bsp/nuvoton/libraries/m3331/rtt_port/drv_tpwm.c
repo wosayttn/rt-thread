@@ -9,7 +9,6 @@
 #if defined(BSP_USING_TPWM)
 
 #include "NuMicro.h"
-#include "rtdbg.h"
 #include "rtdevice.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -135,12 +134,6 @@ static rt_err_t nu_tpwm_set(struct rt_device_pwm *tpwm_dev, struct rt_pwm_config
     tpwm_freq = 1000000000 / tpwm_period;
     tpwm_dutycycle = (tpwm_pulse * 100) / tpwm_period;
 
-    LOG_I("[%s, %s] Period: %d", __func__, psNuTPWM->name, tpwm_config->period);
-    LOG_I("[%s, %s] Pulse: %d", __func__, psNuTPWM->name, tpwm_config->pulse);
-
-    LOG_I("[%s, %s] Freq: %d", __func__, psNuTPWM->name, tpwm_freq);
-    LOG_I("[%s, %s] Duty: %d", __func__, psNuTPWM->name, tpwm_dutycycle);
-
     TPWM_ConfigOutputFreqAndDuty(psNuTPWM->base, tpwm_freq, tpwm_dutycycle) ;
 
     return RT_EOK;
@@ -158,20 +151,14 @@ static rt_err_t nu_tpwm_get(struct rt_device_pwm *tpwm_dev, struct rt_pwm_config
     u32TPWMClockFreq = TIMER_GetModuleClock(psNuTPWM->base);
     time_tick = (uint64_t)1000000000000 / u32TPWMClockFreq;
 
-    LOG_I("[%s, %s] Prescale: %d", __func__, psNuTPWM->name, tpwm_prescale);
-    LOG_I("[%s, %s] Period: %d", __func__, psNuTPWM->name, tpwm_period);
-    LOG_I("[%s, %s] Pulse: %d", __func__, psNuTPWM->name, tpwm_pulse);
-    LOG_I("[%s, %s] ModuleFreq: %d", __func__, psNuTPWM->name, u32TPWMClockFreq);
-    LOG_I("[%s, %s] Tick: %d", __func__, psNuTPWM->name, time_tick);
+    LOG_I("%s reg--> %d %d %d %d %d\n", psNuTPWM->name, tpwm_prescale, tpwm_period, tpwm_pulse, u32TPWMClockFreq, time_tick);
 
     tpwm_real_period = (((tpwm_prescale + 1) * (tpwm_period + 1)) * time_tick) / 1000;
     tpwm_real_duty = (((tpwm_prescale + 1) * tpwm_pulse * time_tick)) / 1000;
     tpwm_config->period = tpwm_real_period;
     tpwm_config->pulse = tpwm_real_duty;
 
-    LOG_I("[%s, %s] Channel: %d", __func__, psNuTPWM->name, tpwm_config->channel);
-    LOG_I("[%s, %s] Period: %d", __func__, psNuTPWM->name, tpwm_config->period);
-    LOG_I("[%s, %s] Pulse: %d", __func__, psNuTPWM->name, tpwm_config->pulse);
+    LOG_I("%s %d %d %d\n", psNuTPWM->name, tpwm_config->channel, tpwm_config->period, tpwm_config->pulse);
 
     return RT_EOK;
 }

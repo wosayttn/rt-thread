@@ -1,4 +1,10 @@
-/* Includes ------------------------------------------------------------------*/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ /* Includes ------------------------------------------------------------------*/
 #include "rtthread.h"
 #include "NuMicro.h"
 
@@ -9,11 +15,6 @@
 #include "drv_log.h"
 
 /* Functions Implementation --------------------------------------------------*/
-/*
- * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
 #if defined(PKG_CHERRYUSB_DEVICE_HS) && defined(BSP_USING_HSUSBD)
 

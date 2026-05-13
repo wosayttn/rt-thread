@@ -1,7 +1,7 @@
 menu "Hardware Drivers Config"
 
     menu "On-chip Peripheral Drivers"
-        source "$(BSP_DIR)/../libraries/m460/rtt_port/Kconfig"
+        source "$(BSP_DIR)/../libraries/cortex-m/Kconfig_M460"
     endmenu
 
     menu "On-board Peripheral Drivers"
@@ -149,7 +149,6 @@ menu "Hardware Drivers Config"
         bool "TPC ILI2130(over i2c1)"
         select BSP_USING_I2C1
         select NU_PKG_USING_TPC
-        select NU_PKG_USING_TPC_ILI
         default n
 
     config BOARD_USING_LCD_FSA506
@@ -192,7 +191,6 @@ menu "Hardware Drivers Config"
         bool "TPC ST1663I(over i2c1)"
         select BSP_USING_I2C1
         select NU_PKG_USING_TPC
-        select NU_PKG_USING_TPC_ST1663I
         default n
 
     config BOARD_USING_SENSOR0
@@ -205,7 +203,8 @@ menu "Hardware Drivers Config"
 
     config BOARD_USING_SENSON0_ID
         int "Specify Sensor0 ID"
-        default 0  if BOARD_USING_SENSOR0
+        depends on BOARD_USING_SENSOR0
+        default 0
         range 0 2
         help
             HM1055=0

@@ -37,6 +37,7 @@ void CANFD##_irq##_IRQHandler(void)             \
                                                 \
     rt_interrupt_leave();                       \
 }
+
 #define IS_CAN_STDID(STDID)   ((STDID) <= 0x7FFU)
 #define IS_CAN_EXTID(EXTID)   ((EXTID) <= 0x1FFFFFFFU)
 #define IS_CAN_DLC(DLC)       ((DLC) <= 8U)

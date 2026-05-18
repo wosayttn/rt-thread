@@ -103,10 +103,11 @@ static int I2C_WriteNAU8822(uint8_t u8addr, uint16_t u16data)
 
     if (g_I2cBusDev && rt_i2c_transfer(g_I2cBusDev, &msg, 1) != 1)
     {
-        rt_kprintf("[Failed] addr=%x, data=%d\n", u8addr, u16data);
+        rt_kprintf("[Failed] addr=%d, data=%d\n", u8addr, u16data);
         return -RT_ERROR;
     }
 
+    if (0)
     {
         /* Verify */
         uint8_t au8RxData[2];
@@ -247,7 +248,7 @@ static rt_err_t nau8822_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNum
         mClkDiv = 7;
         break;
     default:
-        LOG_E("mclk divider not match!\n");
+        LOG_E("mclk divider(%d) not match!\n", mClkDiv);
         mClkDiv = 0;
         return -RT_ERROR;
     }
@@ -261,6 +262,9 @@ static rt_err_t nau8822_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNum
         bClkDiv = 1;
         break;
     case 4:
+    case 5:
+    case 6:
+    case 7:
         bClkDiv = 2;
         break;
     case 8:
@@ -273,7 +277,7 @@ static rt_err_t nau8822_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNum
         bClkDiv = 5;
         break;
     default:
-        LOG_E("bclk divider not match!\n");
+        LOG_E("bclk(%d) divider not match!\n", bClkDiv);
         bClkDiv = 0;
         return -RT_ERROR;
     }
@@ -313,6 +317,13 @@ static rt_err_t nau8822_init(void)
 
     I2C_WriteNAU8822(6,  0x1AD);   /* Divide by 6, 16K */
     I2C_WriteNAU8822(7,  0x006);   /* 16K for internal filter coefficients */
+
+//R9 GPIO pin selection for jack detect function, jack detection enable, VREF jack enable
+//R13 bit mapped selection of which outputs are to be enabled when jack detect is in a logic 1 state
+//R13 bit mapped selection of which outputs are to be enabled when jack detect is in a logic 0 state
+    //I2C_WriteNAU8822(9,  0x1D0);   /* jack detect 1 */
+    //I2C_WriteNAU8822(13,  0x121);   /* jack detect 2 */
+
     I2C_WriteNAU8822(10, 0x008);   /* DAC soft mute is disabled, DAC oversampling rate is 128x */
     I2C_WriteNAU8822(14, 0x108);   /* ADC HP filter is disabled, ADC oversampling rate is 128x */
     I2C_WriteNAU8822(15, 0x1EF);   /* ADC left digital volume control */
@@ -320,11 +331,26 @@ static rt_err_t nau8822_init(void)
     I2C_WriteNAU8822(44, 0x033);   /* LMICN/LMICP is connected to PGA */
     I2C_WriteNAU8822(47, 0x100);   /* Gain value */
     I2C_WriteNAU8822(48, 0x100);   /* Gain value */
+
+    I2C_WriteNAU8822(49, 0x40);   /* Gain value */
+
     I2C_WriteNAU8822(50, 0x001);   /* Left DAC connected to LMIX */
     I2C_WriteNAU8822(51, 0x001);   /* Right DAC connected to RMIX */
 
     I2C_WriteNAU8822(0x34, 0x13F);
     I2C_WriteNAU8822(0x35, 0x13F);
+
+#if 1
+    I2C_WriteNAU8822(11,  0x100 | 240);
+    I2C_WriteNAU8822(12,  0x100 | 240);
+    I2C_WriteNAU8822(54,  0x100 | 0x3B);
+    I2C_WriteNAU8822(55,  0x100 | 0x3B);
+#else
+    I2C_WriteNAU8822(11,  0x100 | 255); // volume 95%
+    I2C_WriteNAU8822(12,  0x100 | 255); // volume 95%
+    I2C_WriteNAU8822(54,  0x100 | 0x3F);  // volume 95%
+    I2C_WriteNAU8822(55,  0x100 | 0x3F);  // volume 95%
+#endif
 
     nu_acodec_ops_nau8822.config.samplerate = 16000;
     nu_acodec_ops_nau8822.config.channels = 2;

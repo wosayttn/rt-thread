@@ -1,0 +1,44 @@
+menu "Sensors"
+
+    config NU_PKG_USING_BMX055
+        bool "BMX055 9-axis sensor."
+        select RT_USING_I2C
+        select RT_USING_SENSOR
+        select RT_USING_SENSOR_V2
+        default n
+
+    config NU_PKG_USING_MAX31875
+        bool "MAX31875 Temperature sensor."
+        select RT_USING_I2C
+        select RT_USING_SENSOR
+        select RT_USING_SENSOR_V2
+        default n
+
+    config NU_PKG_USING_NCT7717U
+        bool "NCT7717U Temperature sensor."
+        select RT_USING_I2C
+        select RT_USING_SENSOR
+        select RT_USING_SENSOR_V2
+        default n
+
+    config NU_PKG_USING_TMP112
+        bool "TMP112 Temperature sensor."
+        select RT_USING_I2C
+        select RT_USING_SENSOR
+        default n
+
+    config NU_PKG_USING_LIS3DH
+        bool "LIS3DH 3-AXIS Accelerator sensor."
+        select RT_USING_I2C
+        select RT_USING_SENSOR
+        select RT_USING_SENSOR_V2
+        default n
+
+    config NU_PKG_USING_LPS22HH
+        bool "LPS22HH Barometer sensor."
+        select RT_USING_I2C
+        select RT_USING_SENSOR
+        select RT_USING_SENSOR_V2
+        default n
+
+endmenu

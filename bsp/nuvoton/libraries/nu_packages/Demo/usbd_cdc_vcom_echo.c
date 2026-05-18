@@ -47,7 +47,7 @@ static void serial_thread_entry(void *parameter)
     }
 }
 
-static int vcom_echo_init(void)
+static rt_err_t vcom_echo_init(void)
 {
     rt_err_t result = 0;
     rt_thread_t thread;
@@ -63,13 +63,13 @@ static int vcom_echo_init(void)
     if (result)
     {
         rt_kprintf("init failed!\n");
-        return -1;
+        return -RT_ERROR;
     }
     result = rt_device_open(serial, RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX/* | RT_DEVICE_FLAG_DMA_TX */);
     if (result)
     {
         rt_kprintf("open failed!\n");
-        return -1;
+        return -RT_ERROR;
     }
 
     result = rt_sem_init(&rx_sem, "rx_sem", 0, RT_IPC_FLAG_FIFO);
@@ -85,7 +85,7 @@ static int vcom_echo_init(void)
         RT_ASSERT(result == RT_EOK);
     }
 
-    return 0;
+    return RT_EOK;
 }
 INIT_APP_EXPORT(vcom_echo_init);
 

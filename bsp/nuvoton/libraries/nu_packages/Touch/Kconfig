@@ -1,0 +1,65 @@
+menu "Touch"
+
+    config NU_PKG_USING_TPC
+        bool "Support Touch Panel Controller over I2C"
+        select RT_USING_TOUCH
+        select RT_TOUCH_PIN_IRQ
+        select RT_USING_I2C
+
+    if NU_PKG_USING_TPC
+        choice
+            prompt "Select TPC drivers"
+            default NU_PKG_USING_TPC_ILI if BOARD_USING_ILI2130
+            default NU_PKG_USING_TPC_GT911 if BOARD_USING_GT911
+            default NU_PKG_USING_TPC_ST1663I if BOARD_USING_ST1663I
+
+            config NU_PKG_USING_TPC_ILI
+                bool "ILI Series TPC"
+
+            config NU_PKG_USING_TPC_GT911
+                bool "GT911 TPC"
+
+            config NU_PKG_USING_TPC_FT5446
+                bool "FT5446 TPC"
+
+            config NU_PKG_USING_TPC_ST1663I
+                bool "ST1663I TPC"
+
+        endchoice
+
+        config NU_PKG_TPC_REVERSE_XY
+            bool "Reverse X-Y coordinate"
+            default n
+
+    endif
+
+    config NU_PKG_USING_ADC_TOUCH
+        bool "ADC touch function"
+        default n
+
+    if NU_PKG_USING_ADC_TOUCH
+        choice
+            prompt "Select TPC drivers"
+            default NU_PKG_USING_ADC_TOUCH_SW if BOARD_USING_NUFUN_ADC_TOUCH || BOARD_USING_NUTFT_ADC_TOUCH || BOARD_USING_LCD_ILI9341
+
+        config NU_PKG_USING_ADC_TOUCH_HW
+            bool "Using HW ADC touch"
+
+        config NU_PKG_USING_ADC_TOUCH_SW
+            bool "Using SW ADC touch"
+            select RT_USING_ADC
+
+        config NU_PKG_USING_ADC_TOUCH_SERIAL
+            bool "Serial touch function"
+            select RT_USING_SERIAL
+
+        endchoice
+
+        if NU_PKG_USING_ADC_TOUCH_SERIAL
+            config NU_PKG_SERIAL_TOUCH_DEVNAME
+                string "uart1"
+                default "uart1"
+        endif
+    endif
+
+endmenu

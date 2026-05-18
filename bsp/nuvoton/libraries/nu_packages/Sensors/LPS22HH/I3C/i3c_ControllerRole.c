@@ -1,0 +1,577 @@
+/**************************************************************************//**
+ * @file     i3c_ControllerRole.c
+ * @version  V3.00
+ * @brief    Functions for I3C Controller Role.
+ *
+ * @copyright SPDX-License-Identifier: Apache-2.0
+ * @copyright Copyright (C) 2025 Nuvoton Technology Corp. All rights reserved.
+ ******************************************************************************/
+#include "i3c_DeviceFunc.h"
+
+/*---------------------------------------------------------------------------------------------------------*/
+/* Functions and variables declaration                                                                     */
+/*---------------------------------------------------------------------------------------------------------*/
+static void ExecCTROperation(I3C_DEVICE_T *dev);
+
+
+/**
+  * @brief  SDR Write and Read Sample Flow.
+  */
+static int32_t SDRWRSample(I3C_DEVICE_T *dev, uint8_t tgt)
+{
+    volatile uint32_t i;
+    static uint8_t sInitVal = 0;
+    int32_t iRet = I3C_STS_NO_ERR;
+    uint16_t len;
+    uint8_t g_DevTxData[I3C_DEVICE_TX_BUF_CNT * 4], g_DevRxData[I3C_DEVICE_TX_BUF_CNT * 4];
+
+    if (dev->port->TGTCFG[tgt] & I3C_TGTCFG_DEVTYPE_Msk)
+    {
+        DGBINT("\nTarget index-%d NOT at I3C mode.\n", tgt);
+        return -1;
+    }
+
+
+    // SDR Write operation
+    len = 1;
+    g_DevTxData[0] = 0xF;
+
+    iRet = I3C_FuncSDRWrite(dev, tgt, (uint8_t *)g_DevTxData, len);
+    if (iRet != I3C_STS_NO_ERR)
+        return -1;
+    DGBINT("\n[ SDR Write PASS ] (Tgt: 0x%02x)\n\t", dev->target_da[tgt]);
+
+    for (i = 0; i < len; i++)
+    {
+        DGBINT("%02x ", dev->tx_buf[i]);
+        if ((i % 8) == 7)
+            DGBINT("\n\t");
+    }
+    sInitVal++;
+    DGBINT("\n");
+
+    //rt_thread_mdelay(10);
+
+    // SDR Read operation
+    len = 1;
+    iRet = I3C_FuncSDRRead(dev, tgt, (uint8_t *)g_DevRxData, &len);
+    if (iRet != I3C_STS_NO_ERR)
+        return -1;
+    DGBINT("\n[ SDR Read PASS ] (Tgt: 0x%02x)\n\t", dev->target_da[tgt]);
+
+    for (i = 0; i < len; i++)
+    {
+        DGBINT("%02x ", g_DevRxData[i]);
+        if ((i % 8) == 7)
+            DGBINT("\n\t");
+    }
+    DGBINT("\n");
+
+    return 0;
+}
+
+/**
+  * @brief  HDR-DDR Write and Read Sample Flow.
+  */
+static int32_t HDRDDRWRSample(I3C_DEVICE_T *dev, uint8_t tgt)
+{
+    volatile uint32_t i;
+    static uint8_t sInitVal = 0;
+    int32_t iRet = I3C_STS_NO_ERR;
+    uint16_t len;
+    uint8_t g_DevTxData[I3C_DEVICE_TX_BUF_CNT * 4], g_DevRxData[I3C_DEVICE_TX_BUF_CNT * 4];
+
+    if (dev->port->TGTCFG[tgt] & I3C_TGTCFG_DEVTYPE_Msk)
+    {
+        DGBINT("\nTarget index-%d NOT at I3C mode.\n", tgt);
+        return -1;
+    }
+
+    // HDR-DDR Write operation
+    len = 16;
+    for (i = 0; i < len; i++)
+        g_DevTxData[i] = ((0x10 + i) + sInitVal);
+
+    iRet = I3C_FuncDDRWrite(dev, tgt, (uint8_t *)g_DevTxData, len);
+    if (iRet != I3C_STS_NO_ERR)
+        return -1;
+    DGBINT("\n[ HDR-DDR Write PASS ] (Tgt: 0x%02x)\n\t", dev->target_da[tgt]);
+
+    for (i = 0; i < len; i++)
+    {
+        DGBINT("%02x ", dev->tx_buf[i]);
+        if ((i % 8) == 7)
+            DGBINT("\n\t");
+    }
+    sInitVal++;
+    DGBINT("\n");
+
+    rt_thread_mdelay(10);
+
+    // HDR-DDR Read operation
+    len = 16;
+    iRet = I3C_FuncDDRRead(dev, tgt, (uint8_t *)g_DevRxData, &len);
+    if (iRet != I3C_STS_NO_ERR)
+        return -1;
+    DGBINT("\n[ HDR-DDR Read PASS ] (Tgt: 0x%02x)\n\t", dev->target_da[tgt]);
+
+    for (i = 0; i < len; i++)
+    {
+        DGBINT("%02x ", g_DevRxData[i]);
+        if ((i % 8) == 7)
+            DGBINT("\n\t");
+    }
+    DGBINT("\n");
+
+    return 0;
+}
+
+/**
+  * @brief  HDR-BT Write and Read Sample Flow.
+  */
+static int32_t HDRBTWRSample(I3C_DEVICE_T *dev, uint8_t tgt)
+{
+    volatile uint32_t i;
+    static uint8_t sInitVal = 0;
+    int32_t iRet = I3C_STS_NO_ERR;
+    uint16_t len;
+    uint8_t g_DevTxData[I3C_DEVICE_TX_BUF_CNT * 4], g_DevRxData[I3C_DEVICE_TX_BUF_CNT * 4];
+
+    if (dev->port->TGTCFG[tgt] & I3C_TGTCFG_DEVTYPE_Msk)
+    {
+        DGBINT("\nTarget index-%d NOT at I3C mode.\n", tgt);
+        return -1;
+    }
+
+
+    // HDR-BT Write operation
+    len = 16;
+    for (i = 0; i < len; i++)
+        g_DevTxData[i] = ((0x10 + i) + sInitVal);
+
+    iRet = I3C_FuncBTWrite(dev, tgt, (uint8_t *)g_DevTxData, len);
+    if (iRet != I3C_STS_NO_ERR)
+        return -1;
+    DGBINT("\n[ HDR-BT Write PASS ] (Tgt: 0x%02x)\n\t", dev->target_da[tgt]);
+
+    for (i = 0; i < len; i++)
+    {
+        DGBINT("%02x ", dev->tx_buf[i]);
+        if ((i % 8) == 7)
+            DGBINT("\n\t");
+    }
+    sInitVal++;
+    DGBINT("\n");
+
+    rt_thread_mdelay(10);
+
+
+    // HDR-BT Read operation
+    len = 16;
+    iRet = I3C_FuncBTRead(dev, tgt, (uint8_t *)g_DevRxData, &len);
+    if (iRet != I3C_STS_NO_ERR)
+        return -1;
+    DGBINT("\n[ HDR-BT Read PASS ] (Tgt: 0x%02x)\n\t", dev->target_da[tgt]);
+
+    for (i = 0; i < len; i++)
+    {
+        DGBINT("%02x ", g_DevRxData[i]);
+        if ((i % 8) == 7)
+            DGBINT("\n\t");
+    }
+    DGBINT("\n");
+
+    return 0;
+}
+
+#if (DEVICE_CONTROLLER_ROLE == 1)
+/**
+  * @brief  I2C FM+ Write and Read Sample Flow.
+  */
+static int32_t I2CFMPWRSample(I3C_DEVICE_T *dev, uint8_t tgt)
+{
+    volatile uint32_t i;
+    static uint8_t sInitVal = 0;
+    int32_t iRet = I3C_STS_NO_ERR;
+    uint16_t len;
+    uint8_t g_DevTxData[I3C_DEVICE_TX_BUF_CNT * 4], g_DevRxData[I3C_DEVICE_TX_BUF_CNT * 4];
+
+    if ((dev->port->TGTCFG[tgt] & I3C_TGTCFG_DEVTYPE_Msk) == 0)
+    {
+        DGBINT("\nTarget index-%d NOT at I2C mode.\n", tgt);
+        return -1;
+    }
+
+
+    // I2C FM+ Write operation
+    len = 16;
+    for (i = 0; i < len; i++)
+        g_DevTxData[i] = ((0x10 + i) + sInitVal);
+
+    dev->speed_mode = I3C_DEVI2C_SPEED_I2CFMPLUS;
+    iRet = I3C_FuncSDRWrite(dev, tgt, (uint8_t *)g_DevTxData, len);
+    if (iRet != I3C_STS_NO_ERR)
+        return -1;
+    DGBINT("\n[ I2C FM+ Write PASS ] (Tgt: 0x%02x)\n\t", dev->target_sa[tgt]);
+
+    for (i = 0; i < len; i++)
+    {
+        DGBINT("%02x ", dev->tx_buf[i]);
+        if ((i % 8) == 7)
+            DGBINT("\n\t");
+    }
+    sInitVal++;
+    DGBINT("\n");
+
+    rt_thread_mdelay(10);
+
+    // I2C FM+ Read operation
+    len = 16;
+    dev->speed_mode = I3C_DEVI2C_SPEED_I2CFMPLUS;
+    iRet = I3C_FuncSDRRead(dev, tgt, (uint8_t *)g_DevRxData, &len);
+    if (iRet != I3C_STS_NO_ERR)
+        return -1;
+    DGBINT("\n[ I2C FM+ Read PASS ] (Tgt: 0x%02x)\n\t", dev->target_sa[tgt]);
+
+    for (i = 0; i < len; i++)
+    {
+        DGBINT("%02x ", g_DevRxData[i]);
+        if ((i % 8) == 7)
+            DGBINT("\n\t");
+    }
+    DGBINT("\n");
+
+    return 0;
+}
+
+/**
+  * @brief  Enter CCC Command.
+  */
+static uint32_t ParseCCCCommand(I3C_DEVICE_T *dev)
+{
+    char cInputTemp = 0x00;
+    char strInput[16] = {0};
+    uint32_t loop = 0;
+
+    while (cInputTemp != 0x0D)
+    {
+        if (dev->intsts != 0) // ESC
+            break;
+
+        cInputTemp = (char)finsh_getchar();
+        if (cInputTemp == 27) // ESC
+            break;
+
+        strInput[loop] = cInputTemp;
+        DGBINT("%c", cInputTemp);
+        loop++;
+        if (loop == 16)
+            break;
+    }
+    DGBINT("\n");
+
+    /* For GET CCC */
+    if (strncmp(strInput, "GETSTATUS", 9) == 0)
+        return I3C_CCC_GETSTATUS;
+
+    if (strncmp(strInput, "GETPID", 6) == 0)
+        return I3C_CCC_GETPID;
+
+    if (strncmp(strInput, "GETBCR", 6) == 0)
+        return I3C_CCC_GETBCR;
+
+    if (strncmp(strInput, "GETDCR", 6) == 0)
+        return I3C_CCC_GETDCR;
+
+    if (strncmp(strInput, "GETMWL", 6) == 0)
+        return I3C_CCC_GETMWL;
+
+    if (strncmp(strInput, "GETMRL", 6) == 0)
+        return I3C_CCC_GETMRL;
+
+    if (strncmp(strInput, "GETCAPS", 7) == 0)
+        return I3C_CCC_GETCAPS;
+
+    if (strncmp(strInput, "GETMXDS", 7) == 0)
+        return I3C_CCC_GETMXDS;
+
+    if (strncmp(strInput, "GETXTIME", 8) == 0)
+        return I3C_CCC_GETXTIME;
+
+    if (strncmp(strInput, "RSTACT", 6) == 0)
+        return I3C_CCC_RSTACT(0);
+
+
+    /* For SET CCC */
+    if (strncmp(strInput, "SETMWL", 6) == 0)
+        return (I3C_CCC_SETMWL(1) | BIT31);
+
+    if (strncmp(strInput, "SETMRL", 6) == 0)
+        return (I3C_CCC_SETMRL(1) | BIT31);
+
+    if (strncmp(strInput, "ENEC", 4) == 0)
+        return (I3C_CCC_ENEC(1) | BIT31);
+
+    if (strncmp(strInput, "DISEC", 5) == 0)
+        return (I3C_CCC_DISEC(1) | BIT31);
+
+    if (strncmp(strInput, "SETGRPA", 7) == 0)
+        return (I3C_CCC_SETGRPA | BIT31);
+
+    if (strncmp(strInput, "RSTGRPA", 7) == 0)
+        return (I3C_CCC_RSTGRPA(1) | BIT31);
+
+    return (uint32_t)I3C_STS_INVALID_INPUT;
+}
+
+/**
+  * @brief  Common Command Codes Flow.
+  */
+static int32_t CCCFlow(I3C_DEVICE_T *dev, uint8_t tgt)
+{
+    uint32_t ccc = 0;
+
+    do
+    {
+        DGBINT("Input the Common Command Code (CCC). (Invalid input to ESC)\n");
+        DGBINT("    - GETSTATUS \n");
+        DGBINT("    - GETPID    \n");
+        DGBINT("    - GETBCR    \n");
+        DGBINT("    - GETDCR    \n");
+        DGBINT("    - GETMWL    \n");
+        DGBINT("    - GETMRL    \n");
+        DGBINT("    - GETCAPS   \n");
+        DGBINT("    - GETMXDS   \n");
+        DGBINT("    - GETXTIME  \n");
+        DGBINT("    - RSTACT    \n");
+        DGBINT("    ============\n");
+        DGBINT("    - SETMWL    \n");
+        DGBINT("    - SETMRL    \n");
+        DGBINT("    - ENEC      \n");
+        DGBINT("    - DISEC     \n");
+        DGBINT("    - SETGRPA   \n");
+        DGBINT("    - RSTGRPA   \n");
+        DGBINT("    ============\n");
+
+        ccc = ParseCCCCommand(dev);
+        if (ccc != (uint32_t)I3C_STS_INVALID_INPUT)
+        {
+            if ((ccc & BIT31) == 0)
+            {
+                ccc &= 0xFF;
+                if (I3C_FuncGETCCCResp(dev, ccc, 0) != I3C_STS_NO_ERR)
+                    break;
+            }
+            else
+            {
+                ccc &= 0xFF;
+                if (I3C_FuncSETCCC(dev, ccc, 0) != I3C_STS_NO_ERR)
+                    break;
+            }
+        }
+    }
+    while (ccc != (uint32_t)I3C_STS_INVALID_INPUT);
+
+    DGBINT("\nExit Common Command Codes Flow.\n\n");
+
+    return 0;
+}
+#endif
+
+/**
+  * @brief  Polling a specified char for Controller operation.
+  */
+static void ExecCTROperation(I3C_DEVICE_T *dev)
+{
+    int i, mode;
+
+#if (DEVICE_CONTROLLER_ROLE == 1)
+
+    DGBINT("\n");
+    DGBINT("[f] I2C FM+ : Write 16-bytes to Target-0, then read back 16-bytes to compare \n");
+    DGBINT("[s] SDR :     Write 16-bytes to Target-0, then read back 16-bytes to compare \n");
+    DGBINT("[d] HDR-DDR : Write 16-bytes to Target-1, then read back 16-bytes to compare \n");
+    DGBINT("[b] HDR-BT :  Write 16-bytes to Target-2, then read back 16-bytes to compare \n");
+    DGBINT("[p] GETPID CCC : Get Target-0's PID \n");
+    DGBINT("[e] ENTDAA CCC : Set all Targets in I3C mode \n");
+    DGBINT("[r] RSTDAA CCC : Set all Targets in I2C mode \n");
+    DGBINT("[C] Common Command Codes (CCC) flow \n");
+
+    /* Dump all Targets info. */
+    DGBINT("\nAll Target's info on the bus:\n");
+    for (i = 0; i < 7; i++)
+    {
+        if (dev->port->TGTCFG[i] & I3C_TGTCFG_DEVTYPE_Msk)
+        {
+            // Target at I2C mode
+            dev->target_sa[i] = ((dev->port->TGTCFG[i] & I3C_TGTCFG_SADDR_Msk) >> I3C_TGTCFG_SADDR_Pos);
+            if (dev->target_sa[i] == 0x0)
+                continue;
+            DGBINT("\tTarget #%d:\n", i);
+            DGBINT("\t - SADDR          = 0x%02x \n", dev->target_sa[i]);
+        }
+        else
+        {
+            // Target at I3C mode
+            dev->target_da[i] = ((dev->port->TGTCHAR[i].DADDR & I3C_TGTCHAR4_DADDR_Msk) >> I3C_TGTCHAR4_DADDR_Pos);
+            DGBINT("\tTarget #%d:\n", i);
+            DGBINT("\t - Provisional ID = 0x%08x%02x \n", dev->port->TGTCHAR[i].PIDMSB, dev->port->TGTCHAR[i].PIDLSB);
+            DGBINT("\t - BCR, DCR       = 0x%08x \n", dev->port->TGTCHAR[i].BCRDCR);
+            DGBINT("\t - DADDR          = 0x%02x \n", dev->target_da[i]);
+        }
+    }
+    DGBINT("\n");
+#else
+    DGBINT("\n");
+    DGBINT("[s] SDR :     Write 16-bytes to Target (Main Controller), then read back 16-bytes to compare \n");
+    DGBINT("[d] HDR-DDR : Write 16-bytes to Target (Main Controller), then read back 16-bytes to compare \n");
+    DGBINT("[b] HDR-BT :  Write 16-bytes to Target (Main Controller), then read back 16-bytes to compare \n");
+    DGBINT("[p] GETPID CCC : Get Target-0's PID \n");
+    DGBINT("\n");
+#endif
+
+    mode = finsh_getchar();
+    rt_kprintf("==> %d\n", mode);
+
+#if (DEVICE_CONTROLLER_ROLE == 1)
+    switch (mode)
+    {
+    case 'f':
+        // I2C FM+ Write and Read to Target-0;
+        I2CFMPWRSample(dev, 0);
+        break;
+
+    case 's':
+        // SDR Write and Read to Target-0;
+        SDRWRSample(dev, 0);
+        break;
+
+    case 'd':
+        // HDR-DDR Write and Read to Target-1;
+        HDRDDRWRSample(dev, 1);
+        break;
+
+    case 'b':
+        // HDR-BT Write and Read to Target-2;
+        HDRBTWRSample(dev, 2);
+        break;
+
+    case 'p':
+        // Send GETPID CCC to Target-0
+        I3C_FuncGETCCCResp(dev, I3C_CCC_GETPID, 0);
+        break;
+
+    case 'r':
+        // Send RSTDAA CCC to reset all Targets at I2C mode
+        I3C_FuncDAAssign(dev, I3C_CCC_RSTDAA, 0, 0);
+        break;
+
+    case 'e':
+        // Send ENTDAA CCC to assign all I3C Targets
+        I3C_FuncDAAssign(dev, I3C_CCC_ENTDAA, 7, 0);
+        break;
+
+    case 'C':
+        // All Common Command Codes (CCC) flow
+        CCCFlow(dev, 0);
+        break;
+
+    default:
+        break;
+    }
+#else
+    switch (mode)
+    {
+    case 's':
+        // SDR WR to Target-0, the Main Controller as Target Role
+        SDRWRSample(dev, 0);
+        break;
+
+    case 'd':
+        // HDR-DDR WR to Target-0, the Main Controller as Target Role
+        HDRDDRWRSample(dev, 0);
+        break;
+
+    case 'b':
+        // HDR-BT WR to Target-0, the Main Controller as Target Role
+        HDRBTWRSample(dev, 0);
+        break;
+
+    case 'p':
+        // Send GETPID CCC to Target-0
+        I3C_FuncGETCCCResp(dev, I3C_CCC_GETPID, 0);
+        break;
+
+    default:
+        break;
+    }
+#endif
+}
+
+/**
+  * @brief  Run in I3C Controller Role.
+  */
+void I3C_ControllerRole(I3C_DEVICE_T *dev, uint32_t u32IsInit)
+{
+    volatile uint32_t i;
+
+    if (u32IsInit == 1)
+    {
+        /* Initialize the device as I3C Controller Role */
+
+        /* Initializes the I3C device */
+        I3C_Init(dev);
+    }
+    else
+    {
+        /* Device has switched to I3C Controller Role */
+
+        DGBINT("\n*** Switched to Controller Role ***\n");
+        dev->device_role = I3C_CONTROLLER;
+
+#if (DEVICE_CONTROLLER_ROLE == 0)
+        /* The I3C Secondary Controller need to allocate Device Address Table for all Targets */
+        for (i = 0; i < 7; i++)
+        {
+            if (i >= dev->target_count)
+                dev->target_da[i] = 0;
+
+            I3C_SetDeviceAddr(dev->port, i, I3C_DEVTYPE_I3C, dev->target_da[i], 0x0);
+        }
+#endif
+
+        DGBINT("\nValid Target's DA on the bus: \n\t");
+        for (i = 0; i < dev->target_count; i++)
+        {
+            DGBINT("0x%02x, ", ((dev->port->TGTCFG[i] >> I3C_TGTCFG_DADDR_Pos) & 0x7F));
+        }
+        DGBINT("\n\n");
+    }
+
+    while (1)
+    {
+
+        if (dev->intsts != 0)
+        {
+            if (dev->intsts & I3C_INTSTS_IBI_RECEIVED)
+            {
+                dev->intsts &= ~I3C_INTSTS_IBI_RECEIVED;
+                I3C_FuncIBIReceived(dev);
+            }
+
+            if (dev->intsts & I3C_INTSTS_BUSOWNER_UPDATED)
+            {
+                /* Switch to I3C Target Role */
+                dev->intsts = 0;
+                break;
+            }
+
+            dev->intsts = 0;
+        }
+
+        /* Polling a specified char for Controller operation */
+        ExecCTROperation(dev);
+    }
+
+    /* Jump to execute in i3c_TargetRole.c */
+}

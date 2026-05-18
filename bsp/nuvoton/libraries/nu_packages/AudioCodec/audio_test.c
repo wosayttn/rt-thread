@@ -22,6 +22,8 @@
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
+#define DEF_MAX_TEST_SECOND  5
+
 /*
   The routine just for test automatically.
   - For record function: Run it w/o parameter.
@@ -29,12 +31,11 @@
 */
 static int audio_test(int argc, char **argv)
 {
-#define DEF_MAX_ARGV_NUM 8
-#define DEF_MAX_TEST_SECOND 5
 
-    int smplrate[] = {8000, 16000, 44100, 48000};
+    int smplrate[] = {8000, 16000};
     int smplbit[] = {16};
-    int chnum[] = {1, 2};
+    //int chnum[] = {1, 2};
+    int chnum[] = {1};
     struct wavrecord_info info;
     char strbuf[128];
     int i, j, k;
@@ -52,20 +53,27 @@ static int audio_test(int argc, char **argv)
             {
                 snprintf(strbuf, sizeof(strbuf), "/mnt/sd0/%d_%d_%d.wav", smplrate[i], smplbit[j], chnum[k]);
 
+                rt_kprintf("==========================================================\n");
+
                 if (bDoRecording)
                 {
+#if defined(PKG_WP_USING_RECORD)
                     rt_kprintf("Recording file at %s\n", strbuf);
                     info.uri = strbuf;
                     info.samplerate = smplrate[i];
                     info.samplebits = smplbit[j];
                     info.channels = chnum[k];
+                    rt_kprintf("+++++++++++++++++++++++++++++++++++++++++++\n");
                     wavrecorder_start(&info);
                     rt_thread_mdelay(DEF_MAX_TEST_SECOND * 1000);
                     wavrecorder_stop();
+                    rt_kprintf("-------------------------------------------\n");
                     rt_thread_mdelay(DEF_MAX_TEST_SECOND * 1000);
+#endif
                 }
                 else
                 {
+#if defined(PKG_WP_USING_PLAY)
                     if (stat((const char *)strbuf, &stat_buf) < 0)
                     {
                         rt_kprintf("%s non-exist.\n", strbuf);
@@ -73,10 +81,15 @@ static int audio_test(int argc, char **argv)
                     }
 
                     rt_kprintf("Replay file at %s\n", strbuf);
+                    rt_kprintf("+++++++++++++++++++++++++++++++++++++++++++\n");
                     wavplayer_play(strbuf);
                     rt_thread_mdelay(DEF_MAX_TEST_SECOND * 1000);
                     wavplayer_stop();
+                    rt_kprintf("-------------------------------------------\n");
+#endif
                 }
+
+                rt_kprintf("==========================================================\n");
             } // k
         } // j
     } // i
@@ -91,25 +104,31 @@ static int audio_test(int argc, char **argv)
 
 static int audio_overnight(int argc, char **argv)
 {
-#define DEF_MAX_TEST_SECOND 5
-
     struct wavrecord_info info;
     char strbuf[128];
     struct stat stat_buf;
+    int bDoForever = 1;
 
-    snprintf(strbuf, sizeof(strbuf), "/test.wav");
-    while (1)
+    if (argc > 1)
+        bDoForever = 0;
+
+    do
     {
+        snprintf(strbuf, sizeof(strbuf), "/test.wav");
+
+#if defined(PKG_WP_USING_RECORD)
         rt_kprintf("Recording file at %s\n", strbuf);
         info.uri = strbuf;
         info.samplerate = 16000;
         info.samplebits = 16;
-        info.channels = 2;
+        info.channels = 1;
         wavrecorder_start(&info);
         rt_thread_mdelay(DEF_MAX_TEST_SECOND * 1000);
         wavrecorder_stop();
         rt_thread_mdelay(1000);
+#endif
 
+#if defined(PKG_WP_USING_PLAY)
         if (stat((const char *)strbuf, &stat_buf) < 0)
         {
             rt_kprintf("%s non-exist.\n", strbuf);
@@ -121,7 +140,10 @@ static int audio_overnight(int argc, char **argv)
         rt_thread_mdelay(DEF_MAX_TEST_SECOND * 1000);
         wavplayer_stop();
         rt_thread_mdelay(1000);
+#endif
     }
+    while (bDoForever);
+
     return 0;
 }
 

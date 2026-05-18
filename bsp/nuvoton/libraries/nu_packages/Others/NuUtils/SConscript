@@ -1,0 +1,9 @@
+Import('RTT_ROOT')
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+CPPPATH = [cwd + '/inc']
+group = DefineGroup('numicro_common', src, depend = ['NU_PKG_USING_NUUTILS'], CPPPATH = CPPPATH)
+
+Return('group')

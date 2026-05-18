@@ -1,0 +1,12 @@
+# RT-Thread building script for component
+
+from building import *
+
+cwd = GetCurrentDir()
+group = []
+if GetDepend('NU_PKG_USING_QSPINOR') or GetDepend('BOARD_USING_QSPI_FLASH'):
+	src = Glob('*.c') + Glob('*.cpp')
+	CPPPATH = [cwd]
+	group = DefineGroup('nu_pkgs_qspinor', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

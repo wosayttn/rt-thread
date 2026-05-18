@@ -1,0 +1,34 @@
+menu "Others"
+
+    config NU_PKG_USING_CCAP_SENSORS
+        bool "CCAP camera sensors."
+        default y if BSP_USING_CCAP
+        default n
+
+    config NU_PKG_USING_DA9062
+        bool "DA9062 PMIC."
+        select BSP_USING_I2C
+        default n
+
+    config NU_PKG_USING_RV3032C7
+        bool "Using RV3032-C7 RTC."
+        select RT_USING_RTC
+        default n
+
+    config NU_PKG_USING_NUUTILS
+        bool "Nuvoton utility headers."
+        default y
+
+    config NU_PKG_USING_LV_PORT
+        bool "LVGL port."
+        depends on PKG_USING_LVGL
+        default y if PKG_USING_LVGL
+        default n
+
+    config NU_PKG_USING_NUWRITER
+        bool "NuWriter packfile support."
+        depends on USE_MA35_AARCH32 && RT_USING_DFS
+        default y if USE_MA35_AARCH32 && RT_USING_DFS
+        default n
+
+endmenu

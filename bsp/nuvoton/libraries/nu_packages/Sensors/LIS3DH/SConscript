@@ -1,0 +1,16 @@
+
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+
+src = []
+
+src += Glob('lis3dh.c')
+src += Glob('lis3dh_reg.c')
+src += ['st_lis3dh_sensor_v1.c']
+
+CPPPATH = [cwd]
+group = DefineGroup('lis3dh_acce', src, depend = ['NU_PKG_USING_LIS3DH'], CPPPATH = CPPPATH)
+
+Return('group')

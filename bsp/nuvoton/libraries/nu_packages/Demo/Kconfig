@@ -1,0 +1,7 @@
+menu "Demo"
+
+    config NU_PKG_DEMO
+        bool "Built-in Demo."
+        default n
+
+endmenu

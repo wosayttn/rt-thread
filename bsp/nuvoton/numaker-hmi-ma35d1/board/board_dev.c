@@ -273,7 +273,7 @@ S_CALIBRATION_MATRIX g_sCalMat = { -17558, 1, 69298832, -10, 11142, -2549195, 65
 
 #if defined(NU_PKG_USING_TPC_GT911) && defined(BOARD_USING_GT911)
 #include "drv_gpio.h"
-#include "gt911.h"
+#include "tpc_gt911.h"
 
 #define TPC_RST_PIN   NU_GET_PININDEX(NU_PM, 12)
 #define TPC_IRQ_PIN   NU_GET_PININDEX(NU_PD, 12)

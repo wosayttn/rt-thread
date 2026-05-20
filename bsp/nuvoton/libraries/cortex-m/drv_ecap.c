@@ -5,13 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_ECAP)
-
-#include "drv_common.h"
 #include "drv_sys.h"
-#include "nu_bitutil.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -25,11 +19,13 @@
 #define NU_ECAP_GET_LEVEL(status, channel)    (((status) & (1 << (ECAP_STATUS_CAP0_Pos + (channel)))) ? 0 : 1)
 #define DEFINE_NU_ECAP(_mod, _chn) \
     {                              \
-        .base = ECAP##_mod,        \
-        .name = "ecap" #_mod "i" #_chn, \
-        .irqn = ECAP##_mod##_IRQn, \
-        .rstidx = ECAP##_mod##_RST, \
-        .modid = ECAP##_mod##_MODULE \
+        .m_module = {              \
+            .base = ECAP##_mod,    \
+            .name = "ecap" #_mod "i" #_chn, \
+            .eIRQn = ECAP##_mod##_IRQn, \
+            .RstId = ECAP##_mod##_RST, \
+            .ModId = ECAP##_mod##_MODULE \
+        } \
     }
 
 #define DEFINE_ECAP_IRQ_HANDLER(_idx)            \
@@ -70,11 +66,7 @@ enum
 struct nu_ecap
 {
     struct rt_inputcapture_device   parent;
-    ECAP_T      *base;
-    char        *name;
-    IRQn_Type    irqn;
-    uint32_t     rstidx;
-    uint32_t     modid;
+    const struct nu_module m_module;
 
     float        fUsPerTick;
     uint8_t      u8Channel;
@@ -148,7 +140,7 @@ DEFINE_ECAP_IRQ_HANDLER(3)
 static void nu_ecap_isr(nu_ecap_t psNuEcapBase)
 {
     int i32ChnId;
-    ECAP_T *base = psNuEcapBase->base;
+    ECAP_T *base = (ECAP_T *)psNuEcapBase->m_module.base;
 
     /* Get input Capture status */
     uint32_t u32Status = ECAP_GET_INT_STATUS(base);
@@ -212,14 +204,14 @@ static float get_ecap_tick_time_us(nu_ecap_t psNuEcap)
 {
     uint8_t u8ClockDivider[8] = { 1, 4, 16, 32, 64, 96, 112, 128 };
 
-    if (psNuEcap->base == ECAP0 
+    if ((ECAP_T *)psNuEcap->m_module.base == ECAP0 
 	#if defined(ECAP2)
-	 || (psNuEcap->base == ECAP2)
+	 || ((ECAP_T *)psNuEcap->m_module.base == ECAP2)
 	#endif
 	)
-        return ((float)1000000 / ((float)CLK_GetPCLK0Freq() / u8ClockDivider[(psNuEcap->base->CTL1 & ECAP_CTL1_CLKSEL_Msk) >> ECAP_CTL1_CLKSEL_Pos]));
+        return ((float)1000000 / ((float)CLK_GetPCLK0Freq() / u8ClockDivider[(((ECAP_T *)psNuEcap->m_module.base)->CTL1 & ECAP_CTL1_CLKSEL_Msk) >> ECAP_CTL1_CLKSEL_Pos]));
     else
-        return ((float)1000000 / ((float)CLK_GetPCLK1Freq() / u8ClockDivider[(psNuEcap->base->CTL1 & ECAP_CTL1_CLKSEL_Msk) >> ECAP_CTL1_CLKSEL_Pos]));
+        return ((float)1000000 / ((float)CLK_GetPCLK1Freq() / u8ClockDivider[(((ECAP_T *)psNuEcap->m_module.base)->CTL1 & ECAP_CTL1_CLKSEL_Msk) >> ECAP_CTL1_CLKSEL_Pos]));
 }
 
 static rt_err_t nu_ecap_init(struct rt_inputcapture_device *inputcapture)
@@ -237,13 +229,13 @@ static rt_err_t nu_ecap_open(struct rt_inputcapture_device *inputcapture)
     psNuEcap->fUsPerTick = get_ecap_tick_time_us(psNuEcap);
 
     /* Enable ECAP Input Channel */
-    ECAP_ENABLE_INPUT_CHANNEL(psNuEcap->base, 0x1 << (ECAP_CTL0_IC0EN_Pos + psNuEcap->u8Channel));
+    ECAP_ENABLE_INPUT_CHANNEL((ECAP_T *)psNuEcap->m_module.base, 0x1 << (ECAP_CTL0_IC0EN_Pos + psNuEcap->u8Channel));
 
     /* Input Channel interrupt enabled */
-    ECAP_EnableINT(psNuEcap->base, 0x1 << (ECAP_CTL0_CAPIEN0_Pos + psNuEcap->u8Channel));
+    ECAP_EnableINT((ECAP_T *)psNuEcap->m_module.base, 0x1 << (ECAP_CTL0_CAPIEN0_Pos + psNuEcap->u8Channel));
 
     /* ECAP_CNT starts up-counting */
-    ECAP_CNT_START(psNuEcap->base);
+    ECAP_CNT_START((ECAP_T *)psNuEcap->m_module.base);
 
     return ret;
 }
@@ -257,13 +249,13 @@ static rt_err_t nu_ecap_close(struct rt_inputcapture_device *inputcapture)
     RT_ASSERT(inputcapture != RT_NULL);
 
     /* Input Channel interrupt disabled */
-    ECAP_DisableINT(psNuEcap->base, 0x1 << (ECAP_CTL0_CAPIEN0_Pos + psNuEcap->u8Channel));
+    ECAP_DisableINT((ECAP_T *)psNuEcap->m_module.base, 0x1 << (ECAP_CTL0_CAPIEN0_Pos + psNuEcap->u8Channel));
 
     /* Disable ECAP Input Channel */
-    ECAP_DISABLE_INPUT_CHANNEL(psNuEcap->base, 0x1 << (ECAP_CTL0_IC0EN_Pos + psNuEcap->u8Channel));
+    ECAP_DISABLE_INPUT_CHANNEL((ECAP_T *)psNuEcap->m_module.base, 0x1 << (ECAP_CTL0_IC0EN_Pos + psNuEcap->u8Channel));
 
     /* Clear input capture channel flag */
-    ECAP_CLR_CAPTURE_FLAG(psNuEcap->base, 0x1 << (ECAP_STATUS_CAPTF0_Pos + psNuEcap->u8Channel));
+    ECAP_CLR_CAPTURE_FLAG((ECAP_T *)psNuEcap->m_module.base, 0x1 << (ECAP_STATUS_CAPTF0_Pos + psNuEcap->u8Channel));
 
     return ret;
 }
@@ -308,16 +300,15 @@ static int rt_hw_ecap_init(void)
         {
 
             /* register ecap module */
-            CLK_EnableModuleClock(psNuEcap->modid);
-            SYS_ResetModule(psNuEcap->rstidx);
-            nu_ecap_channel_init(psNuEcap->base);
-            NVIC_EnableIRQ((IRQn_Type)psNuEcap->irqn);
+            CLK_EnableModuleClock(psNuEcap->m_module.ModId);
+            SYS_ResetModule(psNuEcap->m_module.RstId);
+            nu_ecap_channel_init((ECAP_T *)psNuEcap->m_module.base);
+            NVIC_EnableIRQ(psNuEcap->m_module.eIRQn);
         }
-        ret = rt_device_inputcapture_register(&psNuEcap->parent, psNuEcap->name, psNuEcap);
+        ret = rt_device_inputcapture_register(&psNuEcap->parent, psNuEcap->m_module.name, psNuEcap);
         RT_ASSERT(ret == RT_EOK);
     }
 
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_hw_ecap_init);
-#endif //#if defined(BSP_USING_ECAP)

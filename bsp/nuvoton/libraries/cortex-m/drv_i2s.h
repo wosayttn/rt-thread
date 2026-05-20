@@ -6,8 +6,8 @@
 
 #ifndef __DRV_I2S_H__
 #define __DRV_I2S_H__
-#include "rtdevice.h"
-#include "NuMicro.h"
+
+#include "drv_sys.h"
 #include "drv_pdma.h"
 
 #if !defined(NU_I2S_DMA_FIFO_SIZE)
@@ -63,7 +63,7 @@ struct nu_i2s_dai
     int32_t pdma_perp;
     int32_t pdma_chanid;
     rt_uint8_t *fifo;
-    int16_t  fifo_block_idx;
+    int32_t  fifo_block_idx;
     nu_pdma_desc_t pdma_descs[NU_I2S_DMA_BUF_BLOCK_NUMBER];
 };
 typedef struct nu_i2s_dai *nu_i2s_dai_t;
@@ -73,9 +73,7 @@ struct nu_i2s
     struct rt_audio_device audio;
     struct rt_audio_configure config;
 
-    char *name;
-    I2S_T *i2s_base;
-    uint32_t i2s_rst;
+    const struct nu_module m_module;
 
     struct nu_i2s_dai i2s_dais[NU_I2S_DAI_CNT];
     nu_acodec_ops_t AcodecOps;

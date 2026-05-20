@@ -5,14 +5,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_USPI)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "drv_pdma.h"
-#include "nu_bitutil.h"
-#include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -51,8 +45,10 @@
 
 #define DEFINE_NU_USPI(_idx, _pdma_init)    \
     {                                       \
-        .name = "uspi" #_idx,              \
-        .uspi_base = USPI##_idx,            \
+        .m_module = {                       \
+            .name = "uspi" #_idx,          \
+            .base = USPI##_idx,             \
+        },                                  \
         _pdma_init                          \
     }
 
@@ -71,8 +67,7 @@ enum
 struct nu_uspi
 {
     struct  rt_spi_bus  dev;
-    char    *name;
-    USPI_T  *uspi_base;
+    const struct nu_module m_module;
     struct  rt_spi_configuration    configuration;
     uint32_t    dummy;
 #if defined(BSP_USING_USPI_PDMA)
@@ -158,17 +153,17 @@ static rt_err_t nu_uspi_bus_configure(struct rt_spi_device *device,
         ret = RT_EINVAL;
         goto exit_nu_uspi_bus_configure;
     }
-    u32BusClock = USPI_SetBusClock(uspi_bus->uspi_base, configuration->max_hz);
+    u32BusClock = USPI_SetBusClock((USPI_T *)uspi_bus->m_module.base, configuration->max_hz);
     if (configuration->max_hz > u32BusClock)
     {
-        LOG_W("%s clock max frequency is %dHz ( != %dHz)\n", uspi_bus->name, u32BusClock, configuration->max_hz);
+        LOG_W("%s clock max frequency is %dHz ( != %dHz)\n", uspi_bus->m_module.name, u32BusClock, configuration->max_hz);
         configuration->max_hz = u32BusClock;
     }
     if (rt_memcmp(configuration, &uspi_bus->configuration, sizeof(*configuration)) != 0)
     {
         rt_memcpy(&uspi_bus->configuration, configuration, sizeof(*configuration));
 
-        USPI_Open(uspi_bus->uspi_base, USPI_MASTER, u32SPIMode, configuration->data_width, u32BusClock);
+        USPI_Open((USPI_T *)uspi_bus->m_module.base, USPI_MASTER, u32SPIMode, configuration->data_width, u32BusClock);
 
         if (configuration->mode & RT_SPI_CS_HIGH)
         {
@@ -180,7 +175,7 @@ static rt_err_t nu_uspi_bus_configure(struct rt_spi_device *device,
             }
             else
             {
-                USPI_SET_SS_LOW(uspi_bus->uspi_base);
+                USPI_SET_SS_LOW((USPI_T *)uspi_bus->m_module.base);
             }
         }
         else
@@ -194,22 +189,22 @@ static rt_err_t nu_uspi_bus_configure(struct rt_spi_device *device,
             else
             {
                 /* Set CS pin to HIGH */
-                USPI_SET_SS_HIGH(uspi_bus->uspi_base);
+                USPI_SET_SS_HIGH((USPI_T *)uspi_bus->m_module.base);
             }
         }
 
         if (configuration->mode & RT_SPI_MSB)
         {
             /* Set sequence to MSB first */
-            USPI_SET_MSB_FIRST(uspi_bus->uspi_base);
+            USPI_SET_MSB_FIRST((USPI_T *)uspi_bus->m_module.base);
         }
         else
         {
             /* Set sequence to LSB first */
-            USPI_SET_LSB_FIRST(uspi_bus->uspi_base);
+            USPI_SET_LSB_FIRST((USPI_T *)uspi_bus->m_module.base);
         }
     }
-    nu_uspi_drain_rxfifo(uspi_bus->uspi_base);
+    nu_uspi_drain_rxfifo((USPI_T *)uspi_bus->m_module.base);
 
 exit_nu_uspi_bus_configure:
 
@@ -255,7 +250,7 @@ static rt_err_t nu_pdma_uspi_rx_config(struct nu_uspi *uspi_bus, uint8_t *pu8Buf
     nu_pdma_memctrl_t memctrl = eMemCtl_Undefined;
 
     /* Get base address of uspi register */
-    USPI_T *uspi_base = uspi_bus->uspi_base;
+    USPI_T *uspi_base = (USPI_T *)uspi_bus->m_module.base;
 
     rt_uint8_t uspi_pdma_rx_chid = uspi_bus->pdma_chanid_rx;
 
@@ -316,7 +311,7 @@ static rt_err_t nu_pdma_uspi_tx_config(struct nu_uspi *uspi_bus, const uint8_t *
     nu_pdma_memctrl_t memctrl = eMemCtl_Undefined;
 
     /* Get base address of uspi register */
-    USPI_T *uspi_base = uspi_bus->uspi_base;
+    USPI_T *uspi_base = (USPI_T *)uspi_bus->m_module.base;
 
     rt_uint8_t uspi_pdma_tx_chid = uspi_bus->pdma_chanid_tx;
 
@@ -470,7 +465,7 @@ static int nu_uspi_write(USPI_T *uspi_base, const uint8_t *send_addr, uint8_t by
 static void nu_uspi_transmission_with_poll(struct nu_uspi *uspi_bus,
         uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word)
 {
-    USPI_T *uspi_base = uspi_bus->uspi_base;
+    USPI_T *uspi_base = (USPI_T *)uspi_bus->m_module.base;
 
     // Write-only
     if ((send_addr != RT_NULL) && (recv_addr == RT_NULL))
@@ -566,7 +561,7 @@ static rt_ssize_t nu_uspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
     if ((message->length % bytes_per_word) != 0)
     {
         /* Say bye. */
-        LOG_E("%s: error payload length(%d%%%d != 0).\n", uspi_bus->name, message->length, bytes_per_word);
+        LOG_E("%s: error payload length(%d%%%d != 0).\n", uspi_bus->m_module.name, message->length, bytes_per_word);
         return 0;
     }
 
@@ -591,11 +586,11 @@ static rt_ssize_t nu_uspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
             {
                 if (configuration->mode & RT_SPI_CS_HIGH)
                 {
-                    USPI_SET_SS_HIGH(uspi_bus->uspi_base);
+                    USPI_SET_SS_HIGH((USPI_T *)uspi_bus->m_module.base);
                 }
                 else
                 {
-                    USPI_SET_SS_LOW(uspi_bus->uspi_base);
+                    USPI_SET_SS_LOW((USPI_T *)uspi_bus->m_module.base);
                 }
             }
         }
@@ -621,11 +616,11 @@ static rt_ssize_t nu_uspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
             {
                 if (configuration->mode & RT_SPI_CS_HIGH)
                 {
-                    USPI_SET_SS_LOW(uspi_bus->uspi_base);
+                    USPI_SET_SS_LOW((USPI_T *)uspi_bus->m_module.base);
                 }
                 else
                 {
-                    USPI_SET_SS_HIGH(uspi_bus->uspi_base);
+                    USPI_SET_SS_HIGH((USPI_T *)uspi_bus->m_module.base);
                 }
             }
         }
@@ -649,7 +644,7 @@ static int rt_hw_uspi_init(void)
 
     for (i = (USPI_START + 1); i < USPI_CNT; i++)
     {
-        nu_uspi_register_bus(&nu_uspi_arr[i], nu_uspi_arr[i].name);
+        nu_uspi_register_bus(&nu_uspi_arr[i], nu_uspi_arr[i].m_module.name);
 #if defined(BSP_USING_USPI_PDMA)
         nu_uspi_arr[i].pdma_chanid_tx = -1;
         nu_uspi_arr[i].pdma_chanid_rx = -1;
@@ -667,5 +662,3 @@ static int rt_hw_uspi_init(void)
 }
 
 INIT_DEVICE_EXPORT(rt_hw_uspi_init);
-
-#endif //#if defined(BSP_USING_USPI)

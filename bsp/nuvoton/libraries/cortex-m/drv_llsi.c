@@ -5,14 +5,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_LLSI)
-
 #include "drv_llsi.h"
 #include "drv_pdma.h"
-#include "nu_bitutil.h"
-#include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -31,20 +25,24 @@
 #endif
 #define MAKE_LLSI_INSTANCE(x, t) \
     { \
-        .name  = MAKE_LLSI_NAME(llsi##x), \
-        .base  = LLSI##x, \
-        .rst   = LLSI##x##_RST, \
-        .irqn  = LLSI##x##_IRQn, \
-        .modid = LLSI##x##_MODULE, \
+        .m_module = { \
+            .name  = MAKE_LLSI_NAME(llsi##x), \
+            .base  = LLSI##x, \
+            .RstId = LLSI##x##_RST, \
+            .eIRQn = LLSI##x##_IRQn, \
+            .ModId = LLSI##x##_MODULE, \
+        }, \
         MAKE_LLSI_PDMA_TX_REQ(t)  \
     },
 #define MAKE_ELLSI_INSTANCE(x, t) \
     { \
-        .name  = MAKE_LLSI_NAME(ellsi##x), \
-        .base  = (LLSI_T*)ELLSI##x, \
-        .rst   = ELLSI##x##_RST, \
-        .irqn  = ELLSI##x##_IRQn, \
-        .modid = ELLSI##x##_MODULE, \
+        .m_module = { \
+            .name  = MAKE_LLSI_NAME(ellsi##x), \
+            .base  = (LLSI_T*)ELLSI##x, \
+            .RstId = ELLSI##x##_RST, \
+            .eIRQn = ELLSI##x##_IRQn, \
+            .ModId = ELLSI##x##_MODULE, \
+        }, \
         MAKE_LLSI_PDMA_TX_REQ(t)  \
     },
 
@@ -91,11 +89,7 @@ enum
 struct nu_llsi
 {
     struct rt_device device;
-    char *name;
-    LLSI_T *base;
-    uint32_t rst;
-    uint32_t modid;
-    IRQn_Type irqn;
+    const struct nu_module m_module;
 #if defined(BSP_USING_PDMA_LLSI_TX)
     uint32_t dma_flag;
 
@@ -200,7 +194,7 @@ static void dump_interrupt_event(uint32_t u32Status)
 
 static void nu_llsi_isr(nu_llsi_t llsi)
 {
-    LLSI_T *base = llsi->base;
+    LLSI_T *base = (LLSI_T *)llsi->m_module.base;
     uint32_t u32IntSts;
 
     u32IntSts = base->STATUS;
@@ -271,15 +265,15 @@ static rt_err_t llsi_open(rt_device_t dev, rt_uint16_t oflag)
     RT_ASSERT(psNuLlsi);
 
     /* Reset IP */
-    SYS_ResetModule(psNuLlsi->rst);
+    SYS_ResetModule(psNuLlsi->m_module.RstId);
 
-    LLSI_OpenbyConfig(psNuLlsi->base, &psNuLlsi->config);
+    LLSI_OpenbyConfig((LLSI_T *)psNuLlsi->m_module.base, &psNuLlsi->config);
 
     /* Enable reset command function */
-    LLSI_ENABLE_RESET_COMMAND(psNuLlsi->base);
+    LLSI_ENABLE_RESET_COMMAND((LLSI_T *)psNuLlsi->m_module.base);
 
     /* Unmask External LLSI Interrupt */
-    NVIC_EnableIRQ(psNuLlsi->irqn);
+    NVIC_EnableIRQ(psNuLlsi->m_module.eIRQn);
 
     return RT_EOK;
 }
@@ -291,9 +285,9 @@ static rt_err_t llsi_close(rt_device_t dev)
     RT_ASSERT(psNuLlsi);
 
     /* Mask External LLSI Interrupt */
-    NVIC_DisableIRQ(psNuLlsi->irqn);
+    NVIC_DisableIRQ(psNuLlsi->m_module.eIRQn);
 
-    LLSI_Close(psNuLlsi->base);
+    LLSI_Close((LLSI_T *)psNuLlsi->m_module.base);
 
     return RT_EOK;
 }
@@ -350,14 +344,14 @@ static rt_size_t llsi_write(rt_device_t dev, rt_off_t pos, const void *buffer, r
     /* Register llsi trigger callback function */
     sChnCB.m_eCBType = eCBType_Trigger;
     sChnCB.m_pfnCBHandler = nu_pdma_llsi_tx_cb_trigger;
-    sChnCB.m_pvUserData = (void *)psNuLlsi->base;
+    sChnCB.m_pvUserData = psNuLlsi->m_module.base;
     ret = nu_pdma_callback_register(psNuLlsi->pdma_chanid_tx, &sChnCB);
     RT_ASSERT(ret == RT_EOK);
 
     ret = nu_pdma_transfer(psNuLlsi->pdma_chanid_tx,
                            32,
                            (uint32_t)buffer,
-                           (uint32_t)&psNuLlsi->base->DATA,
+                           (uint32_t)&((LLSI_T *)psNuLlsi->m_module.base)->DATA,
                            RT_ALIGN(size, 4) / 4,
                            0);  // wait-forever
     RT_ASSERT(ret == RT_EOK);
@@ -425,11 +419,10 @@ int rt_hw_llsi_init(void)
         RT_ASSERT(ret == RT_EOK);
 #endif
 
-        ret = llsi_register(&nu_llsi_arr[i].device, nu_llsi_arr[i].name, NULL);
+        ret = llsi_register(&nu_llsi_arr[i].device, nu_llsi_arr[i].m_module.name, NULL);
         RT_ASSERT(ret == RT_EOK);
     }
 
     return ret;
 }
 INIT_DEVICE_EXPORT(rt_hw_llsi_init);
-#endif //#if defined(BSP_USING_LLSI)

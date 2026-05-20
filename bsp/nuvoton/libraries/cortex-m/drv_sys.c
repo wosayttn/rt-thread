@@ -97,9 +97,12 @@ void devmem(int argc, char *argv[])
     rt_kprintf("0x%08x\n", *((volatile uint32_t *)u32Addr));
 
     return;
+
 exit_devmem:
+
     rt_kprintf("Read: devmem <physical address in hex>\n");
     rt_kprintf("Write: devmem <physical address in hex> <value in hex format>\n");
+
     return;
 }
 MSH_CMD_EXPORT(devmem, dump device registers);
@@ -143,8 +146,11 @@ void devmem2(int argc, char *argv[])
     }
 
     return;
+
 exit_devmem:
+
     rt_kprintf("devmem2: <physical address in hex> <count in dec>\n");
+
     return;
 }
 MSH_CMD_EXPORT(devmem2, dump device registers);

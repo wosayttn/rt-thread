@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_RTC)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "sys/time.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -239,4 +235,3 @@ void RTC_IRQHandler(void)
 
     rt_interrupt_leave();
 }
-#endif //#if defined(BSP_USING_RTC)

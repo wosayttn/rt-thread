@@ -110,11 +110,14 @@
 #define RT_USING_CONSOLE
 #define RT_CONSOLEBUF_SIZE 4096
 #define RT_CONSOLE_DEVICE_NAME "uart0"
-#define RT_VER_NUM 0x50201
+#define RT_USING_CONSOLE_OUTPUT_CTL
+#define RT_VER_NUM 0x50300
 #define RT_BACKTRACE_LEVEL_MAX_NR 32
 /* end of RT-Thread Kernel */
 #define RT_USING_CACHE
 #define RT_USING_HW_ATOMIC
+#define ARCH_USING_HW_ATOMIC_8
+#define ARCH_USING_HW_ATOMIC_16
 #define RT_USING_CPU_FFS
 #define ARCH_MM_MMU
 #define ARCH_ARM
@@ -124,7 +127,6 @@
 #define RT_USING_GIC_V2
 #define ARCH_ARM_SECURE_MODE
 #define ARCH_ARMV8
-#define ARCH_USING_ASID
 #define ARCH_USING_IRQ_CTX_LIST
 
 /* RT-Thread Components */
@@ -189,6 +191,7 @@
 #define RT_USING_SERIAL_V1
 #define RT_SERIAL_USING_DMA
 #define RT_SERIAL_RB_BUFSZ 256
+#define RT_USING_CLOCK_TIME
 #define RT_USING_I2C
 #define RT_USING_I2C_BITOPS
 #define RT_USING_ADC
@@ -203,6 +206,7 @@
 #define RT_MMCSD_THREAD_PRIORITY 22
 #define RT_MMCSD_MAX_PARTITION 8
 #define RT_USING_SPI
+#define RT_USING_SPI_ISR
 #define RT_USING_QSPI
 #define RT_USING_AUDIO
 #define RT_AUDIO_REPLAY_MP_BLOCK_SIZE 4096
@@ -217,7 +221,6 @@
 #define RT_BLK_PARTITION_EFI
 /* end of Partition Types */
 #define RT_USING_PIN
-#define RT_USING_KTIME
 /* end of Device Drivers */
 
 /* C/C++ and POSIX layer */
@@ -410,13 +413,9 @@
 
 /* end of CPP11 */
 
-/* LwIP */
+/* Network */
 
-/* end of LwIP */
-
-/* Netdev */
-
-/* end of Netdev */
+/* end of Network */
 
 /* Utest Framework */
 
@@ -432,211 +431,6 @@
 
 /* end of Tmpfs Testcase */
 /* end of RT-Thread Utestcases */
-
-/* RT-Thread online packages */
-
-/* IoT - internet of things */
-
-
-/* Wi-Fi */
-
-/* Marvell WiFi */
-
-/* end of Marvell WiFi */
-
-/* Wiced WiFi */
-
-/* end of Wiced WiFi */
-
-/* CYW43012 WiFi */
-
-/* end of CYW43012 WiFi */
-
-/* BL808 WiFi */
-
-/* end of BL808 WiFi */
-
-/* CYW43439 WiFi */
-
-/* end of CYW43439 WiFi */
-/* end of Wi-Fi */
-
-/* IoT Cloud */
-
-/* end of IoT Cloud */
-/* end of IoT - internet of things */
-
-/* security packages */
-
-/* end of security packages */
-
-/* language packages */
-
-/* JSON: JavaScript Object Notation, a lightweight data-interchange format */
-
-/* end of JSON: JavaScript Object Notation, a lightweight data-interchange format */
-
-/* XML: Extensible Markup Language */
-
-/* end of XML: Extensible Markup Language */
-/* end of language packages */
-
-/* multimedia packages */
-
-/* LVGL: powerful and easy-to-use embedded GUI library */
-
-/* end of LVGL: powerful and easy-to-use embedded GUI library */
-
-/* u8g2: a monochrome graphic library */
-
-/* end of u8g2: a monochrome graphic library */
-/* end of multimedia packages */
-
-/* tools packages */
-
-/* end of tools packages */
-
-/* system packages */
-
-/* enhanced kernel services */
-
-/* end of enhanced kernel services */
-
-/* acceleration: Assembly language or algorithmic acceleration packages */
-
-/* end of acceleration: Assembly language or algorithmic acceleration packages */
-
-/* CMSIS: ARM Cortex-M Microcontroller Software Interface Standard */
-
-/* end of CMSIS: ARM Cortex-M Microcontroller Software Interface Standard */
-
-/* Micrium: Micrium software products porting for RT-Thread */
-
-/* end of Micrium: Micrium software products porting for RT-Thread */
-/* end of system packages */
-
-/* peripheral libraries and drivers */
-
-/* HAL & SDK Drivers */
-
-/* STM32 HAL & SDK Drivers */
-
-/* end of STM32 HAL & SDK Drivers */
-
-/* Infineon HAL Packages */
-
-/* end of Infineon HAL Packages */
-
-/* Kendryte SDK */
-
-/* end of Kendryte SDK */
-
-/* WCH HAL & SDK Drivers */
-
-/* end of WCH HAL & SDK Drivers */
-
-/* AT32 HAL & SDK Drivers */
-
-/* end of AT32 HAL & SDK Drivers */
-
-/* HC32 DDL Drivers */
-
-/* end of HC32 DDL Drivers */
-
-/* NXP HAL & SDK Drivers */
-
-/* end of NXP HAL & SDK Drivers */
-
-/* NUVOTON Drivers */
-
-#define PKG_USING_NUVOTON_CMSIS_DRIVER
-#define PKG_USING_NUVOTON_CMSIS_DRIVER_LATEST_VERSION
-#define PKG_USING_NUVOTON_SERIES_DRIVER
-#define PKG_USING_NUVOTON_SERIES_DRIVER_LATEST_VERSION
-/* end of NUVOTON Drivers */
-
-/* GD32 Drivers */
-
-/* end of GD32 Drivers */
-/* end of HAL & SDK Drivers */
-
-/* sensors drivers */
-
-/* end of sensors drivers */
-
-/* touch drivers */
-
-/* end of touch drivers */
-/* end of peripheral libraries and drivers */
-
-/* AI packages */
-
-/* end of AI packages */
-
-/* Signal Processing and Control Algorithm Packages */
-
-/* end of Signal Processing and Control Algorithm Packages */
-
-/* miscellaneous packages */
-
-/* project laboratory */
-
-/* end of project laboratory */
-
-/* samples: kernel and components samples */
-
-/* end of samples: kernel and components samples */
-
-/* entertainment: terminal games and other interesting software packages */
-
-/* end of entertainment: terminal games and other interesting software packages */
-/* end of miscellaneous packages */
-
-/* Arduino libraries */
-
-
-/* Projects and Demos */
-
-/* end of Projects and Demos */
-
-/* Sensors */
-
-/* end of Sensors */
-
-/* Display */
-
-/* end of Display */
-
-/* Timing */
-
-/* end of Timing */
-
-/* Data Processing */
-
-/* end of Data Processing */
-
-/* Data Storage */
-
-/* Communication */
-
-/* end of Communication */
-
-/* Device Control */
-
-/* end of Device Control */
-
-/* Other */
-
-/* end of Other */
-
-/* Signal IO */
-
-/* end of Signal IO */
-
-/* Uncategorized */
-
-/* end of Arduino libraries */
-/* end of RT-Thread online packages */
 
 /* Hardware Drivers Config */
 
@@ -731,9 +525,36 @@
 
 #define NU_PKG_USING_UTILS
 #define NU_PKG_USING_DEMO
+
+/* Sensors */
+
+/* end of Sensors */
+
+/* Audio Codecs */
+
 #define NU_PKG_USING_NAU8822
+/* end of Audio Codecs */
+
+/* Displays */
+
+/* end of Displays */
+
+/* Touch */
+
 #define NU_PKG_USING_ADC_TOUCH
+#define NU_PKG_USING_ADC_TOUCH_HW
+/* end of Touch */
+
+/* Storages */
+
 #define NU_PKG_USING_SPINAND
+/* end of Storages */
+
+/* Others */
+
+#define NU_PKG_USING_CCAP_SENSORS
+#define NU_PKG_USING_NUUTILS
+/* end of Others */
 /* end of Nuvoton Packages Config */
 /* end of Hardware Drivers Config */
 

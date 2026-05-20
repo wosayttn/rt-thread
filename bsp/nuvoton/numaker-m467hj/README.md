@@ -39,7 +39,6 @@ In addition, there is an attached on-board debugger and programmer “Nu-Link2-M
 
 | Device | Description | Driver supporting status |
 | -- | -- | -- |
-| SPI flash | 32Mb, W25Q32 | Supported |
 | HyperRAM | 64Mb, W956A8MBYA5I | Supported |
 | Ethernet PHY | RTL8201F | Supported |
 | Audio Codec | NAU88L22 | Supported |
@@ -57,13 +56,12 @@ In addition, there is an attached on-board debugger and programmer “Nu-Link2-M
 
 ## 2. Supported compiler
 
-Support GCC, MDK5, IAR IDE/compilers. More information of these compiler version as following:
+Support GCC and MDK5 IDE/compilers. More information of these compiler version as following:
 
 | IDE/Compiler  | Tested version            |
 | ---------- | ---------------------------- |
-| MDK5       | 5.26.2                       |
-| IAR        | 8.2                          |
-| GCC        | GCC 5.4.1 20160919 (release) |
+| MDK5 (AC6) | 5.43                         |
+| GCC        | GCC 10.3.1 (release)         |
 
 Notice: Please install Nu-Link_Keil_Driver or Nu-Link_IAR_Driver for development.
 

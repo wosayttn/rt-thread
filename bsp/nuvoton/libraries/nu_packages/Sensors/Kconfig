@@ -36,7 +36,6 @@ menu "Sensors"
 
     config NU_PKG_USING_LPS22HH
         bool "LPS22HH Barometer sensor."
-        select RT_USING_I2C
         select RT_USING_SENSOR
         select RT_USING_SENSOR_V2
         default n

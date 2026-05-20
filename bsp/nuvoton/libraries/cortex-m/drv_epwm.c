@@ -5,13 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-
-#include "rtdevice.h"
-
-#if defined(BSP_USING_EPWM)
-
-#include "NuMicro.h"
-#include "rthw.h"
+#include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -22,10 +16,12 @@
 #define MAKE_EPWM_NAME(x)         #x
 #define MAKE_EPWM_INSTANCE(x) \
     { \
-        .name  = MAKE_EPWM_NAME(epwm##x), \
-        .base  = EPWM##x, \
-        .rstidx = EPWM##x##_RST, \
-        .modid = EPWM##x##_MODULE, \
+        .m_module = { \
+            .name  = MAKE_EPWM_NAME(epwm##x), \
+            .base  = EPWM##x, \
+            .RstId = EPWM##x##_RST, \
+            .ModId = EPWM##x##_MODULE, \
+        }, \
     },
 
 /* Types / Structures ---------------------------------------------------------*/
@@ -44,10 +40,7 @@ enum
 struct nu_epwm
 {
     struct rt_device_pwm dev;
-    char                *name;
-    EPWM_T              *base;
-    uint32_t             rstidx;
-    uint32_t             modid;
+    const struct nu_module m_module;
 };
 typedef struct nu_epwm *nu_epwm_t;
 
@@ -78,7 +71,7 @@ static rt_err_t nu_epwm_enable(struct rt_device_pwm *device, struct rt_pwm_confi
 {
     rt_err_t result = RT_EOK;
 
-    EPWM_T *pwm_base = ((nu_epwm_t)device)->base;
+    EPWM_T *pwm_base = (EPWM_T *)((nu_epwm_t)device)->m_module.base;
     rt_uint32_t pwm_channel = ((struct rt_pwm_configuration *)configuration)->channel;
 
     if (enable == RT_TRUE)
@@ -102,7 +95,7 @@ static rt_err_t nu_epwm_set(struct rt_device_pwm *device, struct rt_pwm_configur
 
     rt_uint8_t  pwm_channel_pair;
     rt_uint32_t pwm_freq, pwm_dutycycle ;
-    EPWM_T *pwm_base = ((nu_epwm_t)device)->base;
+    EPWM_T *pwm_base = (EPWM_T *)((nu_epwm_t)device)->m_module.base;
     rt_uint8_t pwm_channel = ((struct rt_pwm_configuration *)configuration)->channel;
     rt_uint32_t pwm_period = ((struct rt_pwm_configuration *)configuration)->period;
     rt_uint32_t pwm_pulse = ((struct rt_pwm_configuration *)configuration)->pulse;
@@ -143,7 +136,7 @@ static rt_err_t nu_epwm_get(struct rt_device_pwm *device, struct rt_pwm_configur
 {
     rt_uint32_t pwm_real_period, pwm_real_duty, time_tick, u32EPWMClockSrc ;
 
-    EPWM_T *pwm_base = ((nu_epwm_t)device)->base;
+    EPWM_T *pwm_base = (EPWM_T *)((nu_epwm_t)device)->m_module.base;
     rt_uint32_t pwm_channel = ((struct rt_pwm_configuration *)configuration)->channel;
     rt_uint32_t pwm_prescale = EPWM_GET_PRESCALER(pwm_base, pwm_channel);
     rt_uint32_t pwm_period = EPWM_GET_CNR(pwm_base, pwm_channel);
@@ -157,7 +150,7 @@ static rt_err_t nu_epwm_get(struct rt_device_pwm *device, struct rt_pwm_configur
     ((struct rt_pwm_configuration *)configuration)->period = pwm_real_period;
     ((struct rt_pwm_configuration *)configuration)->pulse = pwm_real_duty;
 
-    LOG_I("%s %d %d %d\n", ((nu_epwm_t)device)->name, configuration->channel, configuration->period, configuration->pulse);
+    LOG_I("%s %d %d %d\n", ((nu_epwm_t)device)->m_module.name, configuration->channel, configuration->period, configuration->pulse);
 
     return RT_EOK;
 }
@@ -194,11 +187,11 @@ static int rt_hw_epwm_init(void)
     for (i = (EPWM_START + 1); i < EPWM_CNT; i++)
     {
 
-        CLK_EnableModuleClock(nu_epwm_arr[i].modid);
+        CLK_EnableModuleClock(nu_epwm_arr[i].m_module.ModId);
 
-        SYS_ResetModule(nu_epwm_arr[i].rstidx);
+        SYS_ResetModule(nu_epwm_arr[i].m_module.RstId);
 
-        ret = rt_device_pwm_register(&nu_epwm_arr[i].dev, nu_epwm_arr[i].name, &nu_epwm_ops, &nu_epwm_arr[i]);
+        ret = rt_device_pwm_register(&nu_epwm_arr[i].dev, nu_epwm_arr[i].m_module.name, &nu_epwm_ops, &nu_epwm_arr[i]);
         RT_ASSERT(ret == RT_EOK);
     }
 
@@ -206,5 +199,3 @@ static int rt_hw_epwm_init(void)
 }
 
 INIT_DEVICE_EXPORT(rt_hw_epwm_init);
-
-#endif //#if defined(BSP_USING_EPWM)

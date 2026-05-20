@@ -5,13 +5,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_PDMA)
-
-#include "drv_pdma.h"
 #include "drv_sys.h"
-#include "nu_bitutil.h"
+#include "drv_pdma.h"
 #include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -30,7 +25,7 @@
 
 #define NU_PDMA_GET_MOD_CHIDX(ch)   ((ch&NU_PDMA_CHN_IDX_Msk)>>NU_PDMA_CHN_IDX_Pos)
 #define NU_PDMA_GET_MOD_IDX(ch)     ((ch&NU_PDMA_IDX_Msk)>>NU_PDMA_IDX_Pos)
-#define NU_PDMA_GET_BASE(ch)        ((PDMA_T *)nu_pdma_arr[NU_PDMA_GET_MOD_IDX(ch)].m_module.m_pvBase)
+#define NU_PDMA_GET_BASE(ch)        ((PDMA_T *)nu_pdma_arr[NU_PDMA_GET_MOD_IDX(ch)].m_module.base)
 #define NU_PDMA_GET_ARRAY_IDX(iModChnID)  ((NU_PDMA_GET_IDX(iModChnID)*PDMA_CH_MAX)+NU_PDMA_GET_CHN_ID(iModChnID))
 #define DEF_SGTBL_TOKEN_NUM    (RT_ALIGN(NU_PDMA_SGTBL_POOL_SIZE, 32) / 32)
 
@@ -38,10 +33,10 @@
     [(_idx)] =                           \
     {                                    \
         .m_module = {                    \
-            .name = "pdma" #_idx,       \
-            .m_pvBase = (void *)PDMA##_idx, \
-            .u32RstId = PDMA##_idx##_RST,\
-            .eIRQn = PDMA##_idx##_IRQn   \
+            .name = "pdma" #_idx,        \
+            .base = (void *)PDMA##_idx,  \
+            .RstId = PDMA##_idx##_RST,   \
+            .eIRQn = PDMA##_idx##_IRQn, \
         }                                \
     }
 
@@ -443,14 +438,14 @@ static void nu_pdma_init(void)
 
     for (i = (PDMA_START + 1); i < PDMA_CNT; i++)
     {
-        if (nu_pdma_arr[i].m_module.m_pvBase == RT_NULL)
+        if (nu_pdma_arr[i].m_module.base == RT_NULL)
         {
             /* Mark all channels occupied for unavailable PDMA module. */
             nu_pdma_chn_mask_arr[i] = (uint32_t)(~0ul);
             continue;
         }
 
-        PDMA_T *pdma = (PDMA_T *)nu_pdma_arr[i].m_module.m_pvBase;
+        PDMA_T *pdma = (PDMA_T *)nu_pdma_arr[i].m_module.base;
         nu_pdma_chn_mask_arr[i] = ~(NU_PDMA_CH_Msk);
 
         nu_pdma_arr[i].m_psSGTbl = rt_malloc_align(sizeof(DSCT_T) * NU_PDMA_SGTBL_POOL_SIZE, 32);
@@ -467,7 +462,7 @@ static void nu_pdma_init(void)
             nu_pdma_arr[i].m_u32SGTblToken[latest] ^= ~((1 << (NU_PDMA_SGTBL_POOL_SIZE % 32)) - 1) ;
         }
 
-        SYS_ResetModule(nu_pdma_arr[i].m_module.u32RstId);
+        SYS_ResetModule(nu_pdma_arr[i].m_module.RstId);
 
         /* Initialize PDMA setting */
         PDMA_Open(pdma, PDMA_CH_Msk);
@@ -478,7 +473,8 @@ static void nu_pdma_init(void)
 
         /* Assign first SG table address as PDMA SG table base address */
         pdma->SCATBA = (uint32_t)nu_pdma_arr[i].m_psSGTbl;
-        rt_kprintf("Set %s SCATBA address to 0x%08x.\n", nu_pdma_arr[i].m_module.name, pdma->SCATBA);
+
+        LOG_I("Set %s SCATBA address to 0x%08x.\n", nu_pdma_arr[i].m_module.name, pdma->SCATBA);
     }
 
     nu_pdma_inited = 1;
@@ -1001,7 +997,7 @@ rt_err_t nu_pdma_sgtbls_allocate(int i32ModChnID, nu_pdma_desc_t *ppsSgtbls, int
         /* Get token. */
         if ((idx = nu_pdma_sgtbls_token_allocate(&nu_pdma_arr[mod_idx])) < 0)
         {
-            rt_kprintf("No available sgtbl.\n");
+            LOG_E("No available sgtbl.\n");
             goto fail_nu_pdma_sgtbls_allocate;
         }
 
@@ -1034,8 +1030,8 @@ static rt_err_t nu_pdma_sgtbls_valid(int i32ModChnID, nu_pdma_desc_t head)
         node_addr = (uint32_t)node;
         if ((node_addr < pdma->SCATBA) || (node_addr - pdma->SCATBA) >= NU_PDMA_SG_LIMITED_DISTANCE)
         {
-            rt_kprintf("The distance is over %d between 0x%08x and 0x%08x. \n", NU_PDMA_SG_LIMITED_DISTANCE, pdma->SCATBA, node);
-            rt_kprintf("Please use nu_pdma_sgtbl_allocate to allocate valid sg-table.\n");
+            LOG_E("The distance is over %d between 0x%08x and 0x%08x.", NU_PDMA_SG_LIMITED_DISTANCE, pdma->SCATBA, node);
+            LOG_E("Please use nu_pdma_sgtbl_allocate to allocate valid sg-table.");
             return -RT_ERROR;
         }
 
@@ -1409,8 +1405,7 @@ static rt_size_t nu_pdma_memfun(void *dest, void *src, uint32_t u32DataWidth, un
 
     psMemFunActor->m_u32Result = 0;
 
-    //rt_kprintf("idx=%d, src@%08x -> dest@%08x, u32DataWidth: %08x, u32TransferCnt:%d\n",
-    //           idx, src, dest, u32DataWidth, u32TransferCnt);
+    //LOG_D("idx=%d, src@%08x -> dest@%08x, u32DataWidth: %08x, u32TransferCnt:%d", idx, src, dest, u32DataWidth, u32TransferCnt);
 
     /* Trigger it */
     nu_pdma_transfer(psMemFunActor->m_i32ModChnID,
@@ -1501,4 +1496,3 @@ int rt_hw_pdma_memfun_init(void)
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_hw_pdma_memfun_init);
-#endif //#if defined(BSP_USING_PDMA)

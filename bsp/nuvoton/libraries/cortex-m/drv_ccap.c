@@ -5,13 +5,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_CCAP)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "drv_ccap.h"
-#include "ccap_sensor.h"
 #include <rthw.h>
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -33,12 +28,8 @@ enum
 struct nu_ccap
 {
     struct rt_device device;
-    char *name;
-    CCAP_T *base;
-    uint32_t rstidx;
-    uint32_t modid_ccap;
+    const struct nu_module m_module;
     uint32_t modid_sensor;
-    IRQn_Type irqn;
 
     ccap_config sConfig;
 };
@@ -52,12 +43,14 @@ static struct nu_ccap nu_ccap_arr [] =
 {
 #if defined(BSP_USING_CCAP0)
     {
-        .name = "ccap0",
-        .base = CCAP,
-        .rstidx = CCAP_RST,
-        .modid_ccap = CCAP_MODULE,
+        .m_module = {
+            .name = "ccap0",
+            .base = CCAP,
+            .RstId = CCAP_RST,
+            .ModId = CCAP_MODULE,
+            .eIRQn = CCAP_IRQn,
+        },
         .modid_sensor = SEN_MODULE,
-        .irqn = CCAP_IRQn,
     },
 #endif
 };
@@ -65,7 +58,7 @@ static struct nu_ccap nu_ccap_arr [] =
 /* Functions Implementation --------------------------------------------------*/
 static void nu_ccap_isr(nu_ccap_t ccap)
 {
-    CCAP_T *base = ccap->base;
+    CCAP_T *base = (CCAP_T *)ccap->m_module.base;
     uint32_t u32CapInt, u32EvtMsk;
 
     u32CapInt = base->INT;
@@ -105,9 +98,7 @@ void CCAP_IRQHandler(void)
 {
     /* enter interrupt */
     rt_interrupt_enter();
-
     nu_ccap_isr(&nu_ccap_arr[CCAP0_IDX]);
-
     /* leave interrupt */
     rt_interrupt_leave();
 }
@@ -123,26 +114,23 @@ static void ccap_sensor_setfreq(nu_ccap_t psNuCcap, uint32_t u32SensorFreq)
 {
     if (u32SensorFreq > 0)
     {
-        int32_t i32Div;
-
         /* Specified sensor clock */
-        i32Div = CLK_GetHCLKFreq() / u32SensorFreq;
+        int32_t i32Div = (CLK_GetHCLKFreq() / u32SensorFreq);
 
-        if (i32Div == 0)
-            i32Div = 1;
-
-        CLK_EnableModuleClock(psNuCcap->modid_ccap);
-        CLK_SetModuleClock(psNuCcap->modid_ccap, CLK_CLKSEL0_CCAPSEL_HCLK, MODULE_NoMsk);
-
+        CLK_EnableModuleClock(psNuCcap->m_module.ModId);
         CLK_EnableModuleClock(psNuCcap->modid_sensor);
-        CLK_SetModuleClock(psNuCcap->modid_sensor, MODULE_NoMsk, CLK_CLKDIV3_VSENSE(i32Div));
+
+        LOG_I("CLKSEL0:%08X CLKDIV3:%08X BEFORE", CLK->CLKSEL0, CLK->CLKDIV3);
+        CLK_SetModuleClock(psNuCcap->modid_sensor, CLK_CLKSEL0_CCAPSEL_HCLK, CLK_CLKDIV3_VSENSE(i32Div));
+        LOG_I("CLKSEL0:%08X CLKDIV3:%08X AFTER", CLK->CLKSEL0, CLK->CLKDIV3);
+
         LOG_I("CCAP Engine clock:%d", CLK_GetHCLKFreq());
         LOG_I("CCAP Sensor preferred clock %d, divider:%d", u32SensorFreq, i32Div);
         LOG_I("CCAP Sensor actully clock:%d", CLK_GetHCLKFreq() / i32Div);
     }
     else
     {
-        CLK_DisableModuleClock(psNuCcap->modid_ccap);
+        CLK_DisableModuleClock(psNuCcap->m_module.ModId);
         CLK_DisableModuleClock(psNuCcap->modid_sensor);
     }
 }
@@ -155,14 +143,15 @@ static rt_err_t ccap_pipe_configure(nu_ccap_t psNuCcap, ccap_view_info_t psViewI
     struct rt_device_rect_info *psRectCropping = &psCcapConf->sRectCropping;
 
     /* Set Cropping Window Vertical/Horizontal Starting Address and Cropping Window Size */
-    CCAP_SetCroppingWindow(psNuCcap->base, psRectCropping->y, psRectCropping->x, psRectCropping->height, psRectCropping->width);
+    CCAP_SetCroppingWindow((CCAP_T *)psNuCcap->m_module.base, psRectCropping->y, psRectCropping->x, psRectCropping->height, psRectCropping->width);
 
+#if defined(CCAP_CTL_PKTEN)
     if (psCcapConf->sPipeInfo_Packet.pu8FarmAddr)
     {
         uint32_t u32WM, u32WN, u32HM, u32HN;
 
         /* Set System Memory Packet Base Address Register */
-        CCAP_SetPacketBuf(psNuCcap->base, (uint32_t)psCcapConf->sPipeInfo_Packet.pu8FarmAddr);
+        CCAP_SetPacketBuf((CCAP_T *)psNuCcap->m_module.base, (uint32_t)psCcapConf->sPipeInfo_Packet.pu8FarmAddr);
 
         u32WM = u32WN = u32HM = u32HN = 0;
         /* Set Packet Scaling Vertical/Horizontal Factor Register */
@@ -178,18 +167,20 @@ static rt_err_t ccap_pipe_configure(nu_ccap_t psNuCcap, ccap_view_info_t psViewI
             u32WM = psRectCropping->width;
         }
 
-        CCAP_SetPacketScaling(psNuCcap->base,
+        CCAP_SetPacketScaling((CCAP_T *)psNuCcap->m_module.base,
                               u32HN,
                               u32HM,
                               u32WN,
                               u32WM);
 
         /* Set Packet Frame Output Pixel Stride Width */
-        CCAP_SetPacketStride(psNuCcap->base, psCcapConf->u32Stride_Packet);
+        CCAP_SetPacketStride((CCAP_T *)psNuCcap->m_module.base, psCcapConf->u32Stride_Packet);
 
         u32PipeEnabling |= CCAP_CTL_PKTEN;
     }
+#endif
 
+#if defined(CCAP_CTL_PLNEN)
     if (psCcapConf->sPipeInfo_Planar.pu8FarmAddr)
     {
         uint32_t u32Offset = 0;
@@ -212,17 +203,17 @@ static rt_err_t ccap_pipe_configure(nu_ccap_t psNuCcap, ccap_view_info_t psViewI
         }
 
         /* Set System Memory Planar Y Base Address Register */
-        CCAP_SetPlanarYBuf(psNuCcap->base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
+        CCAP_SetPlanarYBuf((CCAP_T *)psNuCcap->m_module.base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
 
         u32Offset = psCcapConf->sPipeInfo_Planar.u32Height * psCcapConf->sPipeInfo_Planar.u32Width;
 
         /* Set System Memory Planar U Base Address Register */
-        CCAP_SetPlanarUBuf(psNuCcap->base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
+        CCAP_SetPlanarUBuf((CCAP_T *)psNuCcap->m_module.base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
 
         u32Offset += ((psCcapConf->sPipeInfo_Planar.u32Height * psCcapConf->sPipeInfo_Planar.u32Width) / u32Div);
 
         /* Set System Memory Planar V Base Address Register */
-        CCAP_SetPlanarVBuf(psNuCcap->base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
+        CCAP_SetPlanarVBuf((CCAP_T *)psNuCcap->m_module.base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
 
         u32WM = u32WN = u32HM = u32HN = 0;
         /* Set Planar Scaling Vertical/Horizontal Factor Register */
@@ -239,20 +230,21 @@ static rt_err_t ccap_pipe_configure(nu_ccap_t psNuCcap, ccap_view_info_t psViewI
         }
 
         /* Set Planar Scaling Vertical/Horizontal Factor Register */
-        CCAP_SetPlanarScaling(psNuCcap->base,
+        CCAP_SetPlanarScaling((CCAP_T *)psNuCcap->m_module.base,
                               u32HN,
                               u32HM,
                               u32WN,
                               u32WM);
 
         /* Set Planar Frame Output Pixel Stride Width */
-        CCAP_SetPlanarStride(psNuCcap->base, psCcapConf->u32Stride_Planar);
+        CCAP_SetPlanarStride((CCAP_T *)psNuCcap->m_module.base, psCcapConf->u32Stride_Planar);
 
         u32PipeEnabling |= CCAP_CTL_PLNEN;
     }
+#endif
 
     /* Set Vsync polarity, Hsync polarity, pixel clock polarity, Sensor Format and Order */
-    CCAP_Open(psNuCcap->base,
+    CCAP_Open((CCAP_T *)psNuCcap->m_module.base,
               psSensorModeInfo->u32Polarity |
               psViewInfo->u32PixFmt |
               psCcapConf->sPipeInfo_Packet.u32PixFmt |
@@ -274,10 +266,10 @@ static rt_err_t ccap_open(rt_device_t dev, rt_uint16_t oflag)
     ccap_sensor_setfreq(psNuCcap, 24000000);
 
     /* Reset IP */
-    SYS_ResetModule(psNuCcap->rstidx);
+    SYS_ResetModule(psNuCcap->m_module.RstId);
 
     /* Unmask External CCAP Interrupt */
-    NVIC_EnableIRQ(psNuCcap->irqn);
+    NVIC_EnableIRQ(psNuCcap->m_module.eIRQn);
 
     return RT_EOK;
 }
@@ -287,13 +279,13 @@ static rt_err_t ccap_close(rt_device_t dev)
     nu_ccap_t psNuCcap = (nu_ccap_t)dev;
 
     /* Stop capture engine */
-    CCAP_Stop(psNuCcap->base, FALSE);
+    CCAP_Stop((CCAP_T *)psNuCcap->m_module.base, FALSE);
 
     /* Disable CCAP Interrupt */
-    CCAP_DisableInt(psNuCcap->base, CCAP_INT_VIEN_Msk);
+    CCAP_DisableInt((CCAP_T *)psNuCcap->m_module.base, CCAP_INT_VIEN_Msk);
 
     /* Mask External CCAP Interrupt */
-    NVIC_DisableIRQ(psNuCcap->irqn);
+    NVIC_DisableIRQ(psNuCcap->m_module.eIRQn);
 
     /* Disable clock */
     ccap_sensor_setfreq(psNuCcap, 0);
@@ -324,20 +316,20 @@ static rt_err_t ccap_control(rt_device_t dev, int cmd, void *args)
     case CCAP_CMD_START_CAPTURE:
 
         /* Enable CCAP Interrupt */
-        CCAP_EnableInt(psNuCcap->base, CCAP_INT_VIEN_Msk);
+        CCAP_EnableInt((CCAP_T *)psNuCcap->m_module.base, CCAP_INT_VIEN_Msk);
 
         /* Start capture engine */
-        CCAP_Start(psNuCcap->base);
+        CCAP_Start((CCAP_T *)psNuCcap->m_module.base);
 
         break;
 
     case CCAP_CMD_STOP_CAPTURE:
 
         /* Disable CCAP Interrupt */
-        CCAP_DisableInt(psNuCcap->base, CCAP_INT_VIEN_Msk);
+        CCAP_DisableInt((CCAP_T *)psNuCcap->m_module.base, CCAP_INT_VIEN_Msk);
 
         /* Stop capture engine */
-        CCAP_Stop(psNuCcap->base, FALSE);
+        CCAP_Stop((CCAP_T *)psNuCcap->m_module.base, FALSE);
 
         break;
 
@@ -370,7 +362,7 @@ static rt_err_t ccap_control(rt_device_t dev, int cmd, void *args)
         int i32IsOneSutterMode = *((int *)args);
 
         /* Set shutter or continuous mode */
-        CCAP_SET_CTL(psNuCcap->base, (i32IsOneSutterMode > 0) ? CCAP_CTL_SHUTTER_Msk : 0);
+        CCAP_SET_CTL((CCAP_T *)psNuCcap->m_module.base, (i32IsOneSutterMode > 0) ? CCAP_CTL_SHUTTER_Msk : 0);
     }
     break;
 
@@ -382,17 +374,24 @@ static rt_err_t ccap_control(rt_device_t dev, int cmd, void *args)
         RT_ASSERT(args);
         psCcapConf = (ccap_config_t)args;
 
+#if defined(CCAP_CTL_PKTEN)
         /* Set System Memory Packet Base Address Register */
-        CCAP_SetPacketBuf(psNuCcap->base, (uint32_t)psCcapConf->sPipeInfo_Packet.pu8FarmAddr);
+        CCAP_SetPacketBuf((CCAP_T *)psNuCcap->m_module.base, (uint32_t)psCcapConf->sPipeInfo_Packet.pu8FarmAddr);
+#endif
 
+#if defined(CCAP_CTL_PLNEN)
         /* Set System Memory Planar Y Base Address Register */
-        CCAP_SetPlanarYBuf(psNuCcap->base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
+        CCAP_SetPlanarYBuf((CCAP_T *)psNuCcap->m_module.base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
         u32Offset = psCcapConf->sPipeInfo_Planar.u32Height * psCcapConf->sPipeInfo_Planar.u32Width;
+
         /* Set System Memory Planar U Base Address Register */
-        CCAP_SetPlanarUBuf(psNuCcap->base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
+        CCAP_SetPlanarUBuf((CCAP_T *)psNuCcap->m_module.base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
         u32Offset += ((psCcapConf->sPipeInfo_Planar.u32Height * psCcapConf->sPipeInfo_Planar.u32Width) / 2);
+
         /* Set System Memory Planar V Base Address Register */
-        CCAP_SetPlanarVBuf(psNuCcap->base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
+        CCAP_SetPlanarVBuf((CCAP_T *)psNuCcap->m_module.base, (uint32_t)psCcapConf->sPipeInfo_Planar.pu8FarmAddr + u32Offset);
+#endif
+
     }
     break;
 
@@ -453,12 +452,10 @@ int rt_hw_ccap_init(void)
     for (i = (CCAP_START + 1); i < CCAP_CNT; i++)
     {
         rt_memset(&nu_ccap_arr[i].sConfig, 0, sizeof(ccap_config));
-        ret = ccap_register(&nu_ccap_arr[i].device, nu_ccap_arr[i].name, NULL);
+        ret = ccap_register(&nu_ccap_arr[i].device, nu_ccap_arr[i].m_module.name, NULL);
         RT_ASSERT(ret == RT_EOK);
     }
 
     return ret;
 }
 INIT_DEVICE_EXPORT(rt_hw_ccap_init);
-
-#endif

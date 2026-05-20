@@ -1,14 +1,8 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author           Notes
-* 2020-2-7        Wayne            First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #ifndef NU_MISC_UTIL_H
 #define NU_MISC_UTIL_H
@@ -16,6 +10,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdint.h>
 
 #define NU_MAX(a,b) ((a)>(b)?(a):(b))
 #define NU_MIN(a,b) ((a)<(b)?(a):(b))
@@ -31,6 +27,11 @@ extern "C" {
 #define WRITE_REG(REG, VAL)   ((REG) = (VAL))
 #define READ_REG(REG)         ((REG))
 #define MODIFY_REG(REG, CLEARMASK, SETMASK)  WRITE_REG((REG), (((READ_REG(REG)) & (~(CLEARMASK))) | (SETMASK)))
+
+uint32_t ns_to_cycles_ceil(double ns, double clk_hz);
+uint32_t hz_to_ns_ceil(double hz);
+double ns_to_cycles(double ns, double clk_hz);
+double hz_to_ns(double hz);
 
 #ifdef __cplusplus
 }

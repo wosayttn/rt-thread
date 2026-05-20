@@ -5,12 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_BPWM)
-
-#include "NuMicro.h"
-#include "rthw.h"
+#include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -21,10 +16,12 @@
 #define MAKE_BPWM_NAME(x)         #x
 #define MAKE_BPWM_INSTANCE(x) \
     { \
-        .name  = MAKE_BPWM_NAME(bpwm##x), \
-        .base  = BPWM##x, \
-        .rstidx = BPWM##x##_RST, \
-        .modid = BPWM##x##_MODULE, \
+        .m_module = { \
+            .name = MAKE_BPWM_NAME(bpwm##x), \
+            .base = BPWM##x, \
+            .RstId = BPWM##x##_RST, \
+            .ModId = BPWM##x##_MODULE, \
+        }, \
     },
 
 /* Types / Structures ---------------------------------------------------------*/
@@ -43,10 +40,7 @@ enum
 struct nu_bpwm
 {
     struct rt_device_pwm dev;
-    char                *name;
-    BPWM_T              *base;
-    uint32_t             rstidx;
-    uint32_t             modid;
+    const struct nu_module m_module;
     rt_int32_t  pwm_period_time;
 };
 typedef struct nu_bpwm *nu_bpwm_t;
@@ -76,7 +70,7 @@ static rt_err_t nu_bpwm_enable(struct rt_device_pwm *device, struct rt_pwm_confi
 {
     rt_err_t result = RT_EOK;
 
-    BPWM_T *pwm_base = ((nu_bpwm_t)device)->base;
+    BPWM_T *pwm_base = (BPWM_T *)((nu_bpwm_t)device)->m_module.base;
     rt_uint32_t pwm_channel = ((struct rt_pwm_configuration *)configuration)->channel;
 
     if (enable == RT_TRUE)
@@ -99,7 +93,7 @@ static rt_err_t nu_bpwm_set(struct rt_device_pwm *device, struct rt_pwm_configur
         return -(RT_ERROR);
 
     rt_uint32_t pwm_freq, pwm_dutycycle;
-    BPWM_T *pwm_base = ((nu_bpwm_t)device)->base;
+    BPWM_T *pwm_base = (BPWM_T *)((nu_bpwm_t)device)->m_module.base;
     rt_uint8_t pwm_channel = ((struct rt_pwm_configuration *)configuration)->channel;
     rt_uint32_t pwm_period = ((struct rt_pwm_configuration *)configuration)->period;
     rt_uint32_t pwm_pulse = ((struct rt_pwm_configuration *)configuration)->pulse;
@@ -109,7 +103,7 @@ static rt_err_t nu_bpwm_set(struct rt_device_pwm *device, struct rt_pwm_configur
     if (BPWM_GET_CNR(pwm_base, pwm_channel) != 0)
     {
         pwm_period = ((nu_bpwm_t)device)->pwm_period_time;
-        LOG_I("%s output frequency is determined, user can only change the duty\n", ((nu_bpwm_t)device)->name);
+        LOG_I("%s output frequency is determined, user can only change the duty\n", ((nu_bpwm_t)device)->m_module.name);
     }
     else
     {
@@ -132,7 +126,7 @@ static rt_err_t nu_bpwm_get(struct rt_device_pwm *device, struct rt_pwm_configur
 {
     rt_uint32_t pwm_real_period, pwm_real_duty, time_tick, u32BPWMClockSrc ;
 
-    BPWM_T *pwm_base = ((nu_bpwm_t)device)->base;
+    BPWM_T *pwm_base = (BPWM_T *)((nu_bpwm_t)device)->m_module.base;
     rt_uint32_t pwm_channel = ((struct rt_pwm_configuration *)configuration)->channel;
     rt_uint32_t pwm_prescale = pwm_base->CLKPSC;
     rt_uint32_t pwm_period = BPWM_GET_CNR(pwm_base, pwm_channel);
@@ -146,7 +140,7 @@ static rt_err_t nu_bpwm_get(struct rt_device_pwm *device, struct rt_pwm_configur
     ((struct rt_pwm_configuration *)configuration)->period = pwm_real_period;
     ((struct rt_pwm_configuration *)configuration)->pulse = pwm_real_duty;
 
-    LOG_I("%s %d %d %d\n", ((nu_bpwm_t)device)->name, configuration->channel, configuration->period, configuration->pulse);
+    LOG_I("%s %d %d %d\n", ((nu_bpwm_t)device)->m_module.name, configuration->channel, configuration->period, configuration->pulse);
 
     return RT_EOK;
 }
@@ -182,10 +176,10 @@ static int rt_hw_bpwm_init(void)
 
     for (i = (BPWM_START + 1); i < BPWM_CNT; i++)
     {
-        CLK_EnableModuleClock(nu_bpwm_arr[i].modid);
+        CLK_EnableModuleClock(nu_bpwm_arr[i].m_module.ModId);
+        SYS_ResetModule(nu_bpwm_arr[i].m_module.RstId);
 
-        SYS_ResetModule(nu_bpwm_arr[i].rstidx);
-        ret = rt_device_pwm_register(&nu_bpwm_arr[i].dev, nu_bpwm_arr[i].name, &nu_bpwm_ops, RT_NULL);
+        ret = rt_device_pwm_register(&nu_bpwm_arr[i].dev, nu_bpwm_arr[i].m_module.name, &nu_bpwm_ops, RT_NULL);
         RT_ASSERT(ret == RT_EOK);
     }
 
@@ -193,5 +187,3 @@ static int rt_hw_bpwm_init(void)
 }
 
 INIT_DEVICE_EXPORT(rt_hw_bpwm_init);
-
-#endif //#if defined(BSP_USING_BPWM)

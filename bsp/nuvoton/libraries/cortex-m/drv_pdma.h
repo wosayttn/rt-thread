@@ -7,8 +7,7 @@
 #ifndef __DRV_PDMA_H__
 #define __DRV_PDMA_H__
 
-#include "rtthread.h"
-#include "NuMicro.h"
+#include "drv_sys.h"
 
 #ifndef NU_PDMA_SGTBL_POOL_SIZE
     #define NU_PDMA_SGTBL_POOL_SIZE (16)

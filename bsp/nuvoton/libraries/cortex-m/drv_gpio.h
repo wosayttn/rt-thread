@@ -46,5 +46,6 @@ typedef enum
 #define NU_GET_PINS(rt_pin_index)         ((rt_pin_index) & 0x0000000F)
 #define NU_GET_PORT(rt_pin_index)         (((rt_pin_index)>>4) & 0x0000000F)
 #define NU_GET_PIN_MASK(nu_gpio_pin)      (1 << (nu_gpio_pin))
+#define NU_PIN_UNUSED                     0xFFFFFFFF
 
 #endif /* __DRV_GPIO_H__ */

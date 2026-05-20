@@ -10,10 +10,8 @@
 
 #if defined(BSP_USING_EADC) && defined(BSP_USING_EADC0)
 
-#include "rtdevice.h"
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "drv_gpio.h"
-#include "drv_common.h"
 
 #define UTEST_EADC_DEV_NAME      "eadc0"
 #define UTEST_EADC_CH_NUM        16

@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * Copyright (C) 2015-2017  Dialog Semiconductor
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef __DA9062_H__

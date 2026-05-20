@@ -122,14 +122,14 @@ void nutool_modclkcfg_deinit_crc(void)
 
 void nutool_modclkcfg_init_crpt(void)
 {
-    CLK_EnableModuleClock(CRPT_MODULE);
+    CLK_EnableModuleClock(CRYPTO_MODULE);
 
     return;
 }
 
 void nutool_modclkcfg_deinit_crpt(void)
 {
-    CLK_DisableModuleClock(CRPT_MODULE);
+    CLK_DisableModuleClock(CRYPTO_MODULE);
 
     return;
 }
@@ -1127,6 +1127,12 @@ void nutool_modclkcfg_init_base(void)
     return;
 }
 
+void Reset_Handler_PreInit(void)
+{
+    /* Enable base clock */
+    nutool_modclkcfg_init_base();
+}
+
 void nutool_modclkcfg_init(void)
 {
     /*---------------------------------------------------------------------------------------------------------*/
@@ -1150,7 +1156,7 @@ void nutool_modclkcfg_init(void)
     //SysTick->CTRL = (SysTick->CTRL & ~(0x00000005ul)) | 0x00000005ul;
 
     /* Enable base clock */
-    nutool_modclkcfg_init_base();
+    //nutool_modclkcfg_init_base();
 
     /* Enable module clock and set clock source */
 #if defined(BSP_USING_ACMP01)

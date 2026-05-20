@@ -1,14 +1,8 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-8-25       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <rtthread.h>
 #include <rtdevice.h>
@@ -183,11 +177,11 @@ static const sensor_reg_val s_sRegValue_VGA_YUV[] =
     {0x0022, 0x00}, {0x0023, 0xCF}, {0x0020, 0x08}, {0x0027, 0x30},
     {0x0004, 0x10}, {0x0006, 0x03}, {0x0012, 0x0F},
     // Set 0x25 to 0, 0x26 modification is valid.
-    {0x0026, 0x70},
-    //{0x0026, 0x77}, /*48Mhz */
-    //{0x0026, 0x37}, /*68Mhz */
+    {0x0026, 0x37}, /*68Mhz */
 #if defined(CONFIG_CCIR656)
     {0x0029, 0x80},
+#else
+    {0x0029, 0x00},
 #endif
     {0x002A, 0x44}, {0x002B, 0x01}, {0x002C, 0x00}, {0x0025, 0x00},
     {0x004A, 0x0A}, {0x004B, 0x72}, {0x0070, 0x2A}, {0x0071, 0x46},

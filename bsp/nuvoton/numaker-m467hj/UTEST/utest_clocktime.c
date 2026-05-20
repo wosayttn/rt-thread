@@ -21,6 +21,19 @@ static const char *const g_timer_dev_names[] =
     "timer3",
 };
 
+#define UTEST_CLOCK_TIMER_ONESHOT_USEC    20000
+#define UTEST_CLOCK_TIMER_PERIODIC_USEC   30000
+#define UTEST_CLOCK_TIMER_ONESHOT_WAIT_MS 60
+#define UTEST_CLOCK_TIMER_PERIOD_WAIT_MS  120
+#define UTEST_CLOCK_TIMER_STOP_WAIT_MS    20
+
+static volatile rt_uint32_t g_timer_timeout_count;
+
+static rt_tick_t clocktime_ms_to_tick(rt_uint32_t ms)
+{
+    return ((ms * RT_TICK_PER_SECOND) + 999) / 1000;
+}
+
 static void clocktime_dump_test_setting(void)
 {
     int index;
@@ -37,12 +50,17 @@ static void clocktime_dump_test_setting(void)
                    timer_dev ? "found" : "not found, skip");
     }
 
+    rt_kprintf("  oneshot timeout (us)  : %d\n", UTEST_CLOCK_TIMER_ONESHOT_USEC);
+    rt_kprintf("  period timeout (us)   : %d\n", UTEST_CLOCK_TIMER_PERIODIC_USEC);
     rt_kprintf("  supported modes       : oneshot + periodic\n\n");
 }
 
 static rt_err_t timer_timeout_cb(rt_device_t dev, rt_size_t size)
 {
-    rt_kprintf("enter hardware timer isr\n");
+    RT_UNUSED(dev);
+    RT_UNUSED(size);
+
+    g_timer_timeout_count ++;
 
     return RT_EOK;
 }
@@ -102,42 +120,40 @@ static void test_timeout(rt_device_t timer_dev)
     //timer set timeout start run test
     uassert_true(rt_device_write(timer_dev, 0, &timer_mode, sizeof(timer_mode)) == 0);
 
-    timer_timeout.sec = 4;
-    timer_timeout.usec = 0;
-    uassert_true(rt_device_write(timer_dev, 0, &timer_timeout, sizeof(timer_timeout)) == sizeof(timer_timeout));
-
-    rt_thread_delay(5 * RT_TICK_PER_SECOND);//wait 5 sec for isr stop
-
+    g_timer_timeout_count = 0;
     timer_timeout.sec = 0;
-    timer_timeout.usec = 123456;
+    timer_timeout.usec = UTEST_CLOCK_TIMER_ONESHOT_USEC;
     uassert_true(rt_device_write(timer_dev, 0, &timer_timeout, sizeof(timer_timeout)) == sizeof(timer_timeout));
-    rt_thread_delay(1 * RT_TICK_PER_SECOND);//wait 1 sec for oneshot stop
+    rt_thread_delay(clocktime_ms_to_tick(UTEST_CLOCK_TIMER_ONESHOT_WAIT_MS));
+    uassert_int_equal(g_timer_timeout_count, 1);
 
     timer_mode = CLOCK_TIMER_MODE_PERIOD;
     uassert_true(rt_device_control(timer_dev, CLOCK_TIMER_CTRL_MODE_SET, &timer_mode) == RT_EOK);
 
-    timer_timeout.sec = 3;
-    timer_timeout.usec = 7654321;
+    g_timer_timeout_count = 0;
+    timer_timeout.sec = 0;
+    timer_timeout.usec = UTEST_CLOCK_TIMER_PERIODIC_USEC;
     uassert_true(rt_device_write(timer_dev, 0, &timer_timeout, sizeof(timer_timeout)) == sizeof(timer_timeout));
 
+    rt_thread_delay(clocktime_ms_to_tick(UTEST_CLOCK_TIMER_PERIOD_WAIT_MS));
+    uassert_true(g_timer_timeout_count >= 2);
+
     //timer read
-    rt_thread_delay(5 * RT_TICK_PER_SECOND);//wait 5 sec for user stop
-    uassert_true(rt_device_read(timer_dev, 0, &timer_timeout.sec, sizeof(timer_timeout.sec)) == sizeof(timer_timeout.sec));
-    rt_kprintf("wait 5 sec Read: Sec = %d\n", timer_timeout.sec);
+    uassert_true(rt_device_read(timer_dev, 0, &timer_timeout, sizeof(timer_timeout)) == sizeof(timer_timeout));
+    rt_kprintf("Read before stop: Sec = %d, Usec = %d, callback count = %d\n",
+               timer_timeout.sec,
+               timer_timeout.usec,
+               g_timer_timeout_count);
 
     //timer stop
     uassert_true(rt_device_control(timer_dev, CLOCK_TIMER_CTRL_STOP, &timer_mode) == RT_EOK);
     uassert_true(rt_device_control(timer_dev, CLOCK_TIMER_CTRL_STOP, RT_NULL) == RT_EOK);
+    rt_thread_delay(clocktime_ms_to_tick(UTEST_CLOCK_TIMER_STOP_WAIT_MS));
+    uassert_true(g_timer_timeout_count >= 2);
 
     //timer read
     uassert_true(rt_device_read(timer_dev, 0, &timer_timeout, sizeof(timer_timeout)) == sizeof(timer_timeout));
-    rt_kprintf("Read: Sec = %d, Usec = %d\n", timer_timeout.sec, timer_timeout.usec);
-
-    rt_thread_delay(1 * RT_TICK_PER_SECOND);//wait 1 sec for read CNT
-
-    //timer read
-    uassert_true(rt_device_read(timer_dev, 0, &timer_timeout, sizeof(timer_timeout)) == sizeof(timer_timeout));
-    rt_kprintf("Read: Sec = %d, Usec = %d\n", timer_timeout.sec, timer_timeout.usec);
+    rt_kprintf("Read after stop: Sec = %d, Usec = %d\n", timer_timeout.sec, timer_timeout.usec);
 
     uassert_true(rt_device_close(timer_dev) == RT_EOK);
 
@@ -185,6 +201,6 @@ static void testcase(void)
 }
 
 UTEST_TC_EXPORT(testcase, UTEST_CMD_PREFIX"timer",
-                utest_tc_init, utest_tc_cleanup, 1);
+                utest_tc_init, utest_tc_cleanup, 5);
 
 #endif   //#if (defined(BSP_USING_TIMER))

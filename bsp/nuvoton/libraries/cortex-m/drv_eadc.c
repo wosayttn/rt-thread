@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_EADC)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -20,8 +16,10 @@
 #define CONFIG_MAX_CHN_NUM  EADC_CH_NUM
 #define DEFINE_NU_EADC(_idx)             \
     {                                    \
-        .name = "eadc" #_idx,           \
-        .base = EADC##_idx,              \
+        .m_module = {                    \
+            .name = "eadc" #_idx,       \
+            .base = EADC##_idx,          \
+        },                               \
         .conv_power = 1,                 \
         .chn_msk = 0,                    \
         .max_chn_num = CONFIG_MAX_CHN_NUM, \
@@ -63,15 +61,16 @@ enum
     EADC_CH_15,
     EADC_CH_VBG,        // 16, Band-gap voltage
     EADC_CH_VTEMP,      // 17, Internal Temperature sensor
+#if defined(SYS_IVSCTL_AVDDDIV4EN_Msk) 
     EADC_CH_AVDD_DIV4,  // 18, AVDD/4
+#endif
     EADC_CH_NUM
 };
 
 struct nu_eadc
 {
     struct rt_adc_device dev;
-    char       *name;
-    EADC_T     *base;
+    const struct nu_module m_module;
     uint32_t    conv_power;
     uint32_t    chn_msk;
     uint32_t    max_chn_num;
@@ -128,15 +127,17 @@ static rt_err_t nu_eadc_enabled(struct rt_adc_device *device, rt_int8_t channel,
     {
         if (psNuEADC->chn_msk == 0)
         {
-            EADC_Open(psNuEADC->base, EADC_CTL_DIFFEN_SINGLE_END);
+            EADC_Open((EADC_T *)psNuEADC->m_module.base, EADC_CTL_DIFFEN_SINGLE_END);
         }
 
         switch (channel)
         {
+        #if defined(SYS_IVSCTL_AVDDDIV4EN_Msk) 
         case EADC_CH_AVDD_DIV4:
             /* Enable AVDD/4 */
             SYS->IVSCTL |= SYS_IVSCTL_AVDDDIV4EN_Msk;
             break;
+        #endif
 
         case EADC_CH_VBG:
             /* Force to enable internal voltage band-gap. */
@@ -160,10 +161,12 @@ static rt_err_t nu_eadc_enabled(struct rt_adc_device *device, rt_int8_t channel,
 
         switch (channel)
         {
+        #if defined(SYS_IVSCTL_AVDDDIV4EN_Msk) 
         case EADC_CH_AVDD_DIV4:
             /* Disable AVDD/4 */
             SYS->IVSCTL &= ~SYS_IVSCTL_AVDDDIV4EN_Msk;
             break;
+        #endif
 
         case EADC_CH_VBG:
             /* Force to enable internal voltage band-gap. */
@@ -181,7 +184,7 @@ static rt_err_t nu_eadc_enabled(struct rt_adc_device *device, rt_int8_t channel,
 
         if (psNuEADC->chn_msk == 0)
         {
-            EADC_Close(psNuEADC->base);
+            EADC_Close((EADC_T *)psNuEADC->m_module.base);
         }
     }
 
@@ -204,39 +207,39 @@ static rt_uint32_t _eadc_convert(nu_eadc_t psNuEADC, rt_uint32_t channel)
     u32ModuleNum = channel;
 
     /* Configure the sample module for analog input channel and software trigger source. */
-    EADC_ConfigSampleModule(psNuEADC->base, u32ModuleNum, EADC_SOFTWARE_TRIGGER, channel);
+    EADC_ConfigSampleModule((EADC_T *)psNuEADC->m_module.base, u32ModuleNum, EADC_SOFTWARE_TRIGGER, channel);
 
     /* Set sample module external sampling time to 0xF */
-    EADC_SetExtendSampleTime(psNuEADC->base, u32ModuleNum, CONFIG_EXT_SMPL_TIME);
+    EADC_SetExtendSampleTime((EADC_T *)psNuEADC->m_module.base, u32ModuleNum, CONFIG_EXT_SMPL_TIME);
 
     /* Enable Accumulate feature */
-    EADC_ENABLE_ACU(psNuEADC->base, u32ModuleNum, CONFIG_SMPL_MODULE_ACU_TIMES);
+    EADC_ENABLE_ACU((EADC_T *)psNuEADC->m_module.base, u32ModuleNum, CONFIG_SMPL_MODULE_ACU_TIMES);
 
     /* Enable Average feature */
-    EADC_ENABLE_AVG(psNuEADC->base, u32ModuleNum);
+    EADC_ENABLE_AVG((EADC_T *)psNuEADC->m_module.base, u32ModuleNum);
 
     /* Clear the A/D ADINT0 interrupt flag for safe */
-    EADC_CLR_INT_FLAG(psNuEADC->base, EADC_STATUS2_ADIF0_Msk);
+    EADC_CLR_INT_FLAG((EADC_T *)psNuEADC->m_module.base, EADC_STATUS2_ADIF0_Msk);
 
     /* Enable the sample module interrupt. */
-    EADC_ENABLE_INT(psNuEADC->base, (1 << CONFIG_CONV_INTSEL));
-    EADC_ENABLE_SAMPLE_MODULE_INT(psNuEADC->base, CONFIG_CONV_INTSEL, (1 << u32ModuleNum));
+    EADC_ENABLE_INT((EADC_T *)psNuEADC->m_module.base, (1 << CONFIG_CONV_INTSEL));
+    EADC_ENABLE_SAMPLE_MODULE_INT((EADC_T *)psNuEADC->m_module.base, CONFIG_CONV_INTSEL, (1 << u32ModuleNum));
 
-    EADC_START_CONV(psNuEADC->base, (1 << u32ModuleNum));
-    while (EADC_GET_INT_FLAG(psNuEADC->base, (1 << CONFIG_CONV_INTSEL)) == 0);
+    EADC_START_CONV((EADC_T *)psNuEADC->m_module.base, (1 << u32ModuleNum));
+    while (EADC_GET_INT_FLAG((EADC_T *)psNuEADC->m_module.base, (1 << CONFIG_CONV_INTSEL)) == 0);
 
     /* Disable the sample module interrupt. */
-    EADC_DISABLE_INT(psNuEADC->base, (1 << CONFIG_CONV_INTSEL));
+    EADC_DISABLE_INT((EADC_T *)psNuEADC->m_module.base, (1 << CONFIG_CONV_INTSEL));
 
     /* Disable Average feature */
-    EADC_DISABLE_AVG(psNuEADC->base, u32ModuleNum);
+    EADC_DISABLE_AVG((EADC_T *)psNuEADC->m_module.base, u32ModuleNum);
 
     /* Disable Accumulate feature */
-    EADC_DISABLE_ACU(psNuEADC->base, u32ModuleNum);
+    EADC_DISABLE_ACU((EADC_T *)psNuEADC->m_module.base, u32ModuleNum);
 
-    u32ConvValue = EADC_GET_CONV_DATA(psNuEADC->base, u32ModuleNum);
+    u32ConvValue = EADC_GET_CONV_DATA((EADC_T *)psNuEADC->m_module.base, u32ModuleNum);
 
-    //rt_kprintf("u32ConvValue: %08x\n", u32ConvValue);
+    LOG_D("u32ConvValue: %08x", u32ConvValue);
 
     return u32ConvValue;
 }
@@ -255,7 +258,7 @@ static rt_int16_t nu_eadc_get_vref(struct rt_adc_device *device)
     ---------- = -------------------------
        3072          i32ConversionData
     */
-    // rt_kprintf("u32VBG: %d, AVDD: %d\n", u32VBG, 3072 * s_u32BuiltInBandGapValue / u32VBG);
+    LOG_D("u32VBG: %d, AVDD: %d", u32VBG, 3072 * s_u32BuiltInBandGapValue / u32VBG);
 
     return (3072 * s_u32BuiltInBandGapValue / u32VBG);
 }
@@ -301,15 +304,14 @@ int rt_hw_eadc_init(void)
     s_u32BuiltInBandGapValue = FMC_ReadBandGap();
     FMC_Close();
 
-    //rt_kprintf("s_u32BuiltInBandGapValue: %d\n", s_u32BuiltInBandGapValue);
+    LOG_D("s_u32BuiltInBandGapValue: %d", s_u32BuiltInBandGapValue);
 
     for (i = (EADC_START + 1); i < EADC_CNT; i++)
     {
-        result = rt_hw_adc_register(&nu_eadc_arr[i].dev, nu_eadc_arr[i].name, &nu_adc_ops, NULL);
+        result = rt_hw_adc_register(&nu_eadc_arr[i].dev, nu_eadc_arr[i].m_module.name, &nu_adc_ops, NULL);
         RT_ASSERT(result == RT_EOK);
     }
 
     return 0;
 }
 INIT_BOARD_EXPORT(rt_hw_eadc_init);
-#endif //#if defined(BSP_USING_EADC)

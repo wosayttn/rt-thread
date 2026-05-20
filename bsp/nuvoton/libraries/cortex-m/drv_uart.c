@@ -5,14 +5,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_UART)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "drv_pdma.h"
-#include "drv_uart.h"
-#include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -42,20 +36,24 @@
 #if defined(RT_SERIAL_USING_DMA)
 #define MAKE_UART_INSTANCE(x, t, r) \
     { \
-        .name = MAKE_UART_NAME(uart##x), \
-        .base = UART##x, \
-        .rst  = UART##x##_RST, \
-        .irqn = UART##x##_IRQn, \
+        .m_module = { \
+            .name = MAKE_UART_NAME(uart##x), \
+            .base = UART##x, \
+            .RstId = UART##x##_RST, \
+            .eIRQn = UART##x##_IRQn, \
+        }, \
         .pdma_perp_tx = t, \
         .pdma_perp_rx = r, \
     },
 #else
 #define MAKE_UART_INSTANCE(x, t, r) \
     { \
-        .name = MAKE_UART_NAME(uart##x), \
-        .base = UART##x, \
-        .rst  = UART##x##_RST, \
-        .irqn = UART##x##_IRQn, \
+        .m_module = { \
+            .name = MAKE_UART_NAME(uart##x), \
+            .base = UART##x, \
+            .RstId = UART##x##_RST, \
+            .eIRQn = UART##x##_IRQn, \
+        }, \
     },
 #endif
 
@@ -107,10 +105,7 @@ typedef struct nu_rxbuf_ctx *nu_rxbuf_ctx_t;
 struct nu_uart
 {
     rt_serial_t dev;
-    char *name;
-    UART_T *base;
-    uint32_t rst;
-    IRQn_Type irqn;
+    const struct nu_module m_module;
 #if defined(RT_SERIAL_USING_DMA)
     uint32_t dma_flag;
     uint32_t pdma_perp_tx;
@@ -343,7 +338,7 @@ static struct nu_uart nu_uart_arr [] =
 static void nu_uart_isr(nu_uart_t psNuUart)
 {
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
 
     /* Get interrupt event */
     uint32_t u32IntSts = base->INTSTS;
@@ -390,7 +385,7 @@ void nu_uart_set_rs485aud(struct rt_serial_device *serial, rt_bool_t bRTSActiveL
     RT_ASSERT(serial);
 
     /* Get base address of uart register */
-    base = ((nu_uart_t)serial)->base;
+    base = (UART_T *)((nu_uart_t)serial)->m_module.base;
 
     /* Set RTS as RS-485 phy direction controlling ping. */
     UART_SelectRS485Mode(base, UART_ALTCTL_RS485AUD_Msk, 0);
@@ -406,7 +401,7 @@ void nu_uart_set_rs485aud(struct rt_serial_device *serial, rt_bool_t bRTSActiveL
         base->MODEM &= ~UART_MODEM_RTSACTLV_Msk;
     }
 
-    LOG_I("Set %s to RS-485 AUD function mode. ActiveLowLevel-%s", psNuUart->name, bRTSActiveLowLevel ? "YES" : "NO");
+    LOG_I("Set %s to RS-485 AUD function mode. ActiveLowLevel-%s", psNuUart->m_module.name, bRTSActiveLowLevel ? "YES" : "NO");
 }
 
 /**
@@ -427,7 +422,7 @@ static rt_err_t nu_uart_configure(struct rt_serial_device *serial, struct serial
     uart_word_len = uart_stop_bit = uart_parity = 0;
 
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
 
     /* Check word len */
     switch (cfg->data_bits)
@@ -487,7 +482,7 @@ static rt_err_t nu_uart_configure(struct rt_serial_device *serial, struct serial
         ret = RT_EINVAL;
         goto exit_nu_uart_configure;
     }
-    SYS_ResetModule(psNuUart->rst);
+    SYS_ResetModule(psNuUart->m_module.RstId);
 
     /* Open Uart and set UART Baudrate */
     UART_Open(base, cfg->baud_rate);
@@ -496,7 +491,7 @@ static rt_err_t nu_uart_configure(struct rt_serial_device *serial, struct serial
     UART_SetLineConfig(base, 0, uart_word_len, uart_parity, uart_stop_bit);
 
     /* Enable NVIC interrupt. */
-    NVIC_EnableIRQ(psNuUart->irqn);
+    NVIC_EnableIRQ(psNuUart->m_module.eIRQn);
 
 exit_nu_uart_configure:
 
@@ -529,7 +524,7 @@ static rt_err_t nu_pdma_uart_rx_config(nu_uart_t psNuUart, uint8_t *pu8Buf, int3
     uint32_t u32IdleTimeoutInUs = 1500;
 
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
 
     /* Register ISR callback function */
     sChnCB.m_eCBType = eCBType_Event;
@@ -543,12 +538,12 @@ static rt_err_t nu_pdma_uart_rx_config(nu_uart_t psNuUart, uint8_t *pu8Buf, int3
         goto exit_nu_pdma_uart_rx_config;
     }
 #if defined(CONFIG_UART_USE_IDLE_TIMER)
-    LOG_I("[%s] Set UART bus idle time to %d bit time.", psNuUart->name, CONFIG_UART_IDLE_TIMEOUT_VALUE);
+    LOG_I("[%s] Set UART bus idle time to %d bit time.", psNuUart->m_module.name, CONFIG_UART_IDLE_TIMEOUT_VALUE);
 #else
-    LOG_I("[%s] Set PDMA idle time out %d us", psNuUart->name, CONFIG_PDMA_IDLE_TIMEOUT_VALUE);
+    LOG_I("[%s] Set PDMA idle time out %d us", psNuUart->m_module.name, CONFIG_PDMA_IDLE_TIMEOUT_VALUE);
 #endif
 
-    LOG_I("[%s] bufsz: %d B", psNuUart->name, serial->config.bufsz);
+    LOG_I("[%s] bufsz: %d B", psNuUart->m_module.name, serial->config.bufsz);
 
     if (serial->config.bufsz == 0)
     {
@@ -627,7 +622,7 @@ static void nu_pdma_uart_rx_cb(void *pvOwner, uint32_t u32Events)
     RT_ASSERT(psNuUart);
 
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
     nu_rxbuf_ctx_t psNuRxBufCtx = &psNuUart->dmabuf;
 
     dma_put_index = nu_pdma_transferred_byte_get(psNuUart->pdma_chanid_rx, psNuRxBufCtx->bufsize);
@@ -680,12 +675,12 @@ static void nu_pdma_uart_tx_cb(void *pvOwner, uint32_t u32Events)
     nu_uart_t psNuUart = (nu_uart_t)pvOwner;
     RT_ASSERT(psNuUart);
 
-    UART_DISABLE_INT(psNuUart->base, CONFIG_UART_USE_TXDMA_IT);// Stop DMA TX transfer
+    UART_DISABLE_INT((UART_T *)psNuUart->m_module.base, CONFIG_UART_USE_TXDMA_IT);// Stop DMA TX transfer
 
     if (u32Events & NU_PDMA_EVENT_TRANSFER_DONE)
     {
         /* Get base address of uart register */
-        UART_T *base = psNuUart->base;
+        UART_T *base = (UART_T *)psNuUart->m_module.base;
 
         /* Waiting if TX-FIFO is empty. */
         while (!(UART_IS_TX_EMPTY(base)));
@@ -706,7 +701,7 @@ static rt_ssize_t nu_uart_dma_transmit(struct rt_serial_device *serial, rt_uint8
     RT_ASSERT(buf);
 
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
     if (direction == RT_SERIAL_DMA_TX)
     {
         result = nu_pdma_transfer(psNuUart->pdma_chanid_tx,
@@ -801,7 +796,7 @@ static rt_err_t nu_uart_control(struct rt_serial_device *serial, int cmd, void *
     RT_ASSERT(serial);
 
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
 
     switch (cmd)
     {
@@ -850,7 +845,7 @@ static rt_err_t nu_uart_control(struct rt_serial_device *serial, int cmd, void *
 
     case RT_DEVICE_CTRL_CLOSE:
         /* Disable NVIC interrupt. */
-        NVIC_DisableIRQ(psNuUart->irqn);
+        NVIC_DisableIRQ(psNuUart->m_module.eIRQn);
 #if defined(RT_SERIAL_USING_DMA)
 
 #if defined(CONFIG_UART_USE_IDLE_TIMER)
@@ -893,7 +888,7 @@ static int nu_uart_send(struct rt_serial_device *serial, char c)
     RT_ASSERT(serial);
 
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
 
     /* Waiting if TX-FIFO is full. */
     while (UART_IS_TX_FULL(base));
@@ -914,7 +909,7 @@ static int nu_uart_receive(struct rt_serial_device *serial)
     RT_ASSERT(serial);
 
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
 
     /* Return failure if RX-FIFO is empty. */
     if (UART_GET_RX_EMPTY(base))
@@ -931,7 +926,7 @@ void nu_uart_set_loopback(struct rt_serial_device *serial, rt_bool_t bOn)
     RT_ASSERT(serial);
 
     /* Get base address of uart register */
-    UART_T *base = psNuUart->base;
+    UART_T *base = (UART_T *)psNuUart->m_module.base;
 
     bOn ? (base->MODEM |= 0x10) : (base->MODEM &= ~0x10);
 }
@@ -958,11 +953,10 @@ rt_err_t rt_hw_uart_init(void)
         rt_memset(&nu_uart_arr[i].dmabuf, 0, sizeof(struct nu_rxbuf_ctx));
 #endif
 
-        ret = rt_hw_serial_register(&nu_uart_arr[i].dev, nu_uart_arr[i].name, flag, NULL);
+        ret = rt_hw_serial_register(&nu_uart_arr[i].dev, nu_uart_arr[i].m_module.name, flag, NULL);
         RT_ASSERT(ret == RT_EOK);
 
     }
 
     return ret;
 }
-#endif //#if defined(BSP_USING_UART)

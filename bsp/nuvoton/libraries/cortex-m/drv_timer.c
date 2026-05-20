@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_TIMER) && defined(RT_USING_CLOCK_TIME)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -20,11 +16,13 @@
 #define NU_TIMER_DEVICE(timer) (nu_timer_t)(timer)
 #define DEFINE_NU_TIMER(_idx)                   \
     {                                           \
-        .name = "timer" #_idx,                 \
-        .base = TIMER##_idx,                    \
-        .irqn = TMR##_idx##_IRQn,               \
-        .rstidx = TMR##_idx##_RST,              \
-        .modid = TMR##_idx##_MODULE             \
+        .m_module = {                           \
+            .name = "timer" #_idx,             \
+            .base = TIMER##_idx,                \
+            .eIRQn = TMR##_idx##_IRQn,          \
+            .RstId = TMR##_idx##_RST,           \
+            .ModId = TMR##_idx##_MODULE         \
+        }                                       \
     }
 #define DEFINE_TIMER_IRQ_HANDLER(_idx)            \
 void TMR##_idx##_IRQHandler(void)                 \
@@ -59,11 +57,7 @@ enum
 struct nu_timer
 {
     rt_clock_timer_t  parent;
-    char         *name;
-    TIMER_T      *base;
-    IRQn_Type     irqn;
-    uint32_t      rstidx;
-    uint32_t      modid;
+    const struct nu_module m_module;
 };
 typedef struct nu_timer *nu_timer_t;
 
@@ -119,18 +113,18 @@ static void nu_timer_init(rt_clock_timer_t *timer, rt_uint32_t state)
         uint32_t timer_clk;
         struct rt_clock_timer_info *info = &nu_timer_info;
 
-        timer_clk = TIMER_GetModuleClock(psNuTmr->base);
+        timer_clk = TIMER_GetModuleClock((TIMER_T *)psNuTmr->m_module.base);
         info->maxfreq = timer_clk;
         info->minfreq = timer_clk / 256;
-        TIMER_Open(psNuTmr->base, TIMER_ONESHOT_MODE, 1);
-        TIMER_EnableInt(psNuTmr->base);
-        NVIC_EnableIRQ(psNuTmr->irqn);
+        TIMER_Open((TIMER_T *)psNuTmr->m_module.base, TIMER_ONESHOT_MODE, 1);
+        TIMER_EnableInt((TIMER_T *)psNuTmr->m_module.base);
+        NVIC_EnableIRQ(psNuTmr->m_module.eIRQn);
     }
     else
     {
-        NVIC_DisableIRQ(psNuTmr->irqn);
-        TIMER_DisableInt(psNuTmr->base);
-        TIMER_Close(psNuTmr->base);
+        NVIC_DisableIRQ(psNuTmr->m_module.eIRQn);
+        TIMER_DisableInt((TIMER_T *)psNuTmr->m_module.base);
+        TIMER_Close((TIMER_T *)psNuTmr->m_module.base);
     }
 }
 
@@ -161,12 +155,12 @@ static rt_err_t nu_timer_start(rt_clock_timer_t *timer, rt_uint32_t cnt, rt_cloc
         goto exit_nu_timer_start;
     }
 
-    TIMER_SET_CMP_VALUE(psNuTmr->base, cnt);
-    TIMER_SET_OPMODE(psNuTmr->base, u32OpMode);
-    TIMER_EnableInt(psNuTmr->base);
-    NVIC_EnableIRQ(psNuTmr->irqn);
+    TIMER_SET_CMP_VALUE((TIMER_T *)psNuTmr->m_module.base, cnt);
+    TIMER_SET_OPMODE((TIMER_T *)psNuTmr->m_module.base, u32OpMode);
+    TIMER_EnableInt((TIMER_T *)psNuTmr->m_module.base);
+    NVIC_EnableIRQ(psNuTmr->m_module.eIRQn);
 
-    TIMER_Start(psNuTmr->base);
+    TIMER_Start((TIMER_T *)psNuTmr->m_module.base);
 
     ret = RT_EOK;
 
@@ -180,10 +174,10 @@ static void nu_timer_stop(rt_clock_timer_t *timer)
     nu_timer_t psNuTmr = NU_TIMER_DEVICE(timer);
     RT_ASSERT(psNuTmr != RT_NULL);
 
-    NVIC_DisableIRQ(psNuTmr->irqn);
-    TIMER_DisableInt(psNuTmr->base);
-    TIMER_Stop(psNuTmr->base);
-    TIMER_ResetCounter(psNuTmr->base);
+    NVIC_DisableIRQ(psNuTmr->m_module.eIRQn);
+    TIMER_DisableInt((TIMER_T *)psNuTmr->m_module.base);
+    TIMER_Stop((TIMER_T *)psNuTmr->m_module.base);
+    TIMER_ResetCounter((TIMER_T *)psNuTmr->m_module.base);
 }
 
 static rt_uint32_t nu_timer_count_get(rt_clock_timer_t *timer)
@@ -191,7 +185,7 @@ static rt_uint32_t nu_timer_count_get(rt_clock_timer_t *timer)
     nu_timer_t psNuTmr = NU_TIMER_DEVICE(timer);
     RT_ASSERT(psNuTmr != RT_NULL);
 
-    return TIMER_GetCounter(psNuTmr->base);
+    return TIMER_GetCounter((TIMER_T *)psNuTmr->m_module.base);
 }
 
 static rt_err_t nu_timer_control(rt_clock_timer_t *timer, rt_uint32_t cmd, void *args)
@@ -207,15 +201,15 @@ static rt_err_t nu_timer_control(rt_clock_timer_t *timer, rt_uint32_t cmd, void 
         uint32_t clk;
         uint32_t pre;
 
-        clk = TIMER_GetModuleClock(psNuTmr->base);
+        clk = TIMER_GetModuleClock((TIMER_T *)psNuTmr->m_module.base);
         pre = clk / *((uint32_t *)args) - 1;
-        TIMER_SET_PRESCALE_VALUE(psNuTmr->base, pre);
+        TIMER_SET_PRESCALE_VALUE((TIMER_T *)psNuTmr->m_module.base, pre);
         *((uint32_t *)args) = clk / (pre + 1) ;
     }
     break;
 
     case CLOCK_TIMER_CTRL_STOP:
-        TIMER_Stop(psNuTmr->base);
+        TIMER_Stop((TIMER_T *)psNuTmr->m_module.base);
         break;
 
     default:
@@ -233,9 +227,9 @@ static void nu_timer_isr(nu_timer_t psNuTmr)
 {
     RT_ASSERT(psNuTmr != RT_NULL);
 
-    if (TIMER_GetIntFlag(psNuTmr->base))
+    if (TIMER_GetIntFlag((TIMER_T *)psNuTmr->m_module.base))
     {
-        TIMER_ClearIntFlag(psNuTmr->base);
+        TIMER_ClearIntFlag((TIMER_T *)psNuTmr->m_module.base);
         rt_clock_timer_isr(&psNuTmr->parent);
     }
 }
@@ -246,9 +240,9 @@ static int rt_hw_timer_init(void)
     rt_err_t ret = RT_EOK;
     for (i = (TIMER_START + 1); i < TIMER_CNT; i++)
     {
-        CLK_EnableModuleClock(nu_timer_arr[i].modid);
+        CLK_EnableModuleClock(nu_timer_arr[i].m_module.ModId);
 
-        SYS_ResetModule(nu_timer_arr[i].rstidx);
+        SYS_ResetModule(nu_timer_arr[i].m_module.RstId);
 
         /* Register Timer information. */
         nu_timer_arr[i].parent.info = &nu_timer_info;
@@ -257,7 +251,7 @@ static int rt_hw_timer_init(void)
         nu_timer_arr[i].parent.ops = &nu_timer_ops;
 
         /* Register RT clock_timer device. */
-        ret = rt_clock_timer_register(&nu_timer_arr[i].parent, nu_timer_arr[i].name, &nu_timer_arr[i]);
+        ret = rt_clock_timer_register(&nu_timer_arr[i].parent, nu_timer_arr[i].m_module.name, &nu_timer_arr[i]);
         RT_ASSERT(ret == RT_EOK);
     }
     return 0;
@@ -279,5 +273,3 @@ INIT_BOARD_EXPORT(rt_hw_timer_init);
 #if defined(BSP_USING_TIMER3)
     DEFINE_TIMER_IRQ_HANDLER(3)
 #endif
-
-#endif //#if (defined(BSP_USING_TIMER) && defined(RT_USING_CLOCK_TIME))

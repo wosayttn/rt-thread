@@ -71,9 +71,10 @@ static rt_ssize_t max31875_fetch_data(rt_sensor_t sensor, rt_sensor_data_t data,
     if (sensor->info.type == RT_SENSOR_CLASS_TEMP)
     {
         float temp_value;
+
         temp_value = max31875_read_reg_as_temperature(MAX31875_REG_TEMPERATURE, &g_sMax31875);
         data->type = RT_SENSOR_CLASS_TEMP;
-        data->data.temp = (rt_int32_t)(temp_value * 10);
+        data->data.temp = (rt_int32_t)temp_value;
         data->timestamp = rt_sensor_get_ts();
     }
 

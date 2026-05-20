@@ -31,12 +31,6 @@ menu "Hardware Drivers Config"
             select BSP_USING_SDH0
             default n
 
-        config BOARD_USING_STORAGE_SPIFLASH
-            bool "SPIFLASH supporting(over qspi0)"
-            select BSP_USING_QSPI
-            select BSP_USING_QSPI0
-            default y
-
         config BOARD_USING_CANFD0
             bool "CAN-FD supporting(over canfd0)"
             select BSP_USING_CANFD
@@ -112,7 +106,6 @@ menu "Hardware Drivers Config"
     config BOARD_USING_LCD_SSD1963
         bool "LCD SSD1963(over ebi0)"
         select NU_PKG_USING_SSD1963
-        select NU_PKG_USING_SSD1963_EBI
         select NU_PKG_SSD1963_WITH_OFFSCREEN_FRAMEBUFFER
         default n
 
@@ -145,16 +138,9 @@ menu "Hardware Drivers Config"
 
     endif
 
-    config BOARD_USING_ILI2130
-        bool "TPC ILI2130(over i2c1)"
-        select BSP_USING_I2C1
-        select NU_PKG_USING_TPC
-        default n
-
     config BOARD_USING_LCD_FSA506
         bool "LCD FSA506(over ebi0)"
         select NU_PKG_USING_FSA506
-        select NU_PKG_USING_FSA506_EBI
         select NU_PKG_FSA506_WITH_OFFSCREEN_FRAMEBUFFER
         default n
 
@@ -201,7 +187,7 @@ menu "Hardware Drivers Config"
         select BSP_USING_CCAP0
         default n
 
-    config BOARD_USING_SENSON0_ID
+    config BOARD_USING_SENSOR0_ID
         int "Specify Sensor0 ID"
         depends on BOARD_USING_SENSOR0
         default 0
@@ -209,7 +195,6 @@ menu "Hardware Drivers Config"
         help
             HM1055=0
             ADV728X=1
-
     endmenu
 
     source "$(BSP_DIR)/../libraries/nu_packages/Kconfig"

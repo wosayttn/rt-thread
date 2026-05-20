@@ -7,7 +7,7 @@
 #ifndef __DRV_EQEI_H__
 #define __DRV_EQEI_H__
 
-#include "rtdevice.h"
+#include "drv_sys.h"
 
 rt_int32_t nu_eqei_get_maxval(rt_device_t pulse_encoder);
 rt_int32_t nu_eqei_get_cmpval(rt_device_t pulse_encoder);

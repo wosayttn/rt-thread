@@ -5,11 +5,6 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_FMC)
-
-#include "NuMicro.h"
 #include "drv_fmc.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -402,5 +397,3 @@ static int nu_fmc_init(void)
 }
 
 INIT_APP_EXPORT(nu_fmc_init);
-
-#endif //#if defined(BSP_USING_FMC)

@@ -50,11 +50,7 @@ void fsa506_send_pixels(rt_uint16_t *pixels, int len)
 
     FSA506_WRITE_REG(0xC1);
 
-#if defined(BSP_USING_HBI)
-    if (1) /* Always use CPU-feed */
-#else
     if (count < 512)
-#endif
     {
         // CPU feed
         int i = 0;

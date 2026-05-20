@@ -7,7 +7,7 @@
 #ifndef __DRV_EBI_H__
 #define __DRV_EBI_H__
 
-#include "NuMicro.h"
+#include "drv_sys.h"
 
 /**
   * @brief      Initialize EBI for specify Bank
@@ -37,6 +37,26 @@
   *
   * @return     RT_EOK/RT_ERROR     Bank is used or not
   */
-int nu_ebi_init(uint32_t u32Bank, uint32_t u32DataWidth, uint32_t u32TimingClass, uint32_t u32BusMode, uint32_t u32CSActiveLevel);
+rt_err_t nu_ebi_init(uint32_t u32Bank, uint32_t u32DataWidth, uint32_t u32TimingClass, uint32_t u32BusMode, uint32_t u32CSActiveLevel);
+
+/**
+ * @brief Configure EBI timing parameters for LCD interface.
+ *
+ * Calculates and applies optimal EBI (External Bus Interface) timing parameters
+ * to meet the LCD controller's access time requirements. Tests different MCLK
+ * divisors to find the fastest clock that still meets timing constraints.
+ *
+ * @param acc_ns[in]       Access time requirement in nanoseconds
+ * @param wr_idle_ns[in]   Write cycle idle time in nanoseconds
+ * @param wr_ahd_ns[in]    Write address hold time in nanoseconds
+ * @param rd_ahd_ns[in]    Read address hold time in nanoseconds
+ * @param rd_idle_ns[in]   Read cycle idle time in nanoseconds
+ *
+ * @return     RT_EOK/RT_ERROR     Bank is used or not
+ */
+rt_err_t nu_ebi_apply_timing(uint32_t u32Bank,
+                            int acc_ns,
+                            int wr_idle_ns, int wr_ahd_ns,
+                            int rd_ahd_ns, int rd_idle_ns);
 
 #endif // __DRV_EBI_H___

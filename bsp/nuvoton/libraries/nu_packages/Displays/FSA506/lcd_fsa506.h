@@ -13,7 +13,6 @@
 #ifndef __LCD_FSA506_H__
 #define __LCD_FSA506_H__
 
-#include <rtthread.h>
 #include <rtdevice.h>
 
 #if defined(BOARD_USING_FSA506_PIN_DC)

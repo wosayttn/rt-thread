@@ -1,27 +1,21 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2022-3-12       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <rtthread.h>
 
-#define LOG_TAG         "mnt"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME "mnt"
-#define DBG_LEVEL DBG_ERROR
-#define DBG_COLOR
-#include <rtdbg.h>
+#undef LOG_TAG
+#define LOG_TAG "mnt"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
 #if defined(RT_USING_DFS)
 #include <dfs_fs.h>
 #include <dfs_file.h>
+#include "dfs_ramfs.h"
+#include "dfs_romfs.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -31,204 +25,92 @@
     #include <fal.h>
 #endif
 
-#if defined(PKG_USING_RAMDISK)
-    #define RAMDISK_NAME         "ramdisk0"
-    #define RAMDISK_UDC          "ramdisk1"
-    #define MOUNT_POINT_RAMDISK0 "/"
+#if defined(RT_USING_DFS_RAMFS)
+    #define MOUNT_POINT_HYPERRAM      "/hyperram"
 #endif
 
 #if defined(BOARD_USING_STORAGE_SPIFLASH)
-    #define PARTITION_NAME_FILESYSTEM "filesystem"
-    #define MOUNT_POINT_SPIFLASH0 "/mnt/"PARTITION_NAME_FILESYSTEM
+    #define PARTITION_NAME_FILESYSTEM "sf"
+    #define MOUNT_POINT_SPIFLASH0 "/sf"
 #endif
 
 #ifdef RT_USING_DFS_MNTTABLE
-
-/*
-const char   *device_name;
-const char   *path;
-const char   *filesystemtype;
-unsigned long rwflag;
-const void   *data;
-*/
-
 const struct dfs_mount_tbl mount_table[] =
 {
-    { "sd0", "/mnt/sd0", "elm", 0, RT_NULL },
-    { "sd0p0", "/mnt/sd0p0", "elm", 0, RT_NULL },
-    { "sd0p1", "/mnt/sd0p1", "elm", 0, RT_NULL },
-    { "sd1", "/mnt/sd1", "elm", 0, RT_NULL },
-    { "sd1p0", "/mnt/sd1p0", "elm", 0, RT_NULL },
-    { "sd1p1", "/mnt/sd1p1", "elm", 0, RT_NULL },
+    { "sd0", "/sd0", "elm", 0, RT_NULL },
     {0},
 };
 #endif
 
+#if defined(RT_USING_DFS_ROMFS)
+static const rt_uint8_t _romfs_readme_txt[] =
+    "RT-Thread ROMFS root.\r\n"
+    "Writable paths are mounted separately on /sd0 and /hyperram.\r\n";
 
-#if defined(PKG_USING_RAMDISK) && defined(BOARD_USING_EXTERNAL_HYPERRAM)
-
-extern rt_err_t ramdisk_init(const char *dev_name, rt_uint8_t *disk_addr, rt_size_t block_size, rt_size_t num_block);
-int ramdisk_device_init(void)
+static const struct romfs_dirent _romfs_root_dirent[] =
 {
-    rt_err_t result = RT_EOK;
+    {ROMFS_DIRENT_DIR, "sd0", RT_NULL, 0},
+    {ROMFS_DIRENT_DIR, "udisk", RT_NULL, 0},
+    {ROMFS_DIRENT_DIR, "hyperram", RT_NULL, 0},
+    {ROMFS_DIRENT_FILE, "readme.txt", _romfs_readme_txt, sizeof(_romfs_readme_txt) - 1},
+};
 
-    int disk_size = BOARD_USING_HYPERRAM_SIZE / 2;
-    int disk_startaddr = 0x80000000;
-
-    /* Create a 4MB RAMDISK */
-    result = ramdisk_init(RAMDISK_NAME, (rt_uint8_t *)disk_startaddr, 512, disk_size / 512);
-    RT_ASSERT(result == RT_EOK);
-
-
-    /* Create a 4MB RAMDISK */
-    disk_startaddr += disk_size;
-    result = ramdisk_init(RAMDISK_UDC, (rt_uint8_t *)disk_startaddr, 512, disk_size / 512);
-    RT_ASSERT(result == RT_EOK);
-
-    return 0;
-}
-INIT_DEVICE_EXPORT(ramdisk_device_init);
-
-/* Recursive mkdir */
-static int mkdir_p(const char *dir, const mode_t mode)
+const struct romfs_dirent romfs_root =
 {
-    int ret = -1;
-    char *tmp = NULL;
-    char *p = NULL;
-    struct stat sb;
-    rt_size_t len;
+    ROMFS_DIRENT_DIR,
+    "/",
+    (const rt_uint8_t *)_romfs_root_dirent,
+    sizeof(_romfs_root_dirent) / sizeof(_romfs_root_dirent[0])
+};
+#endif
 
-    if (!dir)
-        goto exit_mkdir_p;
 
-    /* Copy path */
-    /* Get the string length */
-    len = strlen(dir);
-    tmp = rt_strdup(dir);
+#if defined(RT_USING_DFS_RAMFS) && defined(BOARD_USING_EXTERNAL_HYPERRAM)
+static rt_err_t mount_ramfs(const char *mount_point, rt_uint8_t *pool, rt_size_t size)
+{
+    struct dfs_ramfs *ramfs;
 
-    /* Remove trailing slash */
-    if (tmp[len - 1] == '/')
+    ramfs = dfs_ramfs_create(pool, size);
+    if (ramfs == RT_NULL)
     {
-        tmp[len - 1] = '\0';
-        len--;
+        LOG_E("failed to create ramfs for %s", mount_point);
+        return -RT_ENOMEM;
     }
 
-    /* check if path exists and is a directory */
-    if (stat(tmp, &sb) == 0)
+    if (dfs_mount(RT_NULL, mount_point, "ram", 0, (const void *)ramfs) != 0)
     {
-        if (S_ISDIR(sb.st_mode))
-        {
-            ret = 0;
-            goto exit_mkdir_p;
-        }
+        LOG_E("failed to mount ramfs on %s", mount_point);
+        return -RT_ERROR;
     }
 
-    /* Recursive mkdir */
-    for (p = tmp + 1; p - tmp <= len; p++)
-    {
-        if ((*p == '/') || (p - tmp == len))
-        {
-            *p = 0;
+    LOG_I("ramfs mounted on \"%s\".", mount_point);
 
-            /* Test path */
-            if (stat(tmp, &sb) != 0)
-            {
-                /* Path does not exist - create directory */
-                if (mkdir(tmp, mode) < 0)
-                {
-                    goto exit_mkdir_p;
-                }
-            }
-            else if (!S_ISDIR(sb.st_mode))
-            {
-                /* Not a directory */
-                goto exit_mkdir_p;
-            }
-            if (p - tmp != len)
-                *p = '/';
-        }
-    }
-
-    ret = 0;
-
-exit_mkdir_p:
-
-    if (tmp)
-        rt_free(tmp);
-
-    return ret;
+    return RT_EOK;
 }
 
 /* Initialize the filesystem */
 int filesystem_init(void)
 {
     rt_err_t result = RT_EOK;
+    rt_uint8_t *pool = (rt_uint8_t *)0x80000000; // HBI address of HyperRAM
+    rt_size_t hyperram_size = BOARD_USING_HYPERRAM_SIZE;
 
-    // ramdisk as root
-    if (!rt_device_find(RAMDISK_NAME))
+#if defined(RT_USING_DFS_ROMFS)
+    if (dfs_mount(RT_NULL, "/", "rom", 0, (const void *)&romfs_root) != 0)
     {
-        LOG_E("cannot find %s device", RAMDISK_NAME);
+        LOG_E("failed to mount romfs on \"/\"");
+        result = -RT_ERROR;
         goto exit_filesystem_init;
     }
-    else
-    {
-        static int bFormated = 0;
 
-hyperram_remount:
-        /* mount ramdisk0 as root directory */
-        if (dfs_mount(RAMDISK_NAME, "/", "elm", 0, RT_NULL) == 0)
-        {
-            LOG_I("ramdisk mounted on \"/\".");
-
-            /* now you can create dir dynamically. */
-            mkdir_p("/mnt", 0x777);
-            mkdir_p("/cache", 0x777);
-            mkdir_p("/download", 0x777);
-            mkdir_p("/mnt/ram_usbd", 0x777);
-            mkdir_p("/mnt/filesystem", 0x777);
-            mkdir_p("/mnt/sd0", 0x777);
-            mkdir_p("/mnt/sd0p0", 0x777);
-            mkdir_p("/mnt/sd0p1", 0x777);
-            mkdir_p("/mnt/sd1", 0x777);
-            mkdir_p("/mnt/sd1p0", 0x777);
-            mkdir_p("/mnt/sd1p1", 0x777);
-#if defined(RT_USBH_MSTORAGE) && defined(UDISK_MOUNTPOINT)
-            mkdir_p(UDISK_MOUNTPOINT, 0x777);
+    LOG_I("romfs mounted on \"/\".");
 #endif
-        }
-        else
-        {
-            /* Format these ramdisk */
-            result = (rt_err_t)dfs_mkfs("elm", RAMDISK_NAME);
-            RT_ASSERT(result == RT_EOK);
 
-            if (!bFormated)
-            {
-                bFormated = 1;
-                goto hyperram_remount;
-            }
-            else
-            {
-                LOG_E("root folder creation failed!\n");
-
-                // rt_kprintf("Failed to mount elm on /.\n");
-                // rt_kprintf("Try to execute 'mkfs -t elm %s' first, then reboot.\n", RAMDISK_NAME);
-            }
-            goto exit_filesystem_init;
-        }
-    }
-
-    if (!rt_device_find(RAMDISK_UDC))
-    {
-        LOG_E("cannot find %s device", RAMDISK_UDC);
+#if defined(RT_USING_DFS_RAMFS) && defined(BOARD_USING_EXTERNAL_HYPERRAM)
+    result = mount_ramfs(MOUNT_POINT_HYPERRAM, pool, hyperram_size);
+    if (result != RT_EOK)
         goto exit_filesystem_init;
-    }
-    else
-    {
-        /* Format these ramdisk */
-        result = (rt_err_t)dfs_mkfs("elm", RAMDISK_UDC);
-        RT_ASSERT(result == RT_EOK);
-    }
+#endif
 
 exit_filesystem_init:
 

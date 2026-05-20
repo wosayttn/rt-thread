@@ -6,7 +6,8 @@
 
 #ifndef __DRV_LLSI_H__
 #define __DRV_LLSI_H__
-#include "NuMicro.h"
+
+#include "drv_sys.h"
 
 typedef enum
 {

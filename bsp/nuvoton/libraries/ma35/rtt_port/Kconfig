@@ -748,6 +748,7 @@
             if BSP_USING_EPWM1
                 choice
                 prompt "Select EPWM1 function mode"
+                default BSP_USING_EPWM1_PWM if BOARD_USING_BUZZER
                 config BSP_USING_EPWM1_PWM
                     select RT_USING_PWM
                     bool "EPWM1 PWM"
@@ -1066,7 +1067,9 @@
         if BSP_USING_DISP
             choice
                 prompt "Select Supported LCM panel"
+                default LCM_USING_FW070TFT_WVGA if BOARD_USING_LCM_FW070TFT_WVGA
                 default LCM_USING_FW070TFT_WSVGA
+                default LCM_USING_FW070TFT_WSVGA if BOARD_USING_LCM_FW070TFT_WSVGA
                 config LCM_USING_FW070TFT_WSVGA
                     bool "eDispLcd_1024x600(1024x600-RGB888)"
 

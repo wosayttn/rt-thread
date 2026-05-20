@@ -74,6 +74,9 @@ LR_ROM RO_ROM_BASE RO_ROM_SIZE  {                       ; load region size_regio
         .ANY (+RO)
     }
 
+    SRAM_BOUNDARY_START SRAM_START EMPTY 0 {}
+    SRAM_BOUNDARY_END (SRAM_START + SRAM_SIZE) EMPTY 0 {}
+
 #if STACK_SIZE > 0
     ARM_LIB_STACK __STACK_TOP EMPTY - STACK_SIZE {}     ; Reserve empty region for stack
 #endif

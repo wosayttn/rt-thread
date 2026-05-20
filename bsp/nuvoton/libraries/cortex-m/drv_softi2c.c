@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if (defined(BSP_USING_SOFT_I2C) && defined(RT_USING_I2C_BITOPS) && defined(RT_USING_I2C) && defined(RT_USING_PIN))
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -215,4 +211,3 @@ int rt_soft_i2c_init(void)
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_soft_i2c_init);
-#endif //#if (defined(BSP_USING_SOFT_I2C) && defined(RT_USING_I2C_BITOPS) && defined(RT_USING_I2C) && defined(RT_USING_PIN))

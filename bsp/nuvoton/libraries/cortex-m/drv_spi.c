@@ -5,12 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_SPI)
-
 #include "drv_spi.h"
-#include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -148,9 +143,11 @@
 
 #define DEFINE_NU_SPI(_idx, _pdma_init) \
     {                                   \
-        .name = "spi" #_idx,           \
-        .spi_base = SPI##_idx,          \
-        .rstidx = SPI##_idx##_RST,      \
+        .m_module = {                   \
+            .name = "spi" #_idx,       \
+            .base = SPI##_idx,          \
+            .RstId = SPI##_idx##_RST,   \
+        },                              \
         _pdma_init                      \
     }
 
@@ -294,24 +291,24 @@ static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device,
         ret = RT_EINVAL;
         goto exit_nu_spi_bus_configure;
     }
-    u32BusClock = SPI_SetBusClock(spi_bus->spi_base, configuration->max_hz);
+    u32BusClock = SPI_SetBusClock((SPI_T *)spi_bus->m_module.base, configuration->max_hz);
     if (configuration->max_hz > u32BusClock)
     {
-        LOG_I("%s clock max frequency is %dHz ( != %dHz)\n", spi_bus->name, u32BusClock, configuration->max_hz);
+        LOG_I("%s clock max frequency is %dHz ( != %dHz)\n", spi_bus->m_module.name, u32BusClock, configuration->max_hz);
         configuration->max_hz = u32BusClock;
     }
     if (rt_memcmp(configuration, &spi_bus->configuration, sizeof(*configuration)) != 0)
     {
         rt_memcpy(&spi_bus->configuration, configuration, sizeof(*configuration));
 
-        SPI_Open(spi_bus->spi_base,
+        SPI_Open((SPI_T *)spi_bus->m_module.base,
                  (configuration->mode & RT_SPI_SLAVE) ? SPI_SLAVE : SPI_MASTER,
                  u32SPIMode,
                  configuration->data_width,
                  configuration->max_hz);
 
         /* Disable Auto-selection function. */
-        SPI_DisableAutoSS(spi_bus->spi_base);
+        SPI_DisableAutoSS((SPI_T *)spi_bus->m_module.base);
 
         if (configuration->mode & RT_SPI_CS_HIGH)
         {
@@ -323,7 +320,7 @@ static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device,
             }
             else
             {
-                SPI_SET_SS_LOW(spi_bus->spi_base);
+                SPI_SET_SS_LOW((SPI_T *)spi_bus->m_module.base);
             }
         }
         else
@@ -337,22 +334,22 @@ static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device,
             else
             {
                 /* Set CS pin to HIGH */
-                SPI_SET_SS_HIGH(spi_bus->spi_base);
+                SPI_SET_SS_HIGH((SPI_T *)spi_bus->m_module.base);
             }
         }
 
         if (configuration->mode & RT_SPI_MSB)
         {
             /* Set sequence to MSB first */
-            SPI_SET_MSB_FIRST(spi_bus->spi_base);
+            SPI_SET_MSB_FIRST((SPI_T *)spi_bus->m_module.base);
         }
         else
         {
             /* Set sequence to LSB first */
-            SPI_SET_LSB_FIRST(spi_bus->spi_base);
+            SPI_SET_LSB_FIRST((SPI_T *)spi_bus->m_module.base);
         }
     }
-    nu_spi_drain_rxfifo(spi_bus->spi_base);
+    nu_spi_drain_rxfifo((SPI_T *)spi_bus->m_module.base);
 
 exit_nu_spi_bus_configure:
 
@@ -397,7 +394,7 @@ static rt_err_t nu_pdma_spi_rx_config(struct nu_spi *spi_bus, uint8_t *pu8Buf, i
     nu_pdma_memctrl_t memctrl = eMemCtl_Undefined;
 
     /* Get base address of spi register */
-    SPI_T *spi_base = spi_bus->spi_base;
+    SPI_T *spi_base = (SPI_T *)spi_bus->m_module.base;
 
     rt_uint8_t spi_pdma_rx_chid = spi_bus->pdma_chanid_rx;
 
@@ -460,7 +457,7 @@ static rt_err_t nu_pdma_spi_tx_config(struct nu_spi *spi_bus, const uint8_t *pu8
     nu_pdma_memctrl_t memctrl = eMemCtl_Undefined;
 
     /* Get base address of spi register */
-    SPI_T *spi_base = spi_bus->spi_base;
+    SPI_T *spi_base = (SPI_T *)spi_bus->m_module.base;
 
     rt_uint8_t spi_pdma_tx_chid = spi_bus->pdma_chanid_tx;
 
@@ -629,7 +626,7 @@ static int nu_spi_write(SPI_T *spi_base, const uint8_t *send_addr, uint8_t bytes
 static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
         uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word)
 {
-    SPI_T *spi_base = spi_bus->spi_base;
+    SPI_T *spi_base = (SPI_T *)spi_bus->m_module.base;
 
     // Write-only
     if ((send_addr != RT_NULL) && (recv_addr == RT_NULL))
@@ -696,13 +693,13 @@ void nu_spi_transfer(struct nu_spi *spi_bus, uint8_t *tx, uint8_t *rx, int lengt
             !((uint32_t)tx % bytes_per_word) &&
             !((uint32_t)rx % bytes_per_word) &&
             (bytes_per_word != 3) &&
-            ((spi_bus->spi_base->CTL & SPI_CTL_SLAVE_Msk) || (length >= NU_SPI_USE_PDMA_MIN_THRESHOLD)))
+            ((((SPI_T *)spi_bus->m_module.base)->CTL & SPI_CTL_SLAVE_Msk) || (length >= NU_SPI_USE_PDMA_MIN_THRESHOLD)))
         /* DMA transfer constrains */
         nu_spi_pdma_transmit(spi_bus, tx, rx, length, bytes_per_word);
     else
 #endif
     {
-        if (spi_bus->spi_base->CTL & SPI_CTL_SLAVE_Msk)
+        if (((SPI_T *)spi_bus->m_module.base)->CTL & SPI_CTL_SLAVE_Msk)
         {
             /* Slave role */
             /* please use PDMA to get higher performance. */
@@ -732,7 +729,7 @@ static rt_ssize_t nu_spi_bus_xfer(struct rt_spi_device *device, struct rt_spi_me
     if ((message->length % bytes_per_word) != 0)
     {
         /* Say bye. */
-        LOG_E("%s: error payload length(%d%%%d != 0).\n", spi_bus->name, message->length, bytes_per_word);
+        LOG_E("%s: error payload length(%d%%%d != 0).\n", spi_bus->m_module.name, message->length, bytes_per_word);
         return 0;
     }
 
@@ -758,11 +755,11 @@ static rt_ssize_t nu_spi_bus_xfer(struct rt_spi_device *device, struct rt_spi_me
             {
                 if (configuration->mode & RT_SPI_CS_HIGH)
                 {
-                    SPI_SET_SS_HIGH(spi_bus->spi_base);
+                    SPI_SET_SS_HIGH((SPI_T *)spi_bus->m_module.base);
                 }
                 else
                 {
-                    SPI_SET_SS_LOW(spi_bus->spi_base);
+                    SPI_SET_SS_LOW((SPI_T *)spi_bus->m_module.base);
                 }
             }
         }
@@ -788,11 +785,11 @@ static rt_ssize_t nu_spi_bus_xfer(struct rt_spi_device *device, struct rt_spi_me
             {
                 if (configuration->mode & RT_SPI_CS_HIGH)
                 {
-                    SPI_SET_SS_LOW(spi_bus->spi_base);
+                    SPI_SET_SS_LOW((SPI_T *)spi_bus->m_module.base);
                 }
                 else
                 {
-                    SPI_SET_SS_HIGH(spi_bus->spi_base);
+                    SPI_SET_SS_HIGH((SPI_T *)spi_bus->m_module.base);
                 }
             }
         }
@@ -816,7 +813,7 @@ static int rt_hw_spi_init(void)
 
     for (i = (SPI_START + 1); i < SPI_CNT; i++)
     {
-        SYS_ResetModule(nu_spi_arr[i].rstidx);
+        SYS_ResetModule(nu_spi_arr[i].m_module.RstId);
 #if defined(BSP_USING_SPI_PDMA)
         nu_spi_arr[i].pdma_chanid_tx = -1;
         nu_spi_arr[i].pdma_chanid_rx = -1;
@@ -825,18 +822,17 @@ static int rt_hw_spi_init(void)
         {
             if (nu_hw_spi_pdma_allocate(&nu_spi_arr[i]) != RT_EOK)
             {
-                LOG_I("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.\n", nu_spi_arr[i].name);
+                LOG_I("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.\n", nu_spi_arr[i].m_module.name);
             }
         }
 
         nu_spi_arr[i].dummy = rt_malloc_align(RT_ALIGN_SIZE, RT_ALIGN_SIZE);
         RT_ASSERT(nu_spi_arr[i].dummy);
 #endif
-        nu_spi_register_bus(&nu_spi_arr[i], nu_spi_arr[i].name);
+        nu_spi_register_bus(&nu_spi_arr[i], nu_spi_arr[i].m_module.name);
     }
 
     return 0;
 }
 
 INIT_DEVICE_EXPORT(rt_hw_spi_init);
-#endif //#if defined(BSP_USING_SPI)

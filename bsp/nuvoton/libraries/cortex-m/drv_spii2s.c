@@ -5,12 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_SPII2S)
-
 #include "drv_i2s.h"
-#include "drv_pdma.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -25,9 +20,11 @@
 
 #define DEFINE_NU_SPII2S(_idx)                \
     {                                         \
-        .name = "spii2s" #_idx,              \
-        .i2s_base = (void *)SPI##_idx,        \
-        .i2s_rst = SPI##_idx##_RST,           \
+        .m_module = {                         \
+            .name = "spii2s" #_idx,          \
+            .base = (void *)SPI##_idx,        \
+            .RstId = SPI##_idx##_RST,         \
+        },                                    \
         .i2s_dais = {                         \
             [NU_I2S_DAI_PLAYBACK] = {         \
                 .pdma_perp = PDMA_SPI##_idx##_TX, \
@@ -182,7 +179,7 @@ static rt_err_t nu_spii2s_pdma_sc_config(nu_i2s_t psNuSPII2s, E_NU_I2S_DAI dai)
     RT_ASSERT(psNuSPII2s != RT_NULL);
 
     /* Get base address of spii2s register */
-    spii2s_base = (SPI_T *)psNuSPII2s->i2s_base;
+    spii2s_base = (SPI_T *)psNuSPII2s->m_module.base;
     psNuSPII2sDai = &psNuSPII2s->i2s_dais[dai];
 
     switch ((int)dai)
@@ -262,7 +259,7 @@ static rt_err_t nu_spii2s_dai_setup(nu_i2s_t psNuSPII2s, struct rt_audio_configu
 {
     rt_err_t result = RT_EOK;
     nu_acodec_ops_t pNuACodecOps;
-    SPI_T *spii2s_base = (SPI_T *)psNuSPII2s->i2s_base;
+    SPI_T *spii2s_base = (SPI_T *)psNuSPII2s->m_module.base;
 
     RT_ASSERT(psNuSPII2s->AcodecOps != RT_NULL);
     pNuACodecOps = psNuSPII2s->AcodecOps;
@@ -480,7 +477,7 @@ static rt_err_t nu_spii2s_init(struct rt_audio_device *audio)
     RT_ASSERT(audio != RT_NULL);
 
     /* Reset this module */
-    SYS_ResetModule(psNuSPII2s->i2s_rst);
+    SYS_ResetModule(psNuSPII2s->m_module.RstId);
 
     return -(result);
 }
@@ -492,7 +489,7 @@ static rt_err_t nu_spii2s_start(struct rt_audio_device *audio, int stream)
 
     RT_ASSERT(audio != RT_NULL);
 
-    spii2s_base = (SPI_T *)psNuSPII2s->i2s_base;
+    spii2s_base = (SPI_T *)psNuSPII2s->m_module.base;
 
     /* Restart all: SPII2S and codec. */
     nu_spii2s_stop(audio, stream);
@@ -543,7 +540,7 @@ static rt_err_t nu_spii2s_stop(struct rt_audio_device *audio, int stream)
 
     RT_ASSERT(audio != RT_NULL);
 
-    spii2s_base = (SPI_T *)psNuSPII2s->i2s_base;
+    spii2s_base = (SPI_T *)psNuSPII2s->m_module.base;
 
     switch (stream)
     {
@@ -635,7 +632,7 @@ static int rt_hw_spii2s_init(void)
     for (j = (SPII2S_START + 1); j < SPII2S_CNT; j++)
     {
         int i = 0;
-        SYS_ResetModule(g_nu_spii2s_arr[i].i2s_rst);
+        SYS_ResetModule(g_nu_spii2s_arr[j].m_module.RstId);
         for (i = 0; i < NU_I2S_DAI_CNT; i++)
         {
             uint8_t *pu8ptr = rt_malloc(NU_I2S_DMA_FIFO_SIZE);
@@ -652,11 +649,10 @@ static int rt_hw_spii2s_init(void)
         g_nu_spii2s_arr[j].audio.ops  = &nu_spii2s_audio_ops;
 
         /* Register device, RW: it is with replay and record functions. */
-        rt_audio_register(&g_nu_spii2s_arr[j].audio, g_nu_spii2s_arr[j].name, RT_DEVICE_FLAG_RDWR, &g_nu_spii2s_arr[j]);
+        rt_audio_register(&g_nu_spii2s_arr[j].audio, g_nu_spii2s_arr[j].m_module.name, RT_DEVICE_FLAG_RDWR, &g_nu_spii2s_arr[j]);
     }
 
     return RT_EOK;
 }
 
 INIT_DEVICE_EXPORT(rt_hw_spii2s_init);
-#endif //#if defined(BSP_USING_SPII2S)

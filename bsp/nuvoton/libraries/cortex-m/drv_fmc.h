@@ -6,11 +6,11 @@
 
 #ifndef __DRV_FMC_H__
 #define __DRV_FMC_H__
-#include "rtconfig.h"
+
+#include "drv_sys.h"
 
 #if defined(RT_USING_FAL)
     #include "fal.h"
-    #include "NuMicro.h"
 
     extern const struct fal_flash_dev g_falFMC_AP;
     extern const struct fal_flash_dev g_falFMC_LD;
@@ -24,4 +24,5 @@
 int nu_fmc_read(long offset, uint8_t *buf, size_t size);
 int nu_fmc_write(long offset, const uint8_t *buf, size_t size);
 int nu_fmc_erase(long offset, size_t size);
+
 #endif /* __DRV_FMC_H__ */

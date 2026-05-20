@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_SDH)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -23,15 +19,20 @@
 #else
     #define SDH_ALIGN_LEN   4
 #endif
+
 #define SDH_BUFF_SIZE   512
+
 #define SDH_SetClock SDH_Set_clock
+
 #define DEFINE_NU_SDH(_idx, _cachebuf)  \
     {                                   \
-        .name = "sdh" #_idx,           \
-        .base = SDH##_idx,              \
-        .irqn = SDH##_idx##_IRQn,       \
-        .rstidx = SDH##_idx##_RST,      \
-        .modid = SDH##_idx##_MODULE,    \
+        .m_module = {                   \
+            .name = "sdh" #_idx,       \
+            .base = SDH##_idx,          \
+            .eIRQn = SDH##_idx##_IRQn,  \
+            .RstId = SDH##_idx##_RST,   \
+            .ModId = SDH##_idx##_MODULE,\
+        },                              \
         .cachebuf = (uint8_t *)(_cachebuf), \
     }
 
@@ -39,9 +40,7 @@
 void SDH##_idx##_IRQHandler(void)    \
 {                                    \
     rt_interrupt_enter();            \
-                                     \
     nu_sdh_isr(&nu_sdh_arr[SDH##_idx##_IDX]); \
-                                     \
     rt_interrupt_leave();            \
 }
 
@@ -62,11 +61,7 @@ enum
 struct nu_sdh
 {
     struct rt_mmcsd_host  *host;
-    char            *name;
-    SDH_T           *base;
-    IRQn_Type        irqn;
-    uint32_t         rstidx;
-    uint64_t         modid;
+    const struct nu_module m_module;
 
     uint8_t         *cachebuf;
     uint32_t         u32CmdResp0;
@@ -83,6 +78,9 @@ static int SDH_GetBusStatus(SDH_T *sdh, uint32_t mask);
 /* Static Variables ----------------------------------------------------------*/
 #if defined(BSP_USING_SDH0)
     static uint32_t g_au32CacheBuf_SDH0[SDH_BUFF_SIZE / 4];
+#endif
+#if defined(BSP_USING_SDH1)
+    static uint32_t g_au32CacheBuf_SDH1[SDH_BUFF_SIZE / 4];
 #endif
 
 static struct nu_sdh nu_sdh_arr [] =
@@ -244,7 +242,7 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
 {
     int ret;
     nu_sdh_t NuSdh = (nu_sdh_t)host->private_data;
-    SDH_T *sdh = NuSdh->base;
+    SDH_T *sdh = (SDH_T *)NuSdh->m_module.base;
 
     volatile uint32_t ctl = 0, tout = 0;
 
@@ -356,7 +354,7 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
             {
                 if ((NuSdh->u32CmdResp0 == sdh->RESP0) && (NuSdh->u32CmdResp1 == sdh->RESP1))
                 {
-                    LOG_E("False CMD5-RESP issue occured.\n");
+                    //LOG_W("False CMD5-RESP issue occured.\n");
                     ret = __LINE__;
                     goto exit_nu_sdh_sendcmd;
                 }
@@ -427,7 +425,7 @@ static void nu_sdh_request(struct rt_mmcsd_host *host, struct rt_mmcsd_req *req)
     RT_ASSERT(req);
 
     NuSdh = (nu_sdh_t)host->private_data;
-    sdh = NuSdh->base;
+    sdh = (SDH_T *)NuSdh->m_module.base;
 
     if (!SDH_GetCD(sdh))   // card is not present
     {
@@ -541,11 +539,11 @@ static void nu_sdh_iocfg(struct rt_mmcsd_host *host, struct rt_mmcsd_io_cfg *io_
     RT_ASSERT(io_cfg);
 
     NuSdh = (nu_sdh_t)host->private_data;
-    sdh = NuSdh->base;
+    sdh = (SDH_T *)NuSdh->m_module.base;
     clk = io_cfg->clock;
 
     LOG_D("[%s]clk:%d width(%d):%s%s%s power:%s%s%s",
-          NuSdh->name,
+          NuSdh->m_module.name,
           clk,
           io_cfg->bus_width,
           (io_cfg->bus_width) == MMCSD_BUS_WIDTH_8 ? "8" : "",
@@ -562,7 +560,7 @@ static void nu_sdh_iocfg(struct rt_mmcsd_host *host, struct rt_mmcsd_io_cfg *io_
     if (clk < host->freq_min)
         clk = host->freq_min;
 
-    LOG_D("[%s] ExceptedFreq: %d kHz", NuSdh->name, clk / 1000);
+    LOG_D("[%s] ExceptedFreq: %d kHz", NuSdh->m_module.name, clk / 1000);
     if (NuSdh->u32CurClk != (clk / 1000))
     {
         SDH_SetClock(sdh, clk / 1000);
@@ -620,7 +618,7 @@ static rt_int32_t nu_sdh_card_detect(struct rt_mmcsd_host *host)
     RT_ASSERT(host);
 
     NuSdh   = (nu_sdh_t)host->private_data;
-    SDH_T *sdh = NuSdh->base;
+    SDH_T *sdh = (SDH_T *)NuSdh->m_module.base;
 
     LOG_D("try to detect device");
     return SDH_GetCD(sdh);
@@ -628,8 +626,9 @@ static rt_int32_t nu_sdh_card_detect(struct rt_mmcsd_host *host)
 
 static void nu_sdh_isr(nu_sdh_t NuSdh)
 {
-    SDH_T *sdh = NuSdh->base;
+    SDH_T *sdh = (SDH_T *)NuSdh->m_module.base;
     uint32_t isr = sdh->INTSTS;
+    rt_bool_t card_present;
 
     /* card detected */
     if (isr & SDH_INTSTS_CDIF_Msk)
@@ -646,7 +645,12 @@ static void nu_sdh_isr(nu_sdh_t NuSdh)
         if (!NuSdh->LastNotice || (diff_tick > (RT_TICK_PER_SECOND / 5))) // Debounce 200ms
         {
             NuSdh->LastNotice = cur_tick;
-            mmcsd_change(NuSdh->host);
+
+            card_present = (SDH_GetCD(sdh) ? RT_TRUE : RT_FALSE);
+            if (card_present || (NuSdh->host && NuSdh->host->card))
+            {
+                mmcsd_change(NuSdh->host);
+            }
         }
         SDH_CLR_INT_FLAG(sdh, SDH_INTSTS_CDIF_Msk);
     }
@@ -669,16 +673,16 @@ static void nu_sdh_isr(nu_sdh_t NuSdh)
 void nu_sdh_irq_update(struct rt_mmcsd_host *host, rt_int32_t enable)
 {
     nu_sdh_t NuSdh = (nu_sdh_t)host->private_data;
-    SDH_T *sdh = NuSdh->base;
+    SDH_T *sdh = (SDH_T *)NuSdh->m_module.base;
 
     if (enable)
     {
-        LOG_D("Enable %s irq", NuSdh->name);
+        LOG_D("Enable %s irq", NuSdh->m_module.name);
         SDH_ENABLE_INT(sdh, SDH_INTSTS_CDIF_Msk);
     }
     else
     {
-        LOG_D("Disable %s irq", NuSdh->name);
+        LOG_D("Disable %s irq", NuSdh->m_module.name);
         SDH_DISABLE_INT(sdh, SDH_INTSTS_CDIF_Msk);
     }
 }
@@ -719,10 +723,10 @@ void nu_sdh_host_init(nu_sdh_t sdh)
     sdh->host = host;
 
     /* Enable DMA engine at first. */
-    SDH_Enable(sdh->base);
+    SDH_Enable((SDH_T *)sdh->m_module.base);
 
     /* Install ISR. */
-    NVIC_EnableIRQ(sdh->irqn);
+    NVIC_EnableIRQ(sdh->m_module.eIRQn);
 
     /* ready to change */
     //mmcsd_change(host);
@@ -734,8 +738,8 @@ static int rt_hw_sdh_init(void)
 
     for (i = (SDH_START + 1); i < SDH_CNT; i++)
     {
-        CLK_EnableModuleClock(nu_sdh_arr[i].modid);
-        SYS_ResetModule(nu_sdh_arr[i].rstidx);
+        CLK_EnableModuleClock(nu_sdh_arr[i].m_module.ModId);
+        SYS_ResetModule(nu_sdh_arr[i].m_module.RstId);
 
         nu_sdh_host_init(&nu_sdh_arr[i]);
     }
@@ -747,11 +751,15 @@ INIT_DEVICE_EXPORT(rt_hw_sdh_init);
 void nu_sd_attach(void)
 {
     int i;
+
     /* ready to change */
     for (i = (SDH_START + 1); i < SDH_CNT; i++)
     {
-        if (nu_sdh_arr[i].host)
+        if (nu_sdh_arr[i].host &&
+                (SDH_GetCD((SDH_T *)nu_sdh_arr[i].m_module.base) || nu_sdh_arr[i].host->card))
+        {
             mmcsd_change(nu_sdh_arr[i].host);
+        }
     }
 }
 MSH_CMD_EXPORT(nu_sd_attach, attach card);
@@ -759,11 +767,13 @@ MSH_CMD_EXPORT(nu_sd_attach, attach card);
 void nu_sd_regdump(void)
 {
     int i;
+
     for (i = (SDH_START + 1); i < SDH_CNT; i++)
     {
         if (nu_sdh_arr[i].host)
-            LOG_HEX("sdh_reg", 16, (void *)nu_sdh_arr[i].base, sizeof(SDH_T));
+        {
+            LOG_HEX("sdh_reg", 16, (void *)nu_sdh_arr[i].m_module.base, sizeof(SDH_T));
+        }
     }
 }
 MSH_CMD_EXPORT(nu_sd_regdump, dump sdh registers);
-#endif

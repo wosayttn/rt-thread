@@ -127,9 +127,11 @@ static rt_ssize_t nct7717u_fetch_data(rt_sensor_t sensor, rt_sensor_data_t data,
         if (nct7717u_ldt_readout(i2c_bus_dev, (uint8_t *)&i8Temp) == RT_EOK)
         {
             rt_int32_t i32TempValue = i8Temp;
+
             data->type = RT_SENSOR_TYPE_TEMP;
-            data->data.temp = i32TempValue * 10;
+            data->data.temp = i32TempValue;
             data->timestamp = rt_sensor_get_ts();
+
             return 1;
         }
     }

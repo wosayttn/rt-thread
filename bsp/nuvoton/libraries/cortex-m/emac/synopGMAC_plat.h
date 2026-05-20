@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2006-2022, RT-Thread Development Team
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date           Author       Notes
- * 2021-08-24     Wayne        first version
  */
 
 #ifndef SYNOP_GMAC_PLAT_H

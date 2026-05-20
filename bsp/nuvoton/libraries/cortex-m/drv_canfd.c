@@ -5,13 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_CANFD)
-
-#include "NuMicro.h"
-#include "nu_bitutil.h"
-#include "rthw.h"
+#include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -19,13 +13,16 @@
 #define DBG_TAG LOG_TAG
 #include "drv_log.h"
 
-#define DEFINE_NU_CANFD(_idx, _rstidx, _irqn0, _irqn1) \
+#define DEFINE_NU_CANFD(_idx, _rstidx, _irqn0, _irqn1)  \
     {                                                   \
-        .name = "canfd" #_idx,                         \
-        .base = CANFD##_idx,                            \
-        .rstidx = _rstidx,                              \
-        .irqn0 = _irqn0,                                \
-        .irqn1 = _irqn1,                                \
+        .m_module = {                                   \
+            .name = "canfd" #_idx,                      \
+            .base = CANFD##_idx,                        \
+            .RstId = _rstidx,                           \
+            .ModId = CANFD##_idx##_MODULE,              \
+            .eIRQn = _irqn0,                            \
+            .eIRQn1 = _irqn1,                           \
+        },                                              \
     }
 
 #define DEFINE_CANFD_IRQ_HANDLER(_irq, _idx)    \
@@ -77,11 +74,7 @@ enum
 struct nu_canfd
 {
     struct rt_can_device dev;
-    char *name;
-    CANFD_T *base;
-    uint32_t rstidx;
-    IRQn_Type irqn0;
-    IRQn_Type irqn1;
+    const struct nu_module m_module;
     uint32_t int_flag;
     CANFD_FD_T sCANFD_Config;
 };
@@ -191,7 +184,7 @@ static void dump_interrupt_event(uint32_t u32Status)
 static void nu_canfd_isr(nu_canfd_t psNuCANFD)
 {
     /* Get base address of CAN register */
-    CANFD_T *base = psNuCANFD->base;
+    CANFD_T *base = (CANFD_T *)psNuCANFD->m_module.base;
 
     /* Get interrupt status */
     uint32_t u32Status = base->IR;
@@ -232,19 +225,19 @@ static void nu_canfd_isr(nu_canfd_t psNuCANFD)
     }
     if (u32Status & CANFD_IR_EW_Msk)
     {
-        LOG_E("[%s]EWARN", psNuCANFD->name) ;
+        LOG_E("[%s]EWARN", psNuCANFD->m_module.name) ;
     }
 
     if (u32Status & CANFD_IR_BO_Msk)
     {
-        LOG_E("[%s]BUSOFF", psNuCANFD->name) ;
+        LOG_E("[%s]BUSOFF", psNuCANFD->m_module.name) ;
 
         /* To release busoff pin */
     }
 
     if (u32Status & CANFD_IR_PED_Msk)
     {
-        LOG_E("[%s] LEC: %03x\n", psNuCANFD->name, base->PSR & CANFD_PSR_LEC_Msk) ;
+        LOG_E("[%s] LEC: %03x\n", psNuCANFD->m_module.name, base->PSR & CANFD_PSR_LEC_Msk) ;
     }
 }
 
@@ -275,7 +268,7 @@ static void nu_canfd_ie(nu_canfd_t psNuCANFD)
         u32CanFDIE |= (CANFD_IE_EPE_Msk | CANFD_IE_EWE_Msk | CANFD_IE_ELOE_Msk | CANFD_IE_TOOE_Msk | CANFD_IR_PED_Msk);
     }
 
-    CANFD_EnableInt(psNuCANFD->base, u32CanFDIE, 0,
+    CANFD_EnableInt((CANFD_T *)psNuCANFD->m_module.base, u32CanFDIE, 0,
                     (psNuCANFD->int_flag & (RT_DEVICE_FLAG_INT_TX)) ? CANFD_TXBTIE_TIEn_Msk : 0,
                     (psNuCANFD->int_flag & (RT_DEVICE_FLAG_INT_TX)) ? CANFD_TXBCIE_CFIEn_Msk : 0);
 }
@@ -291,7 +284,7 @@ static rt_err_t nu_canfd_configure(struct rt_can_device *can, struct can_configu
     RT_ASSERT(cfg);
 
     /* Get base address of CAN register */
-    CANFD_T *base = psNuCANFD->base;
+    CANFD_T *base = (CANFD_T *)psNuCANFD->m_module.base;
 
     psCANFDConf = &psNuCANFD->sCANFD_Config;
 
@@ -396,7 +389,7 @@ static rt_err_t nu_canfd_configure(struct rt_can_device *can, struct can_configu
 
     case RT_CAN_MODE_LOOPBACKANLISTEN:
     default:
-        rt_kprintf("Unsupported Operating mode\n");
+        LOG_W("Unsupported Operating mode");
         goto exit_nu_canfd_configure;
     }
     CANFD_Open(base, psCANFDConf);
@@ -472,7 +465,7 @@ static rt_err_t nu_canfd_control(struct rt_can_device *can, int cmd, void *arg)
                 sStdFilter.SFEC  = u32FEC;                       /*!<Standard Filter Element Configuration */ //001b: Store in Rx FIFO 0 if filter matches
                 sStdFilter.SFT   = eCANFD_SID_FLTR_TYPE_CLASSIC; /*!<Standard Filter Type */ //10b: Classic filter: SFID1 = filter, SFID2 = mask
 
-                CANFD_Transfer(psNuCANFD->base, eCANFD_MSG_SID, &sStdFilter, i);
+                CANFD_Transfer((CANFD_T *)psNuCANFD->m_module.base, eCANFD_MSG_SID, &sStdFilter, i);
             }
             else
             {
@@ -487,7 +480,7 @@ static rt_err_t nu_canfd_control(struct rt_can_device *can, int cmd, void *arg)
                 sXidFilter.EFEC  = u32FEC;                        /*!<Extended Filter Element Configuration */ //001b: Store in Rx FIFO 0 if filter matches
                 sXidFilter.EFT   = eCANFD_XID_FLTR_TYPE_CLASSIC;  /*!<Extended Filter Type */ //10b: Classic filter: SFID1 = filter, SFID2 = mask
 
-                CANFD_Transfer(psNuCANFD->base, eCANFD_MSG_XID, &sXidFilter, i);
+                CANFD_Transfer((CANFD_T *)psNuCANFD->m_module.base, eCANFD_MSG_XID, &sXidFilter, i);
             }
 
         }
@@ -557,8 +550,8 @@ static rt_err_t nu_canfd_control(struct rt_can_device *can, int cmd, void *arg)
 
     case RT_CAN_CMD_GET_STATUS:
     {
-        rt_uint32_t u32ErrCounter = psNuCANFD->base->ECR;
-        rt_uint32_t u32ProtocolStatus = psNuCANFD->base->PSR;
+        rt_uint32_t u32ErrCounter = ((CANFD_T *)psNuCANFD->m_module.base)->ECR;
+        rt_uint32_t u32ProtocolStatus = ((CANFD_T *)psNuCANFD->m_module.base)->PSR;
 
         RT_ASSERT(arg);
 
@@ -629,7 +622,7 @@ static int nu_canfd_sendmsg(struct rt_can_device *can, const void *buf, rt_uint3
         }
     }
 
-    if (CANFD_Transfer(psNuCANFD->base, eCANFD_MSG_DTB, &sTxMsg, boxno) == NULL)
+    if (CANFD_Transfer((CANFD_T *)psNuCANFD->m_module.base, eCANFD_MSG_DTB, &sTxMsg, boxno) == NULL)
     {
         goto exit_nu_canfd_sendmsg;
     }
@@ -651,9 +644,9 @@ static int nu_canfd_recvmsg(struct rt_can_device *can, void *buf, rt_uint32_t bo
     RT_ASSERT(buf);
 
     /* get data */
-    if (CANFD_Transfer(psNuCANFD->base, eCANFD_MSG_RF0, &sRxMsg, 0) == NULL)
+    if (CANFD_Transfer((CANFD_T *)psNuCANFD->m_module.base, eCANFD_MSG_RF0, &sRxMsg, 0) == NULL)
     {
-        rt_kprintf("No available RX Msg.\n");
+        LOG_W("No available RX Msg.");
         return -(RT_ERROR);
     }
 
@@ -698,16 +691,14 @@ static int rt_hw_canfd_init(void)
         nu_canfd_arr[i].dev.config.maxhdr = RT_CANMSG_BOX_SZ;
 #endif
         /* Register can device */
-        ret = rt_hw_can_register(&nu_canfd_arr[i].dev, nu_canfd_arr[i].name, &nu_canfd_ops, NULL);
+        ret = rt_hw_can_register(&nu_canfd_arr[i].dev, nu_canfd_arr[i].m_module.name, &nu_canfd_ops, NULL);
         RT_ASSERT(ret == RT_EOK);
 
         /* Unmask interrupt. */
-        NVIC_EnableIRQ(nu_canfd_arr[i].irqn0);
-        NVIC_EnableIRQ(nu_canfd_arr[i].irqn1);
+        NVIC_EnableIRQ(nu_canfd_arr[i].m_module.eIRQn);
+        NVIC_EnableIRQ(nu_canfd_arr[i].m_module.eIRQn1);
     }
 
     return (int)ret;
 }
 INIT_DEVICE_EXPORT(rt_hw_canfd_init);
-
-#endif  //#if defined(BSP_USING_CANFD)

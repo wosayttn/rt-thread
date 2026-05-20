@@ -5,13 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-
-#include "rtdevice.h"
-
-#if defined(BSP_USING_EQEI)
-
 #include "drv_eqei.h"
-#include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -21,11 +15,13 @@
 
 #define DEFINE_NU_EQEI(_idx)      \
     {                             \
-        .name = "eqei" #_idx,    \
-        .base = EQEI##_idx,       \
-        .irqn = EQEI##_idx##_IRQn,\
-        .rstidx = EQEI##_idx##_RST,\
-        .modid = EQEI##_idx##_MODULE,\
+        .m_module = {             \
+            .name = "eqei" #_idx,\
+            .base = EQEI##_idx,   \
+            .eIRQn = EQEI##_idx##_IRQn,\
+            .RstId = EQEI##_idx##_RST,\
+            .ModId = EQEI##_idx##_MODULE,\
+        },                        \
         .max_cntval = 1000,       \
         .cmp_val = 100,           \
     }
@@ -62,11 +58,7 @@ enum
 struct nu_qei
 {
     struct rt_pulse_encoder_device dev;
-    char *name;
-    EQEI_T *base;
-    IRQn_Type   irqn;
-    uint32_t    rstidx;
-    uint32_t    modid;
+    const struct nu_module m_module;
 
     rt_uint32_t max_cntval;
     rt_uint32_t cmp_val;
@@ -148,7 +140,8 @@ static rt_uint32_t nu_eqei_type(struct rt_pulse_encoder_device *pulse_encoder)
         break;
     }
 
-    rt_kprintf("[%d %d %d]\n", pulse_encoder->type, psNuEqei->cmp_val, u32type);
+    LOG_D("[%d %d %d]", pulse_encoder->type, psNuEqei->cmp_val, u32type);
+
     return u32type;
 }
 
@@ -161,16 +154,16 @@ void nu_eqei_set_cmpval(rt_device_t pulse_encoder, rt_uint32_t u32val)
     psNuEqei->cmp_val = u32val;
     if (u32val > 0)
     {
-        EQEI_DisableInt(psNuEqei->base, EQEI_CTL_CMPIEN_Msk);
-        EQEI_SET_CNT_CMP(psNuEqei->base, u32val);
-        EQEI_ENABLE_CNT_CMP(psNuEqei->base);
-        EQEI_EnableInt(psNuEqei->base, EQEI_CTL_CMPIEN_Msk);
+        EQEI_DisableInt((EQEI_T *)psNuEqei->m_module.base, EQEI_CTL_CMPIEN_Msk);
+        EQEI_SET_CNT_CMP((EQEI_T *)psNuEqei->m_module.base, u32val);
+        EQEI_ENABLE_CNT_CMP((EQEI_T *)psNuEqei->m_module.base);
+        EQEI_EnableInt((EQEI_T *)psNuEqei->m_module.base, EQEI_CTL_CMPIEN_Msk);
     }
     else
     {
-        EQEI_DisableInt(psNuEqei->base, EQEI_CTL_CMPIEN_Msk);
-        EQEI_DISABLE_CNT_CMP(psNuEqei->base);
-        EQEI_SET_CNT_CMP(psNuEqei->base, 0);
+        EQEI_DisableInt((EQEI_T *)psNuEqei->m_module.base, EQEI_CTL_CMPIEN_Msk);
+        EQEI_DISABLE_CNT_CMP((EQEI_T *)psNuEqei->m_module.base);
+        EQEI_SET_CNT_CMP((EQEI_T *)psNuEqei->m_module.base, 0);
     }
 }
 
@@ -181,13 +174,13 @@ static rt_err_t nu_eqei_init(struct rt_pulse_encoder_device *pulse_encoder)
     RT_ASSERT(pulse_encoder != RT_NULL);
 
     /* enable noise filter */
-    EQEI_ENABLE_NOISE_FILTER(psNuEqei->base, EQEI_CTL_NFCLKSEL_DIV2);
+    EQEI_ENABLE_NOISE_FILTER((EQEI_T *)psNuEqei->m_module.base, EQEI_CTL_NFCLKSEL_DIV2);
 
     /* set compare value and interrupt */
     nu_eqei_set_cmpval((rt_device_t)pulse_encoder, psNuEqei->cmp_val);
 
     /* set qei mode */
-    EQEI_Open(psNuEqei->base, nu_eqei_type(pulse_encoder), psNuEqei->max_cntval);
+    EQEI_Open((EQEI_T *)psNuEqei->m_module.base, nu_eqei_type(pulse_encoder), psNuEqei->max_cntval);
 
     return RT_EOK;
 }
@@ -196,7 +189,7 @@ static rt_int32_t nu_eqei_get_count(struct rt_pulse_encoder_device *pulse_encode
 {
     nu_eqei_t psNuEqei = (nu_eqei_t)pulse_encoder;
     RT_ASSERT(pulse_encoder != RT_NULL);
-    return (rt_int32_t)EQEI_GET_CNT_VALUE(psNuEqei->base);
+    return (rt_int32_t)EQEI_GET_CNT_VALUE((EQEI_T *)psNuEqei->m_module.base);
 }
 
 static rt_err_t nu_eqei_clear_count(struct rt_pulse_encoder_device *pulse_encoder)
@@ -204,9 +197,9 @@ static rt_err_t nu_eqei_clear_count(struct rt_pulse_encoder_device *pulse_encode
     nu_eqei_t psNuEqei = (nu_eqei_t)pulse_encoder;
     RT_ASSERT(pulse_encoder != RT_NULL);
 
-    EQEI_Stop(psNuEqei->base);
-    EQEI_SET_CNT_VALUE(psNuEqei->base, 0);
-    EQEI_Start(psNuEqei->base);
+    EQEI_Stop((EQEI_T *)psNuEqei->m_module.base);
+    EQEI_SET_CNT_VALUE((EQEI_T *)psNuEqei->m_module.base, 0);
+    EQEI_Start((EQEI_T *)psNuEqei->m_module.base);
 
     return RT_EOK;
 }
@@ -222,11 +215,11 @@ static rt_err_t nu_eqei_control(struct rt_pulse_encoder_device *pulse_encoder, r
     {
     case PULSE_ENCODER_CMD_ENABLE:
         /* set compare value and interrupt */
-        EQEI_Start(psNuEqei->base);
+        EQEI_Start((EQEI_T *)psNuEqei->m_module.base);
         nu_eqei_set_cmpval((rt_device_t)pulse_encoder, psNuEqei->cmp_val);
         break;
     case PULSE_ENCODER_CMD_DISABLE:
-        EQEI_Stop(psNuEqei->base);
+        EQEI_Stop((EQEI_T *)psNuEqei->m_module.base);
         nu_eqei_set_cmpval((rt_device_t)pulse_encoder, 0);
         break;
     default:
@@ -239,11 +232,11 @@ static rt_err_t nu_eqei_control(struct rt_pulse_encoder_device *pulse_encoder, r
 
 static void nu_eqei_isr(nu_eqei_t psNuEqei)
 {
-    if (EQEI_GET_INT_FLAG(psNuEqei->base, EQEI_STATUS_CMPF_Msk))
+    if (EQEI_GET_INT_FLAG((EQEI_T *)psNuEqei->m_module.base, EQEI_STATUS_CMPF_Msk))
     {
         psNuEqei->qei_flag = 1;
-        EQEI_CLR_INT_FLAG(psNuEqei->base, EQEI_STATUS_CMPF_Msk);
-        rt_kprintf("%s: CMP flag rising\n", psNuEqei->name) ;
+        EQEI_CLR_INT_FLAG((EQEI_T *)psNuEqei->m_module.base, EQEI_STATUS_CMPF_Msk);
+        LOG_D("%s: CMP flag rising", psNuEqei->m_module.name);
     }
 }
 
@@ -278,7 +271,7 @@ void nu_eqei_set_maxval_type(rt_device_t pulse_encoder, rt_uint32_t u32val, enum
 
     psNuEqei->dev.type = eType;
     psNuEqei->max_cntval = u32val;
-    EQEI_Open(psNuEqei->base, nu_eqei_type(&psNuEqei->dev), u32val);
+    EQEI_Open((EQEI_T *)psNuEqei->m_module.base, nu_eqei_type(&psNuEqei->dev), u32val);
 }
 
 static int rt_hw_qei_init(void)
@@ -294,10 +287,10 @@ static int rt_hw_qei_init(void)
         psNuEqei->dev.ops = &nu_eqei_ops;
 
         /* Enable QEI module */
-        CLK_EnableModuleClock(psNuEqei->modid);
-        SYS_ResetModule(psNuEqei->rstidx);
+        CLK_EnableModuleClock(psNuEqei->m_module.ModId);
+        SYS_ResetModule(psNuEqei->m_module.RstId);
 
-        result = rt_device_pulse_encoder_register((struct rt_pulse_encoder_device *)&nu_eqei_arr[i].dev, nu_eqei_arr[i].name, (void *)&psNuEqei->qei_flag);
+        result = rt_device_pulse_encoder_register((struct rt_pulse_encoder_device *)&nu_eqei_arr[i].dev, nu_eqei_arr[i].m_module.name, (void *)&psNuEqei->qei_flag);
         RT_ASSERT(result == RT_EOK);
     }
 
@@ -305,5 +298,3 @@ static int rt_hw_qei_init(void)
 }
 
 INIT_APP_EXPORT(rt_hw_qei_init);
-
-#endif //#if defined(BSP_USING_EQEI)

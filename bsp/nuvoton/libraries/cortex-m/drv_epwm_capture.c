@@ -5,10 +5,6 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_EPWM_CAPTURE)
-
 #include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -25,11 +21,13 @@
 
 #define MAKE_EPWM_CAPTURE_INSTANCE(x, y, z) \
     { \
-        .name  = MAKE_EPWM_CAPTURE_NAME(x, y), \
-        .base  = EPWM##x, \
-        .irqn = EPWM##x##P##z##_IRQn, \
-        .rstidx = EPWM##x##_RST, \
-        .modid = EPWM##x##_MODULE, \
+        .m_module = { \
+            .name  = MAKE_EPWM_CAPTURE_NAME(x, y), \
+            .base  = EPWM##x, \
+            .eIRQn = EPWM##x##P##z##_IRQn, \
+            .RstId = EPWM##x##_RST, \
+            .ModId = EPWM##x##_MODULE, \
+        }, \
     },
 
 #define FOR_EACH_EPWM_CHANNEL(x) \
@@ -75,11 +73,7 @@ enum
 struct nu_epwmcap
 {
     struct rt_inputcapture_device   parent;
-    EPWM_T      *base;
-    char        *name;
-    IRQn_Type    irqn;
-    uint32_t     rstidx;
-    uint64_t     modid;
+    const struct nu_module m_module;
 
     uint8_t     u8Channel;
     uint32_t    u32CurrentRisingCnt;
@@ -119,7 +113,7 @@ static struct rt_inputcapture_ops nu_epwmcap_ops =
 /* Functions Implementation --------------------------------------------------*/
 static void nu_epwmcap_isr(nu_epwmcap_t psNuEpwmCap)
 {
-    if (EPWM_GetCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel) != 0)
+    if (EPWM_GetCaptureIntFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel) != 0)
     {
         /* Calculate pulse width */
         if (CalPulseWidth(psNuEpwmCap) == RT_EOK)
@@ -146,35 +140,35 @@ static rt_err_t CalPulseWidth(nu_epwmcap_t psNuEpwmCap)
     rt_bool_t bWrapAroundFlag = RT_FALSE;
 
     /* Check rising/falling capture counter is overflow or not */
-    if (EPWM_GetWrapAroundFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel))
+    if (EPWM_GetWrapAroundFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel))
     {
-        EPWM_ClearWrapAroundFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel);
+        EPWM_ClearWrapAroundFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel);
         bWrapAroundFlag = RT_TRUE;
     }
-    if (EPWM_GetCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel) == 1)//Rising edge
+    if (EPWM_GetCaptureIntFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel) == 1)//Rising edge
     {
-        EPWM_ClearCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_RISING_LATCH);
+        EPWM_ClearCaptureIntFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_RISING_LATCH);
 
         if (bWrapAroundFlag)
         {
             psNuEpwmCap->u32CurrentRisingCnt = 0x10000;
         }
-        psNuEpwmCap->u32CurrentRisingCnt += EPWM_GET_CAPTURE_RISING_DATA(psNuEpwmCap->base, psNuEpwmCap->u8Channel);
+        psNuEpwmCap->u32CurrentRisingCnt += EPWM_GET_CAPTURE_RISING_DATA((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel);
     }
-    else if (EPWM_GetCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel) == 2)//Falling edge
+    else if (EPWM_GetCaptureIntFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel) == 2)//Falling edge
     {
-        EPWM_ClearCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_FALLING_LATCH);
+        EPWM_ClearCaptureIntFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_FALLING_LATCH);
 
         if (bWrapAroundFlag)
         {
             psNuEpwmCap->u32CurrentFallingCnt = 0x10000;
         }
-        psNuEpwmCap->u32CurrentFallingCnt += EPWM_GET_CAPTURE_FALLING_DATA(psNuEpwmCap->base, psNuEpwmCap->u8Channel);
+        psNuEpwmCap->u32CurrentFallingCnt += EPWM_GET_CAPTURE_FALLING_DATA((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel);
     }
     else //Rising & Falling edge
     {
-        EPWM_ClearCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_RISING_LATCH);
-        EPWM_ClearCaptureIntFlag(psNuEpwmCap->base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_FALLING_LATCH);
+        EPWM_ClearCaptureIntFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_RISING_LATCH);
+        EPWM_ClearCaptureIntFlag((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_FALLING_LATCH);
 
         return -(RT_ERROR);
     }
@@ -221,26 +215,26 @@ static rt_err_t nu_epwmcap_open(struct rt_inputcapture_device *inputcapture)
     RT_ASSERT(psNuEpwmCap != RT_NULL);
 
     /* Set capture time as 1000 nanosecond */
-    EPWM_ConfigCaptureChannel(psNuEpwmCap->base, psNuEpwmCap->u8Channel, 1000, 0);
+    EPWM_ConfigCaptureChannel((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel, 1000, 0);
 
     /* Enable capture rising/falling edge interrupt */
-    EPWM_EnableCaptureInt(psNuEpwmCap->base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_FALLING_LATCH | EPWM_CAPTURE_INT_RISING_LATCH);
+    EPWM_EnableCaptureInt((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_FALLING_LATCH | EPWM_CAPTURE_INT_RISING_LATCH);
 
     /* Enable Capture Function for EPWM */
-    EPWM_EnableCapture(psNuEpwmCap->base, 0x1 << psNuEpwmCap->u8Channel);
+    EPWM_EnableCapture((EPWM_T *)psNuEpwmCap->m_module.base, 0x1 << psNuEpwmCap->u8Channel);
 
     /* Enable rising/falling capture reload */
-    psNuEpwmCap->base->CAPCTL |= (0x1 << (EPWM_CAPCTL_RCRLDEN0_Pos + psNuEpwmCap->u8Channel))
+    ((EPWM_T *)psNuEpwmCap->m_module.base)->CAPCTL |= (0x1 << (EPWM_CAPCTL_RCRLDEN0_Pos + psNuEpwmCap->u8Channel))
                                  | (0x1 << (EPWM_CAPCTL_FCRLDEN0_Pos + psNuEpwmCap->u8Channel));
 
     /* Set counter type as down count */
-    EPWM_SET_ALIGNED_TYPE(psNuEpwmCap->base, 0x1 << psNuEpwmCap->u8Channel, EPWM_UP_COUNTER);
+    EPWM_SET_ALIGNED_TYPE((EPWM_T *)psNuEpwmCap->m_module.base, 0x1 << psNuEpwmCap->u8Channel, EPWM_UP_COUNTER);
 
     /* Enable EPWM Timer */
-    EPWM_Start(psNuEpwmCap->base, 0x1 << psNuEpwmCap->u8Channel);
+    EPWM_Start((EPWM_T *)psNuEpwmCap->m_module.base, 0x1 << psNuEpwmCap->u8Channel);
 
     /* Enable EPWMxPx interrupt. */
-    NVIC_EnableIRQ(psNuEpwmCap->irqn);
+    NVIC_EnableIRQ(psNuEpwmCap->m_module.eIRQn);
 
     return ret;
 }
@@ -254,14 +248,14 @@ static rt_err_t nu_epwmcap_close(struct rt_inputcapture_device *inputcapture)
     RT_ASSERT(psNuEpwmCap != RT_NULL);
 
     /* Disable capture rising/falling edge interrupt */
-    EPWM_DisableCaptureInt(psNuEpwmCap->base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_FALLING_LATCH | EPWM_CAPTURE_INT_RISING_LATCH);
+    EPWM_DisableCaptureInt((EPWM_T *)psNuEpwmCap->m_module.base, psNuEpwmCap->u8Channel, EPWM_CAPTURE_INT_FALLING_LATCH | EPWM_CAPTURE_INT_RISING_LATCH);
 
     /* Stop EPWM Timer */
-    EPWM_ForceStop(psNuEpwmCap->base, 0x1 << psNuEpwmCap->u8Channel);
+    EPWM_ForceStop((EPWM_T *)psNuEpwmCap->m_module.base, 0x1 << psNuEpwmCap->u8Channel);
 
     /* Disable EPWMxPx interrupt */
-    if ((psNuEpwmCap->base->CNTEN & (0x3 << (psNuEpwmCap->u8Channel / 2 * 2))) == 0u)
-        NVIC_DisableIRQ(psNuEpwmCap->irqn);
+    if ((((EPWM_T *)psNuEpwmCap->m_module.base)->CNTEN & (0x3 << (psNuEpwmCap->u8Channel / 2 * 2))) == 0u)
+        NVIC_DisableIRQ(psNuEpwmCap->m_module.eIRQn);
 
     return ret;
 }
@@ -283,14 +277,13 @@ static int rt_hw_epwmcap_init(void)
         if ((psNuEpwmCap->u8Channel % EPWM_CHANNEL_NUM) == 0)
         {
             /* Enable epwm module */
-            CLK_EnableModuleClock(psNuEpwmCap->modid);
-            SYS_ResetModule(psNuEpwmCap->rstidx);
+            CLK_EnableModuleClock(psNuEpwmCap->m_module.ModId);
+            SYS_ResetModule(psNuEpwmCap->m_module.RstId);
         }
-        ret = rt_device_inputcapture_register(&psNuEpwmCap->parent, psNuEpwmCap->name, psNuEpwmCap);
+        ret = rt_device_inputcapture_register(&psNuEpwmCap->parent, psNuEpwmCap->m_module.name, psNuEpwmCap);
         RT_ASSERT(ret == RT_EOK);
     }
 
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_hw_epwmcap_init);
-#endif //#if defined(BSP_USING_EPWM_CAPTURE)

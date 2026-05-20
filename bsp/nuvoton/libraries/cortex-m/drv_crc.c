@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_CRC)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "drv_crc.h"
 #include "drv_pdma.h"
 
@@ -50,16 +46,21 @@ void CRC_IRQHandler(void)
     CRC->DMASTS = u32CRCDMAStatus;
 
     if (u32CRCDMAStatus & CRC_DMASTS_FINISH_Msk)
-        rt_kprintf("\tIRQ - CRC DMA Finish\n\n");
-
+    {
+        LOG_D("\tIRQ - CRC DMA Finish\n\n");
+    }
     if (u32CRCDMAStatus & CRC_DMASTS_ABORTED_Msk)
-        rt_kprintf("\tIRQ - CRC DMA Abort\n");
-
+    {
+        LOG_D("\tIRQ - CRC DMA Abort\n");
+    }
     if (u32CRCDMAStatus & CRC_DMASTS_CFGERR_Msk)
-        rt_kprintf("\tIRQ - CRC DMA CFG Error\n\n");
-
+    {
+        LOG_D("\tIRQ - CRC DMA CFG Error\n\n");
+    }
     if (u32CRCDMAStatus & CRC_DMASTS_ACCERR_Msk)
-        rt_kprintf("\tIRQ - CRC DMA Access Error\n\n");
+    {
+        LOG_D("\tIRQ - CRC DMA Access Error\n\n");
+    }
 
     /* leave interrupt */
     rt_interrupt_leave();
@@ -130,17 +131,21 @@ static rt_uint32_t nu_crc_run(
 
             if (u32CRCDMAStatus != CRC_DMASTS_FINISH_Msk)
             {
-                rt_kprintf("CRC DMA Address@0x%08X\n", (uint32_t)pu8InTempData);
-                rt_kprintf("CRC DMA Length: %d\n", (uint32_t)i32Remain_WordAligned);
+                LOG_D("CRC DMA Address@0x%08X\n", (uint32_t)pu8InTempData);
+                LOG_D("CRC DMA Length: %d\n", (uint32_t)i32Remain_WordAligned);
 
                 if (u32CRCDMAStatus & CRC_DMASTS_ABORTED_Msk)
-                    rt_kprintf("CRC DMA Abort\n");
-
+                {
+                    LOG_D("CRC DMA Abort\n");
+                }
                 if (u32CRCDMAStatus & CRC_DMASTS_CFGERR_Msk)
-                    rt_kprintf("CRC DMA CFG Error\n");
-
+                {
+                    LOG_D("CRC DMA CFG Error\n");
+                }
                 if (u32CRCDMAStatus & CRC_DMASTS_ACCERR_Msk)
-                    rt_kprintf("CRC DMA Access Error\n");
+                {
+                    LOG_D("CRC DMA Access Error\n");
+                }
             }
             else
             {
@@ -231,4 +236,3 @@ rt_uint32_t nu_crc_update(struct hwcrypto_crc *ctx, const rt_uint8_t *in, rt_siz
     // Apply xorout (final xor value)
     return crc_result ^ ctx->crc_cfg.xorout;
 }
-#endif //#if defined(BSP_USING_CRC)

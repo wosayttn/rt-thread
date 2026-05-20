@@ -21,8 +21,8 @@
 #if defined(BSP_USING_FMC)
 #define IFDEF_BOARD_USING_FMC   &g_falFMC_AP, &g_falFMC_LD,
 #define FAL_PART_FMC  \
-            {FAL_PART_MAGIC_WORD, "ldrom",     "FMC_LD",  0x0,    (8*1024),   0},  \
-            {FAL_PART_MAGIC_WORD, "aprom",     "FMC_AP",  0x0,    (1*1024*1024), 0},
+            {FAL_PART_MAGIC_WORD, "LDROM",     "FMC_LD",  0x0,    (8*1024),   0},  \
+            {FAL_PART_MAGIC_WORD, "APROM",     "FMC_AP",  0x0,    (1*1024*1024), 0},
 #else
 #define IFDEF_BOARD_USING_FMC
 #define FAL_PART_FMC
@@ -33,7 +33,7 @@
 extern struct fal_flash_dev        nor_flash0;
 #define IFDEF_BOARD_USING_QSPI     &nor_flash0,
 #define FAL_PART_QSPI \
-            {FAL_PART_MAGIC_WORD, "filesystem", FAL_USING_NOR_FLASH_DEV_NAME, 0, (2 * 1024 * 1024), 0},
+            {FAL_PART_MAGIC_WORD, "sf", FAL_USING_NOR_FLASH_DEV_NAME, 0, (2 * 1024 * 1024), 0},
 #else
 #define IFDEF_BOARD_USING_QSPI
 #define FAL_PART_QSPI

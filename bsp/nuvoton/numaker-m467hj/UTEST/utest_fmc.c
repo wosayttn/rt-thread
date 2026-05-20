@@ -62,14 +62,14 @@ static void test_fmc_partition_exist(void)
 static void test_fmc_ldrom_bench(void)
 {
     uassert_not_null(g_part_ldrom);
-    fmc_run_bench("ldrom");
+    fmc_run_bench("LDROM");
 }
 
 static void test_fmc_aprom_partition_exist(void)
 {
     uassert_not_null(g_part_aprom);
 
-    rt_kprintf("[FMC utest] skip shell probe on aprom to avoid self-flash access while running from APROM.\n");
+    rt_kprintf("[FMC utest] skip shell probe on APROM to avoid self-flash access while running from APROM.\n");
 }
 
 static rt_err_t utest_tc_init(void)
@@ -80,8 +80,8 @@ static rt_err_t utest_tc_init(void)
     if (!fal_init_check())
         fal_init();
 
-    g_part_ldrom = fal_partition_find("ldrom");
-    g_part_aprom = fal_partition_find("aprom");
+    g_part_ldrom = fal_partition_find("LDROM");
+    g_part_aprom = fal_partition_find("APROM");
 
     fmc_dump_test_setting();
 

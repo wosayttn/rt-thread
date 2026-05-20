@@ -1,22 +1,16 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2020-1-16       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
-
-#if defined(NU_PKG_USING_BMX055)
+#include "sensor_bmx055.h"
 
 #include <sys/time.h>
 #include <string.h>
-#include "sensor_bmx055.h"
+#include "bma2x2.h"
+#include "bmm050.h"
+#include "bmg160.h"
 
 #define DBG_ENABLE
 #define DBG_LEVEL DBG_LOG
@@ -654,5 +648,3 @@ int rt_hw_bmx055_init(const char *name, struct rt_sensor_config *cfg)
 exit_rt_hw_bmx055_init:
     return ret;
 }
-
-#endif //#if defined(NU_PKG_USING_BMX055)

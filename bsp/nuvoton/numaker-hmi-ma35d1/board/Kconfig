@@ -55,7 +55,6 @@ menu "Hardware Drivers Config"
             bool "BUZZER function(over epwm1_ch5)"
             select BSP_USING_EPWM
             select BSP_USING_EPWM1
-            select BSP_USING_EPWM1_PWM
             default y
 
         config BOARD_USING_MPU6500
@@ -91,14 +90,12 @@ menu "Hardware Drivers Config"
                 config BOARD_USING_LCM_FW070TFT_WVGA
                     bool "NuDesign TFT-LCD7-WVGA"
                     select BSP_USING_DISP
-                    select LCM_USING_FW070TFT
                     help
                         Choose this option if you use 7" 800x480x32b LCD panel.
 
                 config BOARD_USING_LCM_FW070TFT_WSVGA
                     bool "NuDesign TFT-LCD7-WSVGA"
                     select BSP_USING_DISP
-                    select LCM_USING_FW070TFT_WSVGA
                     help
                         Choose this option if you use 7" 1024x600x32b LCD panel.
             endchoice
@@ -111,7 +108,6 @@ menu "Hardware Drivers Config"
                     bool "GT911 TPC"
                     select BSP_USING_I2C
                     select BSP_USING_I2C0
-                    select NU_PKG_USING_TPC_GT911
                     help
                         Choose this option if you use GT911 external TSC touching function.
 

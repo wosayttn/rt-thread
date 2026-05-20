@@ -1,6 +1,6 @@
 menu "Demo"
 
-    config NU_PKG_DEMO
+    config NU_PKG_USING_DEMO
         bool "Built-in Demo."
         default n
 

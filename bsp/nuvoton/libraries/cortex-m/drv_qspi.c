@@ -5,12 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtconfig.h"
-
-#if defined(BSP_USING_QSPI)
-
 #include "drv_spi.h"
-#include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -19,6 +14,7 @@
 #include "drv_log.h"
 
 #if defined(BSP_USING_SPI_PDMA)
+
 #if defined(BSP_USING_QSPI0_PDMA)
 #define QSPI0_PDMA_INIT                 \
     .pdma_perp_tx = PDMA_QSPI0_TX,      \
@@ -28,15 +24,29 @@
     .pdma_perp_tx = NU_PDMA_UNUSED,     \
     .pdma_perp_rx = NU_PDMA_UNUSED,
 #endif
+
+#if defined(BSP_USING_QSPI1_PDMA)
+#define QSPI1_PDMA_INIT                 \
+    .pdma_perp_tx = PDMA_QSPI1_TX,      \
+    .pdma_perp_rx = PDMA_QSPI1_RX,
 #else
-#define QSPI0_PDMA_INIT
+#define QSPI1_PDMA_INIT                 \
+    .pdma_perp_tx = NU_PDMA_UNUSED,     \
+    .pdma_perp_rx = NU_PDMA_UNUSED,
+#endif
+
+#else
+    #define QSPI0_PDMA_INIT
+    #define QSPI1_PDMA_INIT
 #endif
 
 #define DEFINE_NU_QSPI(_idx, _pdma_init) \
     {                                     \
-        .name = "qspi" #_idx,            \
-        .spi_base = (SPI_T *)QSPI##_idx,  \
-        .rstidx = QSPI##_idx##_RST,       \
+        .m_module = {                     \
+            .name = "qspi" #_idx,        \
+            .base = (SPI_T *)QSPI##_idx,  \
+            .RstId = QSPI##_idx##_RST,    \
+        },                                \
         _pdma_init                        \
     }
 
@@ -117,41 +127,41 @@ static rt_err_t nu_qspi_bus_configure(struct rt_spi_device *device,
         ret = RT_EINVAL;
         goto exit_nu_qspi_bus_configure;
     }
-    u32BusClock = QSPI_SetBusClock((QSPI_T *)spi_bus->spi_base, configuration->max_hz);
+    u32BusClock = QSPI_SetBusClock((QSPI_T *)spi_bus->m_module.base, configuration->max_hz);
     if (configuration->max_hz > u32BusClock)
     {
-        LOG_W("%s clock max frequency is %dHz ( != %dHz)\n", spi_bus->name, u32BusClock, configuration->max_hz);
+        LOG_W("%s clock max frequency is %dHz ( != %dHz)\n", spi_bus->m_module.name, u32BusClock, configuration->max_hz);
         configuration->max_hz = u32BusClock;
     }
     if (rt_memcmp(configuration, &spi_bus->configuration, sizeof(struct rt_spi_configuration)) != 0)
     {
         rt_memcpy(&spi_bus->configuration, configuration, sizeof(struct rt_spi_configuration));
 
-        QSPI_Open((QSPI_T *)spi_bus->spi_base, SPI_MASTER, u32SPIMode, configuration->data_width, u32BusClock);
+        QSPI_Open((QSPI_T *)spi_bus->m_module.base, SPI_MASTER, u32SPIMode, configuration->data_width, u32BusClock);
 
         if (configuration->mode & RT_SPI_CS_HIGH)
         {
             /* Set CS pin to LOW */
-            SPI_SET_SS_LOW(spi_bus->spi_base);
+            SPI_SET_SS_LOW((SPI_T *)spi_bus->m_module.base);
         }
         else
         {
             /* Set CS pin to HIGH */
-            SPI_SET_SS_HIGH(spi_bus->spi_base);
+            SPI_SET_SS_HIGH((SPI_T *)spi_bus->m_module.base);
         }
 
         if (configuration->mode & RT_SPI_MSB)
         {
             /* Set sequence to MSB first */
-            SPI_SET_MSB_FIRST(spi_bus->spi_base);
+            SPI_SET_MSB_FIRST((SPI_T *)spi_bus->m_module.base);
         }
         else
         {
             /* Set sequence to LSB first */
-            SPI_SET_LSB_FIRST(spi_bus->spi_base);
+            SPI_SET_LSB_FIRST((SPI_T *)spi_bus->m_module.base);
         }
     }
-    nu_spi_drain_rxfifo(spi_bus->spi_base);
+    nu_spi_drain_rxfifo((SPI_T *)spi_bus->m_module.base);
 
 exit_nu_qspi_bus_configure:
 
@@ -160,7 +170,7 @@ exit_nu_qspi_bus_configure:
 
 static int nu_qspi_mode_config(struct nu_spi *qspi_bus, rt_uint8_t *tx, rt_uint8_t *rx, int qspi_lines)
 {
-    QSPI_T *qspi_base = (QSPI_T *)qspi_bus->spi_base;
+    QSPI_T *qspi_base = (QSPI_T *)qspi_bus->m_module.base;
     if (qspi_lines > 1)
     {
         if (tx)
@@ -216,7 +226,7 @@ static rt_ssize_t nu_qspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
     RT_ASSERT(message != RT_NULL);
 
     qspi_bus = (struct nu_spi *) device->bus;
-    qspi_base = (QSPI_T *)qspi_bus->spi_base;
+    qspi_base = (QSPI_T *)qspi_bus->m_module.base;
     qspi_configuration = &qspi_bus->configuration;
 
     bytes_per_word = qspi_configuration->parent.data_width / 8;
@@ -361,7 +371,7 @@ static int rt_hw_qspi_init(void)
 
     for (i = (QSPI_START + 1); i < QSPI_CNT; i++)
     {
-        SYS_ResetModule(nu_qspi_arr[i].rstidx);
+        SYS_ResetModule(nu_qspi_arr[i].m_module.RstId);
 
         nu_qspi_arr[i].dummy = rt_malloc_align(RT_ALIGN_SIZE, RT_ALIGN_SIZE);
         RT_ASSERT(nu_qspi_arr[i].dummy);
@@ -374,50 +384,13 @@ static int rt_hw_qspi_init(void)
         {
             if (nu_hw_spi_pdma_allocate(&nu_qspi_arr[i]) != RT_EOK)
             {
-                LOG_E("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.\n", nu_qspi_arr[i].name);
+                LOG_E("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.\n", nu_qspi_arr[i].m_module.name);
             }
         }
 #endif
-        nu_qspi_register_bus(&nu_qspi_arr[i], nu_qspi_arr[i].name);
+        nu_qspi_register_bus(&nu_qspi_arr[i], nu_qspi_arr[i].m_module.name);
     }
 
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_hw_qspi_init);
-
-rt_err_t nu_qspi_bus_attach_device(const char *bus_name, const char *device_name, rt_uint8_t data_line_width, void (*enter_qspi_mode)(), void (*exit_qspi_mode)())
-{
-    struct rt_qspi_device *qspi_device = RT_NULL;
-    rt_err_t result = RT_EOK;
-
-    RT_ASSERT(bus_name != RT_NULL);
-    RT_ASSERT(device_name != RT_NULL);
-    RT_ASSERT(data_line_width == 1 || data_line_width == 2 || data_line_width == 4);
-
-    qspi_device = (struct rt_qspi_device *)
-                  rt_malloc(sizeof(struct rt_qspi_device));
-    if (qspi_device == RT_NULL)
-    {
-        LOG_E("no memory, qspi bus attach device failed!\n");
-        result = -RT_ENOMEM;
-        goto __exit;
-    }
-
-    qspi_device->enter_qspi_mode = enter_qspi_mode;
-    qspi_device->exit_qspi_mode = exit_qspi_mode;
-    qspi_device->config.qspi_dl_width = data_line_width;
-
-    result = rt_spi_bus_attach_device(&qspi_device->parent, device_name, bus_name, RT_NULL);
-
-__exit:
-    if (result != RT_EOK)
-    {
-        if (qspi_device)
-        {
-            rt_free(qspi_device);
-        }
-    }
-
-    return  result;
-}
-#endif //#if defined(BSP_USING_QSPI)

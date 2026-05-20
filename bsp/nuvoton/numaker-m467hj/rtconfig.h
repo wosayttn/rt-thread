@@ -84,6 +84,9 @@
 #define RT_USING_IDLE_HOOK
 #define RT_IDLE_HOOK_LIST_SIZE 4
 #define IDLE_THREAD_STACK_SIZE 1024
+#define RT_USING_TIMER_SOFT
+#define RT_TIMER_THREAD_PRIO 4
+#define RT_TIMER_THREAD_STACK_SIZE 1024
 
 /* kservice options */
 
@@ -107,6 +110,8 @@
 
 #define RT_USING_MEMPOOL
 #define RT_USING_SMALL_MEM
+#define RT_USING_MEMHEAP
+#define RT_MEMHEAP_FAST_MODE
 #define RT_USING_SMALL_MEM_AS_HEAP
 #define RT_USING_HEAP
 /* end of Memory Management */
@@ -114,10 +119,13 @@
 #define RT_USING_CONSOLE
 #define RT_CONSOLEBUF_SIZE 256
 #define RT_CONSOLE_DEVICE_NAME "uart0"
-#define RT_VER_NUM 0x50201
+#define RT_USING_CONSOLE_OUTPUT_CTL
+#define RT_VER_NUM 0x50300
 #define RT_BACKTRACE_LEVEL_MAX_NR 32
 /* end of RT-Thread Kernel */
 #define RT_USING_HW_ATOMIC
+#define ARCH_USING_HW_ATOMIC_8
+#define ARCH_USING_HW_ATOMIC_16
 #define RT_USING_CPU_FFS
 #define ARCH_ARM
 #define ARCH_ARM_CORTEX_M
@@ -172,12 +180,17 @@
 #define RT_DFS_ELM_MUTEX_TIMEOUT 3000
 /* end of elm-chan's FatFs, Generic FAT Filesystem Module */
 #define RT_USING_DFS_DEVFS
+#define RT_USING_DFS_ROMFS
+#define RT_USING_DFS_ROMFS_USER_ROOT
+#define RT_USING_DFS_RAMFS
 /* end of DFS: device virtual file system */
 #define RT_USING_FAL
 #define FAL_USING_DEBUG
 #define FAL_PART_HAS_TABLE_CFG
 #define FAL_USING_SFUD_PORT
 #define FAL_USING_NOR_FLASH_DEV_NAME "norflash0"
+#define FAL_DEV_NAME_MAX 24
+#define FAL_DEV_BLK_MAX 6
 
 /* Device Drivers */
 
@@ -195,6 +208,7 @@
 #define RT_CANSND_BOX_NUM 1
 #define RT_CANSND_MSG_TIMEOUT 100
 #define RT_CAN_NB_TX_FIFO_SIZE 256
+#define RT_USING_CLOCK_TIME
 #define RT_USING_I2C
 #define RT_USING_I2C_BITOPS
 #define RT_USING_PWM
@@ -209,6 +223,7 @@
 #define RT_MMCSD_MAX_PARTITION 16
 #define RT_SDIO_DEBUG
 #define RT_USING_SPI
+#define RT_USING_SPI_ISR
 #define RT_USING_QSPI
 #define RT_USING_SFUD
 #define RT_SFUD_USING_SFDP
@@ -224,34 +239,6 @@
 #define RT_USING_SENSOR
 #define RT_USING_SENSOR_V2
 #define RT_USING_SENSOR_CMD
-#define RT_USING_HWCRYPTO
-#define RT_HWCRYPTO_DEFAULT_NAME "hwcryto"
-#define RT_HWCRYPTO_IV_MAX_SIZE 16
-#define RT_HWCRYPTO_KEYBIT_MAX_SIZE 256
-#define RT_HWCRYPTO_USING_AES
-#define RT_HWCRYPTO_USING_AES_ECB
-#define RT_HWCRYPTO_USING_AES_CBC
-#define RT_HWCRYPTO_USING_AES_CFB
-#define RT_HWCRYPTO_USING_AES_CTR
-#define RT_HWCRYPTO_USING_AES_OFB
-#define RT_HWCRYPTO_USING_DES
-#define RT_HWCRYPTO_USING_DES_ECB
-#define RT_HWCRYPTO_USING_DES_CBC
-#define RT_HWCRYPTO_USING_3DES
-#define RT_HWCRYPTO_USING_3DES_ECB
-#define RT_HWCRYPTO_USING_3DES_CBC
-#define RT_HWCRYPTO_USING_SHA1
-#define RT_HWCRYPTO_USING_SHA2
-#define RT_HWCRYPTO_USING_SHA2_224
-#define RT_HWCRYPTO_USING_SHA2_256
-#define RT_HWCRYPTO_USING_SHA2_384
-#define RT_HWCRYPTO_USING_SHA2_512
-#define RT_HWCRYPTO_USING_RNG
-#define RT_HWCRYPTO_USING_CRC
-#define RT_HWCRYPTO_USING_CRC_07
-#define RT_HWCRYPTO_USING_CRC_8005
-#define RT_HWCRYPTO_USING_CRC_1021
-#define RT_HWCRYPTO_USING_CRC_04C11DB7
 #define RT_USING_BLK
 
 /* Partition Types */
@@ -260,7 +247,25 @@
 #define RT_BLK_PARTITION_EFI
 /* end of Partition Types */
 #define RT_USING_PIN
-#define RT_USING_HWTIMER
+#define RT_USING_CHERRYUSB
+#define RT_CHERRYUSB_HOST
+#define RT_CHERRYUSB_HOST_MSC
+#define RT_CHERRYUSB_HOST_CDC_RNDIS
+#define RT_CHERRYUSB_HOST_GSM
+#define CONFIG_USBHOST_SERIAL
+#define CONFIG_USBHOST_PLATFORM_CDC_RNDIS
+#define CONFIG_USBHOST_PSC_PRIO 0
+#define CONFIG_USBHOST_PSC_STACKSIZE 4096
+#define CONFIG_USBHOST_REQUEST_BUFFER_LEN 512
+#define CONFIG_USBHOST_CONTROL_TRANSFER_TIMEOUT 500
+#define CONFIG_USBHOST_SERIAL_RX_SIZE 2048
+#define RT_LWIP_PBUF_POOL_BUFSIZE 1600
+#define CONFIG_USB_DFS_MOUNT_POINT "/udisk"
+
+/* Select USB host template, please select class driver first */
+
+#define CONFIG_TEST_USBH_MSC
+/* end of Select USB host template, please select class driver first */
 /* end of Device Drivers */
 
 /* C/C++ and POSIX layer */
@@ -341,6 +346,8 @@
 #define RT_LWIP_TCPTHREAD_PRIORITY 10
 #define RT_LWIP_TCPTHREAD_MBOX_SIZE 64
 #define RT_LWIP_TCPTHREAD_STACKSIZE 2048
+#define LWIP_NO_RX_THREAD
+#define LWIP_NO_TX_THREAD
 #define RT_LWIP_ETHTHREAD_PRIORITY 12
 #define RT_LWIP_ETHTHREAD_STACKSIZE 2048
 #define RT_LWIP_ETHTHREAD_MBOX_SIZE 64
@@ -368,6 +375,7 @@
 #define RT_USING_ULOG
 #define ULOG_OUTPUT_LVL_D
 #define ULOG_OUTPUT_LVL 7
+#define ULOG_USING_ISR_LOG
 #define ULOG_ASSERT_ENABLE
 #define ULOG_LINE_BUF_SIZE 128
 
@@ -387,17 +395,6 @@
 
 /* Using USB legacy version */
 
-#define RT_USING_USB
-#define RT_USING_USB_HOST
-#define RT_USBH_MSTORAGE
-#define UDISK_MOUNTPOINT "/mnt/udisk"
-#define RT_USING_USB_DEVICE
-#define RT_USBD_THREAD_STACK_SZ 4096
-#define USB_VENDOR_ID 0x0FFE
-#define USB_PRODUCT_ID 0x0001
-#define _RT_USB_DEVICE_MSTORAGE
-#define RT_USB_DEVICE_MSTORAGE
-#define RT_USB_MSTORAGE_DISK_NAME "ramdisk1"
 /* end of Using USB legacy version */
 /* end of RT-Thread Components */
 
@@ -462,6 +459,12 @@
 /* u8g2: a monochrome graphic library */
 
 /* end of u8g2: a monochrome graphic library */
+#define PKG_USING_WAVPLAYER
+#define PKG_WP_USING_PLAY
+#define PKG_WP_PLAY_DEVICE "sound0"
+#define PKG_WP_USING_RECORD
+#define PKG_WP_RECORD_DEVICE "sound0"
+#define PKG_USING_WAVPLAYER_LATEST_VERSION
 /* end of multimedia packages */
 
 /* tools packages */
@@ -485,6 +488,7 @@
 /* Micrium: Micrium software products porting for RT-Thread */
 
 /* end of Micrium: Micrium software products porting for RT-Thread */
+#define PKG_CHERRYUSB_HOST_EHCI_CUSTOM
 /* end of system packages */
 
 /* peripheral libraries and drivers */
@@ -521,8 +525,6 @@
 
 /* NUVOTON Drivers */
 
-#define PKG_USING_NUVOTON_CMSIS_DRIVER
-#define PKG_USING_NUVOTON_CMSIS_DRIVER_LATEST_VERSION
 #define PKG_USING_NUVOTON_SERIES_DRIVER
 #define PKG_USING_NUVOTON_SERIES_DRIVER_LATEST_VERSION
 /* end of NUVOTON Drivers */
@@ -530,6 +532,18 @@
 /* GD32 Drivers */
 
 /* end of GD32 Drivers */
+
+/* HPMicro SDK */
+
+/* end of HPMicro SDK */
+
+/* FT32 HAL & SDK Drivers */
+
+/* end of FT32 HAL & SDK Drivers */
+
+/* NOVOSNS Drivers */
+
+/* end of NOVOSNS Drivers */
 /* end of HAL & SDK Drivers */
 
 /* sensors drivers */
@@ -562,6 +576,8 @@
 /* entertainment: terminal games and other interesting software packages */
 
 /* end of entertainment: terminal games and other interesting software packages */
+#define PKG_USING_OPTPARSE
+#define PKG_USING_OPTPARSE_LATEST_VERSION
 /* end of miscellaneous packages */
 
 /* Arduino libraries */
@@ -614,95 +630,77 @@
 
 /* On-chip Peripheral Drivers */
 
+#define SOC_FAMILY_NUMICRO
 #define SOC_SERIES_M460
-#define BSP_USE_STDDRIVER_SOURCE
-#define BSP_USING_PDMA
-#define NU_PDMA_MEMFUN_ACTOR_MAX 2
-#define NU_PDMA_SGTBL_POOL_SIZE 32
-#define BSP_USING_FMC
-#define BSP_USING_GPIO
-#define BSP_USING_EMAC
-#define BSP_USING_RTC
-#define NU_RTC_SUPPORT_MSH_CMD
-#define BSP_USING_TMR
-#define BSP_USING_TIMER
-#define BSP_USING_TPWM
-#define BSP_USING_TIMER_CAPTURE
-#define BSP_USING_TMR0
-#define BSP_USING_TIMER0
-#define BSP_USING_TMR1
-#define BSP_USING_TPWM1
-#define BSP_USING_TMR2
-#define BSP_USING_TIMER2_CAPTURE
-#define BSP_USING_TMR3
-#define BSP_USING_TIMER3
-#define BSP_USING_UART
-#define BSP_USING_UART0
-#define BSP_USING_UART1
-#define BSP_USING_UART1_TX_DMA
-#define BSP_USING_UART1_RX_DMA
-#define BSP_USING_I2C
-#define BSP_USING_I2C2
-#define BSP_USING_SDH
-#define BSP_USING_SDH0
 #define BSP_USING_CANFD
 #define BSP_USING_CANFD0
-#define BSP_USING_SPI
-#define BSP_USING_SPI_PDMA
-#define BSP_USING_SPI0_NONE
-#define BSP_USING_SPI1_NONE
-#define BSP_USING_SPI2
-#define BSP_USING_SPI2_PDMA
-#define BSP_USING_SPI3_NONE
-#define BSP_USING_SPI4_NONE
-#define BSP_USING_SPI5_NONE
-#define BSP_USING_SPI6_NONE
-#define BSP_USING_SPI7_NONE
-#define BSP_USING_SPI8_NONE
-#define BSP_USING_SPI9_NONE
-#define BSP_USING_SPI10_NONE
+#define BSP_USING_FMC
+#define BSP_USING_GPIO
+#define BSP_USING_HBI
+#define BSP_USING_I2C
+#define BSP_USING_I2C2
 #define BSP_USING_I2S
 #define BSP_USING_I2S0
 #define NU_I2S_DMA_FIFO_SIZE 2048
-#define BSP_USING_QSPI
-#define BSP_USING_QSPI0
-#define BSP_USING_CRYPTO
-#define BSP_USING_TRNG
-#define BSP_USING_CRC
-#define NU_CRC_USE_PDMA
-#define BSP_USING_WDT
-#define BSP_USING_EBI
-#define BSP_USING_HBI
-#define BSP_USING_USBD
-#define BSP_USING_HSUSBH
-#define NU_USBHOST_HUB_POLLING_INTERVAL 100
+#define BSP_USING_PDMA
+#define NU_PDMA_MEMFUN_ACTOR_MAX 2
+#define NU_PDMA_SGTBL_POOL_SIZE 32
+#define BSP_USING_SDH
+#define BSP_USING_SDH0
+#define BSP_USING_UART
+#define BSP_USING_UART0
 /* end of On-chip Peripheral Drivers */
 
 /* On-board Peripheral Drivers */
 
 #define BSP_USING_NULINKME
-#define BOARD_USING_RTL8201FI
 #define BOARD_USING_NAU8822
 #define BOARD_USING_STORAGE_SDCARD
 #define BOARD_USING_CANFD0
 #define BOARD_USING_EXTERNAL_HYPERRAM
 #define BOARD_USING_HYPERRAM_SIZE 8388608
 #define BOARD_USING_NCT7717U
-#define BOARD_USING_USB_D_H
-#define BOARD_USING_HSUSBH_USBD
 /* end of On-board Peripheral Drivers */
 
 /* Board extended module drivers */
 
-#define BOARD_USING_SENSON0_ID
 /* end of Board extended module drivers */
 
 /* Nuvoton Packages Config */
 
-#define NU_PKG_USING_UTILS
+/* Sensors */
+
 #define NU_PKG_USING_NCT7717U
+/* end of Sensors */
+
+/* Audio Codecs */
+
 #define NU_PKG_USING_NAU8822
+/* end of Audio Codecs */
+
+/* Displays */
+
+/* end of Displays */
+
+/* Touch */
+
+/* end of Touch */
+
+/* Storages */
+
+/* end of Storages */
+
+/* Others */
+
+#define NU_PKG_USING_NUUTILS
+/* end of Others */
+
+/* Demo */
+
+/* end of Demo */
 /* end of Nuvoton Packages Config */
 /* end of Hardware Drivers Config */
+#define UTEST_CMD_PREFIX "numicro.bsp.utest."
+#define BOARD_USE_UTEST
 
 #endif

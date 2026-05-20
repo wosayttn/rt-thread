@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_TPWM)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -24,10 +20,12 @@
 #define NU_TPWM_DEVICE(tpwm) (nu_tpwm_t)(tpwm)
 #define DEFINE_NU_TPWM(_idx)            \
     {                                   \
-        .name = "tpwm" #_idx,          \
-        .base = TIMER##_idx,            \
-        .rstidx = TMR##_idx##_RST,      \
-        .modid = TMR##_idx##_MODULE     \
+        .m_module = {                   \
+            .name = "tpwm" #_idx,      \
+            .base = TIMER##_idx,        \
+            .RstId = TMR##_idx##_RST,   \
+            .ModId = TMR##_idx##_MODULE \
+        }                               \
     }
 
 
@@ -53,10 +51,7 @@ enum
 struct nu_tpwm
 {
     struct rt_device_pwm  tpwm_dev;
-    char                 *name;
-    TIMER_T              *base;
-    uint32_t              rstidx;
-    uint32_t              modid;
+    const struct nu_module m_module;
     rt_uint32_t           channel_mask;
 } ;
 
@@ -101,18 +96,18 @@ static rt_err_t nu_tpwm_enable(struct rt_device_pwm *tpwm_dev, struct rt_pwm_con
     {
         if (psNuTPWM->channel_mask == 0)
         {
-            TPWM_START_COUNTER(psNuTPWM->base);
+            TPWM_START_COUNTER((TIMER_T *)psNuTPWM->m_module.base);
         }
         psNuTPWM->channel_mask |= (1 << tpwm_channel);
-        TPWM_ENABLE_OUTPUT(psNuTPWM->base, psNuTPWM->channel_mask);
+        TPWM_ENABLE_OUTPUT((TIMER_T *)psNuTPWM->m_module.base, psNuTPWM->channel_mask);
     }
     else
     {
         psNuTPWM->channel_mask &= ~(1 << tpwm_channel);
-        TPWM_ENABLE_OUTPUT(psNuTPWM->base, psNuTPWM->channel_mask);
+        TPWM_ENABLE_OUTPUT((TIMER_T *)psNuTPWM->m_module.base, psNuTPWM->channel_mask);
         if (psNuTPWM->channel_mask == 0)
         {
-            TPWM_STOP_COUNTER(psNuTPWM->base);
+            TPWM_STOP_COUNTER((TIMER_T *)psNuTPWM->m_module.base);
         }
     }
 
@@ -129,12 +124,12 @@ static rt_err_t nu_tpwm_set(struct rt_device_pwm *tpwm_dev, struct rt_pwm_config
     rt_uint32_t tpwm_pulse = tpwm_config->pulse;
     nu_tpwm_t psNuTPWM = NU_TPWM_DEVICE(tpwm_dev->parent.user_data);
 
-    rt_uint32_t pre_tpwm_prescaler = TPWM_GET_PRESCALER(psNuTPWM->base);
+    rt_uint32_t pre_tpwm_prescaler = TPWM_GET_PRESCALER((TIMER_T *)psNuTPWM->m_module.base);
 
     tpwm_freq = 1000000000 / tpwm_period;
     tpwm_dutycycle = (tpwm_pulse * 100) / tpwm_period;
 
-    TPWM_ConfigOutputFreqAndDuty(psNuTPWM->base, tpwm_freq, tpwm_dutycycle) ;
+    TPWM_ConfigOutputFreqAndDuty((TIMER_T *)psNuTPWM->m_module.base, tpwm_freq, tpwm_dutycycle) ;
 
     return RT_EOK;
 }
@@ -144,21 +139,21 @@ static rt_err_t nu_tpwm_get(struct rt_device_pwm *tpwm_dev, struct rt_pwm_config
     rt_uint32_t tpwm_real_period, tpwm_real_duty, time_tick, u32TPWMClockFreq ;
 
     nu_tpwm_t psNuTPWM = NU_TPWM_DEVICE(tpwm_dev->parent.user_data);
-    rt_uint32_t tpwm_prescale = TPWM_GET_PRESCALER(psNuTPWM->base);
-    rt_uint32_t tpwm_period = TPWM_GET_PERIOD(psNuTPWM->base);
-    rt_uint32_t tpwm_pulse = TPWM_GET_CMPDAT(psNuTPWM->base);
+    rt_uint32_t tpwm_prescale = TPWM_GET_PRESCALER((TIMER_T *)psNuTPWM->m_module.base);
+    rt_uint32_t tpwm_period = TPWM_GET_PERIOD((TIMER_T *)psNuTPWM->m_module.base);
+    rt_uint32_t tpwm_pulse = TPWM_GET_CMPDAT((TIMER_T *)psNuTPWM->m_module.base);
 
-    u32TPWMClockFreq = TIMER_GetModuleClock(psNuTPWM->base);
+    u32TPWMClockFreq = TIMER_GetModuleClock((TIMER_T *)psNuTPWM->m_module.base);
     time_tick = (uint64_t)1000000000000 / u32TPWMClockFreq;
 
-    LOG_I("%s reg--> %d %d %d %d %d\n", psNuTPWM->name, tpwm_prescale, tpwm_period, tpwm_pulse, u32TPWMClockFreq, time_tick);
+    LOG_I("%s reg--> %d %d %d %d %d\n", psNuTPWM->m_module.name, tpwm_prescale, tpwm_period, tpwm_pulse, u32TPWMClockFreq, time_tick);
 
     tpwm_real_period = (((tpwm_prescale + 1) * (tpwm_period + 1)) * time_tick) / 1000;
     tpwm_real_duty = (((tpwm_prescale + 1) * tpwm_pulse * time_tick)) / 1000;
     tpwm_config->period = tpwm_real_period;
     tpwm_config->pulse = tpwm_real_duty;
 
-    LOG_I("%s %d %d %d\n", psNuTPWM->name, tpwm_config->channel, tpwm_config->period, tpwm_config->pulse);
+    LOG_I("%s %d %d %d\n", psNuTPWM->m_module.name, tpwm_config->channel, tpwm_config->period, tpwm_config->pulse);
 
     return RT_EOK;
 }
@@ -172,7 +167,7 @@ static rt_err_t nu_tpwm_control(struct rt_device_pwm *tpwm_dev, int cmd, void *a
 
     nu_tpwm_t psNuTPWM = NU_TPWM_DEVICE(tpwm_dev->parent.user_data);
     RT_ASSERT(psNuTPWM != RT_NULL);
-    RT_ASSERT(psNuTPWM->base != RT_NULL);
+    RT_ASSERT(psNuTPWM->m_module.base != RT_NULL);
 
     if ((tpwm_config->channel + 1) > TPWM_CHANNEL_NUM)
         return -(RT_ERROR);
@@ -201,19 +196,17 @@ int rt_hw_tpwm_init(void)
     {
         nu_tpwm_arr[i].channel_mask = 0;
 
-        CLK_EnableModuleClock(nu_tpwm_arr[i].modid);
+        CLK_EnableModuleClock(nu_tpwm_arr[i].m_module.ModId);
 
-        SYS_ResetModule(nu_tpwm_arr[i].rstidx);
+        SYS_ResetModule(nu_tpwm_arr[i].m_module.RstId);
 
-        TPWM_ENABLE_PWM_MODE(nu_tpwm_arr[i].base);
+        TPWM_ENABLE_PWM_MODE((TIMER_T *)nu_tpwm_arr[i].m_module.base);
 
         /* Register RT PWM device. */
-        ret = rt_device_pwm_register(&nu_tpwm_arr[i].tpwm_dev, nu_tpwm_arr[i].name, &nu_tpwm_ops, &nu_tpwm_arr[i]);
+        ret = rt_device_pwm_register(&nu_tpwm_arr[i].tpwm_dev, nu_tpwm_arr[i].m_module.name, &nu_tpwm_ops, &nu_tpwm_arr[i]);
         RT_ASSERT(ret == RT_EOK);
     }
     return 0;
 }
 
 INIT_DEVICE_EXPORT(rt_hw_tpwm_init);
-
-#endif //#if defined(BSP_USING_TPWM)

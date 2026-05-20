@@ -8,6 +8,9 @@ MEMORY
   SRAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 0x50000    /* 320k */
 }
 
+PROVIDE(__sram_start__ = ORIGIN(SRAM));
+PROVIDE(__sram_end__ = ORIGIN(SRAM) + LENGTH(SRAM));
+
 
 /* Linker script to place sections and symbol values. Should be used together
  * with other linker script that defines memory regions FLASH and RAM.

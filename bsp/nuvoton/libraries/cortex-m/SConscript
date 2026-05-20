@@ -2,18 +2,58 @@
 
 Import('RTT_ROOT')
 from building import *
+import os
 
 cwd = GetCurrentDir()
 objs = []
-list = os.listdir(cwd)
-src = Glob('*.c') + Glob('*.cpp')
+dir_list = os.listdir(cwd)
+src = ['drv_common.c','drv_sys.c']
 CPPPATH = [cwd]
-group = []
 
-# USB driver constrain
+driver_deps = [
+    ('drv_bpwm.c', 'BSP_USING_BPWM'),
+    ('drv_bpwm_capture.c', 'BSP_USING_BPWM_CAPTURE'),
+    ('drv_canfd.c', 'BSP_USING_CANFD'),
+    ('drv_ccap.c', 'BSP_USING_CCAP'),
+    ('drv_crc.c', 'BSP_USING_CRC'),
+    ('drv_crypto.c', ['BSP_USING_CRYPTO', 'RT_USING_HWCRYPTO']),
+    ('drv_dac.c', 'BSP_USING_DAC'),
+    ('drv_eadc.c', 'BSP_USING_EADC'),
+    ('drv_ebi.c', 'BSP_USING_EBI'),
+    ('drv_ecap.c', 'BSP_USING_ECAP'),
+    ('drv_epwm.c', 'BSP_USING_EPWM'),
+    ('drv_epwm_capture.c', 'BSP_USING_EPWM_CAPTURE'),
+    ('drv_eqei.c', 'BSP_USING_EQEI'),
+    ('drv_fmc.c', 'BSP_USING_FMC'),
+    ('drv_gpio.c', ['BSP_USING_GPIO', 'RT_USING_PIN']),
+    ('drv_i2c.c', 'BSP_USING_I2C'),
+    ('drv_i2s.c', 'BSP_USING_I2S'),
+    ('drv_llsi.c', 'BSP_USING_LLSI'),
+    ('drv_pdma.c', 'BSP_USING_PDMA'),
+    ('drv_qspi.c', 'BSP_USING_QSPI'),
+    ('drv_rtc.c', 'BSP_USING_RTC'),
+    ('drv_scuart.c', 'BSP_USING_SCUART'),
+    ('drv_sdio.c', 'BSP_USING_SDH'),
+    ('drv_softi2c.c', ['BSP_USING_SOFT_I2C', 'RT_USING_I2C_BITOPS', 'RT_USING_I2C', 'RT_USING_PIN']),
+    ('drv_spi.c', 'BSP_USING_SPI'),
+    ('drv_spii2s.c', 'BSP_USING_SPII2S'),
+    ('drv_timer.c', ['BSP_USING_TIMER', 'RT_USING_CLOCK_TIME']),
+    ('drv_tpwm.c', 'BSP_USING_TPWM'),
+    ('drv_trng.c', ['BSP_USING_TRNG', 'RT_HWCRYPTO_USING_RNG']),
+    ('drv_uart.c', 'BSP_USING_UART'),
+    ('drv_ui2c.c', ['BSP_USING_UI2C', 'RT_USING_I2C']),
+    ('drv_uspi.c', 'BSP_USING_USPI'),
+    ('drv_uuart.c', 'BSP_USING_UUART'),
+    ('drv_wdt.c', 'BSP_USING_WDT'),
+]
+
+for file_name, depend in driver_deps:
+    if GetDepend(depend):
+        src.append(file_name)
+
 group = DefineGroup('Drivers', src, depend = [''], CPPPATH = CPPPATH)
 
-for d in list:
+for d in dir_list:
     path = os.path.join(cwd, d)
     if os.path.isfile(os.path.join(path, 'SConscript')):
         objs = objs + SConscript(os.path.join(d, 'SConscript'))

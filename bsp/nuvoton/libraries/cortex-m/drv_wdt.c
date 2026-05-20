@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if defined(BSP_USING_WDT)
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -417,4 +413,3 @@ void WDT0_IRQHandler(void)
 
     rt_interrupt_leave();
 }
-#endif /* BSP_USING_WDT */

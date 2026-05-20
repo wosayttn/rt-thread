@@ -283,9 +283,6 @@ int rt_hw_lcd_fsa506_init(void)
 #if defined(BSP_USING_SPIM0)
     #include "drv_memheap.h"
     g_FSA506Info.framebuffer = rt_memheap_alloc(nu_memheap_get(NU_MEMHEAP_SPIM0), g_FSA506Info.pitch * NU_PKG_FSA506_LINE_BUFFER_NUMBER + 32);
-#elif defined(BSP_USING_HBI)
-    struct rt_memheap *nu_hyperram_get_memheap(const char *name);
-    g_FSA506Info.framebuffer = rt_memheap_alloc(nu_hyperram_get_memheap("hbi"), g_FSA506Info.pitch * NU_PKG_FSA506_LINE_BUFFER_NUMBER + 32);
 #else
     g_FSA506Info.framebuffer = rt_malloc_align((g_FSA506Info.pitch * NU_PKG_FSA506_LINE_BUFFER_NUMBER) + 32, 32);
 #endif

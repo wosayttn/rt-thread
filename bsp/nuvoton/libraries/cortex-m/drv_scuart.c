@@ -5,11 +5,6 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include <rtdevice.h>
-
-#if defined(BSP_USING_SCUART)
-#include <rthw.h>
-#include "NuMicro.h"
 #include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -37,11 +32,7 @@ enum
 struct nu_scuart
 {
     rt_serial_t dev;
-    char *name;
-    SC_T *base;
-    IRQn_Type irqn;
-    uint32_t rstidx;
-    uint32_t modid;
+    const struct nu_module m_module;
 };
 typedef struct nu_scuart *nu_scuart_t;
 
@@ -71,17 +62,17 @@ static struct nu_scuart nu_scuart_arr[] =
 {
 #if defined(BSP_USING_SCUART0)
     {
-        .name = "scuart0", .base = SC0, .irqn = SC0_IRQn, .rstidx = SC0_RST, .modid = SC0_MODULE,
+        .m_module = { .name = "scuart0", .base = SC0, .eIRQn = SC0_IRQn, .RstId = SC0_RST, .ModId = SC0_MODULE, },
     },
 #endif
 #if defined(BSP_USING_SCUART1)
     {
-        .name = "scuart1", .base = SC1, .irqn = SC1_IRQn, .rstidx = SC1_RST, .modid = SC1_MODULE,
+        .m_module = { .name = "scuart1", .base = SC1, .eIRQn = SC1_IRQn, .RstId = SC1_RST, .ModId = SC1_MODULE, },
     },
 #endif
 #if defined(BSP_USING_SCUART2)
     {
-        .name = "scuart2", .base = SC2, .irqn = SC2_IRQn, .rstidx = SC2_RST, .modid = SC2_MODULE,
+        .m_module = { .name = "scuart2", .base = SC2, .eIRQn = SC2_IRQn, .RstId = SC2_RST, .ModId = SC2_MODULE, },
     },
 #endif
 }; /* scuart nu_scuart */
@@ -127,15 +118,15 @@ void SC2_IRQHandler(void)
 static void nu_scuart_isr(nu_scuart_t psNuSCUart)
 {
     /* Handle RX event */
-    if (SCUART_GET_INT_FLAG(psNuSCUart->base, SC_INTSTS_RXTOIF_Msk) ||
-            SCUART_GET_INT_FLAG(psNuSCUart->base, SC_INTSTS_RDAIF_Msk))
+        if (SCUART_GET_INT_FLAG((SC_T *)psNuSCUart->m_module.base, SC_INTSTS_RXTOIF_Msk) ||
+            SCUART_GET_INT_FLAG((SC_T *)psNuSCUart->m_module.base, SC_INTSTS_RDAIF_Msk))
     {
         rt_hw_serial_isr(&psNuSCUart->dev, RT_SERIAL_EVENT_RX_IND);
 
         // RDA is the only interrupt enabled in this driver, this status bit
         // automatically cleared after Rx FIFO empty. So no need to clear interrupt
         // status here.
-        SCUART_CLR_INT_FLAG(psNuSCUart->base, SC_INTSTS_RXTOIF_Msk);
+        SCUART_CLR_INT_FLAG((SC_T *)psNuSCUart->m_module.base, SC_INTSTS_RXTOIF_Msk);
     }
 }
 
@@ -219,22 +210,22 @@ static rt_err_t nu_scuart_configure(struct rt_serial_device *serial,
         goto exit_nu_scuart_configure;
     }
 
-    SYS_ResetModule(psNuSCUart->rstidx);
+    SYS_ResetModule(psNuSCUart->m_module.RstId);
 
     /* Open SCUART and set SCUART baud rate */
-    SCUART_Open(psNuSCUart->base, cfg->baud_rate);
+    SCUART_Open((SC_T *)psNuSCUart->m_module.base, cfg->baud_rate);
 
     /* Set line configuration. */
-    SCUART_SetLineConfig(psNuSCUart->base, 0, scuart_word_len, scuart_parity,
+    SCUART_SetLineConfig((SC_T *)psNuSCUart->m_module.base, 0, scuart_word_len, scuart_parity,
                          scuart_stop_bit);
 
     /* Enable interrupt. */
-    NVIC_EnableIRQ(psNuSCUart->irqn);
+    NVIC_EnableIRQ(psNuSCUart->m_module.eIRQn);
 
 exit_nu_scuart_configure:
 
     if (ret != RT_EOK)
-        SCUART_Close(psNuSCUart->base);
+        SCUART_Close((SC_T *)psNuSCUart->m_module.base);
 
     return -(ret);
 }
@@ -258,7 +249,7 @@ static rt_err_t nu_scuart_control(struct rt_serial_device *serial, int cmd,
         if (ctrl_arg == RT_DEVICE_FLAG_INT_RX) /* Disable INT-RX */
         {
             flag = SC_INTEN_RDAIEN_Msk | SC_INTEN_RXTOIEN_Msk;
-            SCUART_DISABLE_INT(psNuSCUart->base, flag);
+            SCUART_DISABLE_INT((SC_T *)psNuSCUart->m_module.base, flag);
         }
         break;
 
@@ -267,17 +258,17 @@ static rt_err_t nu_scuart_control(struct rt_serial_device *serial, int cmd,
         if (ctrl_arg == RT_DEVICE_FLAG_INT_RX) /* Enable INT-RX */
         {
             flag = SC_INTEN_RDAIEN_Msk | SC_INTEN_RXTOIEN_Msk;
-            SCUART_ENABLE_INT(psNuSCUart->base, flag);
+            SCUART_ENABLE_INT((SC_T *)psNuSCUart->m_module.base, flag);
         }
         break;
 
     case RT_DEVICE_CTRL_CLOSE:
 
         /* Disable interrupt. */
-        NVIC_DisableIRQ(psNuSCUart->irqn);
+        NVIC_DisableIRQ(psNuSCUart->m_module.eIRQn);
 
         /* Close SCUART port */
-        SCUART_Close(psNuSCUart->base);
+        SCUART_Close((SC_T *)psNuSCUart->m_module.base);
 
         break;
 
@@ -298,10 +289,10 @@ static int nu_scuart_send(struct rt_serial_device *serial, char c)
     RT_ASSERT(psNuSCUart != RT_NULL);
 
     /* Waiting if TX-FIFO is full. */
-    while (SCUART_IS_TX_FULL(psNuSCUart->base)) ;
+    while (SCUART_IS_TX_FULL((SC_T *)psNuSCUart->m_module.base)) ;
 
     /* Put char into TX-FIFO */
-    SCUART_WRITE(psNuSCUart->base, c);
+    SCUART_WRITE((SC_T *)psNuSCUart->m_module.base, c);
 
     return 1;
 }
@@ -315,13 +306,13 @@ static int nu_scuart_receive(struct rt_serial_device *serial)
     RT_ASSERT(psNuSCUart != RT_NULL);
 
     /* Return failure if RX-FIFO is empty. */
-    if (SCUART_GET_RX_EMPTY(psNuSCUart->base))
+    if (SCUART_GET_RX_EMPTY((SC_T *)psNuSCUart->m_module.base))
     {
         return -1;
     }
 
     /* Get char from RX-FIFO */
-    return SCUART_READ(psNuSCUart->base);
+    return SCUART_READ((SC_T *)psNuSCUart->m_module.base);
 }
 
 /**
@@ -340,14 +331,13 @@ static int rt_hw_scuart_init(void)
         nu_scuart_arr[i].dev.ops = &nu_scuart_ops;
         nu_scuart_arr[i].dev.config = nu_scuart_default_config;
 
-        CLK_EnableModuleClock(nu_scuart_arr[i].modid);
-        SYS_ResetModule(nu_scuart_arr[i].rstidx);
+        CLK_EnableModuleClock(nu_scuart_arr[i].m_module.ModId);
+        SYS_ResetModule(nu_scuart_arr[i].m_module.RstId);
 
-        ret = rt_hw_serial_register(&nu_scuart_arr[i].dev, nu_scuart_arr[i].name, flag, NULL);
+        ret = rt_hw_serial_register(&nu_scuart_arr[i].dev, nu_scuart_arr[i].m_module.name, flag, NULL);
         RT_ASSERT(ret == RT_EOK);
     }
 
     return (int)ret;
 }
 INIT_DEVICE_EXPORT(rt_hw_scuart_init);
-#endif //#if defined(BSP_USING_SCUART)

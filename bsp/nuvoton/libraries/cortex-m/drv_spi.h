@@ -7,9 +7,8 @@
 #ifndef __DRV_SPI_H__
 #define __DRV_SPI_H__
 
-#include "rtdevice.h"
-#include "NuMicro.h"
-#include "nu_bitutil.h"
+#include "drv_sys.h"
+
 #if defined(BSP_USING_SPI_PDMA)
 
     #include "drv_pdma.h"
@@ -22,9 +21,7 @@
 struct nu_spi
 {
     struct rt_spi_bus dev;
-    char *name;
-    SPI_T *spi_base;
-    uint32_t rstidx;
+    const struct nu_module m_module;
     uint32_t *dummy;
 #if defined(BSP_USING_SPI_PDMA)
     int32_t  pdma_perp_tx;

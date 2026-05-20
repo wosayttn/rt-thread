@@ -5,11 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtdevice.h"
-
-#if (defined(BSP_USING_TRNG) && defined(RT_HWCRYPTO_USING_RNG))
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
@@ -44,5 +40,3 @@ rt_uint32_t nu_trng_rand(struct hwcrypto_rng *ctx)
 
     return u32RNGValue;
 }
-
-#endif //#if (defined(BSP_USING_TRNG) && defined(RT_HWCRYPTO_USING_RNG))

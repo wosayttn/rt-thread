@@ -5,14 +5,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-
-#include "rtdevice.h"
-
-#if (defined(BSP_USING_GPIO) && defined(RT_USING_PIN))
-
-#include "NuMicro.h"
+#include "drv_sys.h"
 #include "drv_gpio.h"
-#include "nu_bitutil.h"
 #include "rthw.h"
 
 /* Defines / Macros ----------------------------------------------------------*/
@@ -22,22 +16,16 @@
 #include "drv_log.h"
 
 #define PORT_OFFSET         0x40
-
 #define IRQ_MAX_NUM         16            //Max support 32
-
-#define MAX_PORTH_PIN_MAX   11
 
 #define DEFINE_GPIO_IRQ_HANDLER(_port)        \
 void GP##_port##_IRQHandler(void)             \
 {                                             \
     rt_uint32_t int_status;                   \
-                                              \
     rt_interrupt_enter();                     \
-                                              \
     int_status = P##_port->INTSRC;            \
     pin_irq_hdr(int_status, NU_P##_port);     \
     P##_port->INTSRC = int_status;            \
-                                              \
     rt_interrupt_leave();                     \
 }
 
@@ -139,13 +127,11 @@ DEFINE_GPIO_IRQ_HANDLER(M)
 DEFINE_GPIO_IRQ_HANDLER(N)
 #endif
 
-
-
 static rt_err_t nu_port_check(rt_int32_t pin)
 {
     if (NU_GET_PORT(pin) >= NU_PORT_CNT)
         return -(RT_ERROR);
-    else if ((NU_GET_PORT(pin) == (NU_PORT_CNT-1)) && (NU_GET_PINS(pin) > MAX_PORTH_PIN_MAX))
+    else if ((NU_GET_PORT(pin) == (NU_PORT_CNT-1)))
         return -(RT_ERROR);
 
     return RT_EOK;
@@ -413,5 +399,3 @@ static int rt_hw_gpio_init(void)
 }
 
 INIT_BOARD_EXPORT(rt_hw_gpio_init);
-
-#endif //#if (defined(BSP_USING_GPIO) && defined(RT_USING_PIN))

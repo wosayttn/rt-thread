@@ -870,6 +870,7 @@ static void ccap_grabber(void *parameter)
 
         }
 #endif
+
 #if defined(DEF_PREVIEW)
         if (!bDrawDirect)
         {
@@ -905,7 +906,6 @@ static void ccap_grabber(void *parameter)
 
         }
 #endif
-
         sGrabberContext.u32FrameEnd++;
 
         /* FPS */
@@ -957,6 +957,6 @@ int ccap_demo(void)
     return 0;
 }
 MSH_CMD_EXPORT(ccap_demo, camera capture demo);
-//INIT_ENV_EXPORT(ccap_demo);
+INIT_ENV_EXPORT(ccap_demo);
 
 #endif // #if defined(BSP_USING_CCAP)

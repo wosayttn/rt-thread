@@ -856,20 +856,19 @@ config SOC_SERIES_M460
             config BSP_USING_USBD
                 bool "Enable Full-Speed USB Device Controller(USBD)"
 
+            config BSP_USING_USBH
+                bool "Enable Full-Speed USB Host Controller(USBH)"
+
+            config BSP_USING_OTG
+                bool "Enable USB On-The-Go(OTG)"
+                select BSP_USING_USBH
+                select BSP_USING_USBD
+
             config BSP_USING_HSUSBD
                 bool "Enable High-Speed USB Device Controller(HSUSBD)"
 
-            config BSP_USING_USBH
-                bool "Enable Full-Speed USB Host Controller(USBH)"
-                select RT_USING_CHERRYUSB
-                select RT_CHERRYUSB_HOST
-                select RT_CHERRYUSB_HOST_EHCI_CUSTOM
-
             config BSP_USING_HSUSBH
                 bool "Enable High-Speed USB Host Controller(HSUSBH)"
-                select RT_USING_CHERRYUSB
-                select RT_CHERRYUSB_HOST
-                select RT_CHERRYUSB_HOST_EHCI_CUSTOM
 
             config BSP_USING_HSOTG
                 bool "Enable High-Speed USB On-The-Go(HSOTG)"

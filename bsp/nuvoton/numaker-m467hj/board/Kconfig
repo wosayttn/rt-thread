@@ -56,48 +56,28 @@ menu "Hardware Drivers Config"
             select BSP_USING_I2C2
             default y
 
-        config BOARD_USING_USB_D_H
-            bool "Enable USB Device or Host function"
-            help
-                Choose this option if you need USB function.
+        menu "USB Device or Host function"
+            config BOARD_USING_USB_D_H
+                bool "Enable USB Device or Host function"
+                help
+                    Choose this option if you need USB function mode.
 
-        if BOARD_USING_USB_D_H
-            choice
-                prompt "Select FS/HS USB Ports"
+                if BOARD_USING_USB_D_H
 
-                config BOARD_USING_HSUSBD
-                    select BSP_USING_HSUSBD
-                    bool "Enable HSUSBD(over USB2.0)"
-                    help
-                        Choose this option if you need HSUSBD function mode.
+                    config BOARD_USING_USB
+                        select BSP_USING_OTG
+                        bool "Enable USB"
+                        help
+                            Choose this option if you need USB function mode.
 
-                config BOARD_USING_HSUSBD_USBH
-                    select BSP_USING_USBH
-                    select BSP_USING_HSUSBD
-                    bool "Enable HSUSBD(over USB2.0) and USBH(over USB1.1)"
-                    help
-                        Choose this option if you need HSUSBD and USBH function mode at the same time.
+                    config BOARD_USING_HSUSB
+                        select BSP_USING_HSOTG
+                        bool "Enable HSUSB"
+                        help
+                            Choose this option if you need HSUSB function mode.
 
-                config BOARD_USING_HSUSBH
-                    select BSP_USING_HSUSBH
-                    bool "Enable HSUSBH(over USB2.0)"
-                    help
-                        Choose this option if you need HSUSBH function mode.
-
-                config BOARD_USING_HSUSBH_USBD
-                    select BSP_USING_HSUSBH
-                    select BSP_USING_USBD
-                    bool "Enable HSUSBH(over USB2.0) and USBD(over USB1.1)"
-                    help
-                        Choose this option if you need HSUSBH and USBD function mode at the same time.
-
-                config BOARD_USING_HSOTG
-                    select BSP_USING_HSOTG
-                    bool "Enable HSOTG(over USB2.0)"
-                    help
-                        Choose this option if you need HSOTG function mode.
-            endchoice
-        endif
+                endif
+        endmenu
 
     endmenu
 

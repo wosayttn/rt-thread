@@ -1,3 +1,9 @@
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "m460.h"
 #include "rtconfig.h"
 
@@ -1353,6 +1359,19 @@ void nutool_modclkcfg_init(void)
 #if defined(BSP_USING_UART5)
     nutool_modclkcfg_init_uart5();
 #endif
+#if defined(BSP_USING_UART6)
+    nutool_modclkcfg_init_uart6();
+#endif
+#if defined(BSP_USING_UART7)
+    nutool_modclkcfg_init_uart7();
+#endif
+#if defined(BSP_USING_UART8)
+    nutool_modclkcfg_init_uart8();
+#endif
+#if defined(BSP_USING_UART9)
+    nutool_modclkcfg_init_uart9();
+#endif
+
 #if defined(BSP_USING_USBD) || defined(BSP_USING_USBH)
     nutool_modclkcfg_init_usbd();
 #endif

@@ -25,14 +25,6 @@
     #include <fal.h>
 #endif
 
-#if defined(RT_USING_DFS_RAMFS)
-    #define MOUNT_POINT_HYPERRAM      "/hyperram"
-#endif
-
-#if defined(BOARD_USING_STORAGE_SPIFLASH)
-    #define PARTITION_NAME_FILESYSTEM "sf"
-    #define MOUNT_POINT_SPIFLASH0 "/sf"
-#endif
 
 #ifdef RT_USING_DFS_MNTTABLE
 const struct dfs_mount_tbl mount_table[] =
@@ -117,36 +109,6 @@ exit_filesystem_init:
     return -result;
 }
 INIT_ENV_EXPORT(filesystem_init);
-#endif
-
-#if defined(BOARD_USING_STORAGE_SPIFLASH)
-int mnt_init_spiflash0(void)
-{
-#if defined(RT_USING_FAL)
-    extern int fal_init_check(void);
-    if (!fal_init_check())
-        fal_init();
-#endif
-    struct rt_device *psNorFlash = fal_blk_device_create(PARTITION_NAME_FILESYSTEM);
-    if (!psNorFlash)
-    {
-        rt_kprintf("Failed to create block device for %s.\n", PARTITION_NAME_FILESYSTEM);
-        goto exit_mnt_init_spiflash0;
-    }
-    else if (dfs_mount(psNorFlash->parent.name, MOUNT_POINT_SPIFLASH0, "elm", 0, 0) != 0)
-    {
-        rt_kprintf("Failed to mount elm on %s.\n", MOUNT_POINT_SPIFLASH0);
-        rt_kprintf("Try to execute 'mkfs -t elm %s' first, then reboot.\n", PARTITION_NAME_FILESYSTEM);
-        goto exit_mnt_init_spiflash0;
-    }
-    rt_kprintf("mount %s with elmfat type: ok\n", PARTITION_NAME_FILESYSTEM);
-
-exit_mnt_init_spiflash0:
-
-    return 0;
-}
-INIT_APP_EXPORT(mnt_init_spiflash0);
-
 #endif
 
 #endif

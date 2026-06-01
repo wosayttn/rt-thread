@@ -40,6 +40,14 @@
         }                                \
     }
 
+#define MAKE_PDMA_ISR(x)                \
+    void PDMA##x##_IRQHandler(void)     \
+    {                                   \
+        rt_interrupt_enter();           \
+        pdma_isr(PDMA##x, PDMA##x##_IDX); \
+        rt_interrupt_leave();           \
+    }
+
 /* Types / Structures ---------------------------------------------------------*/
 struct nu_pdma_periph_ctl
 {
@@ -546,14 +554,14 @@ static rt_err_t nu_pdma_timeout_set(int i32ModChnID, int i32Timeout_us)
 
     nu_pdma_chn_arr[NU_PDMA_GET_ARRAY_IDX(i32ModChnID)].m_u32IdleTimeout_us = i32Timeout_us;
 
-    if (i32Timeout_us)
+    if (i32Timeout_us > 0)
     {
         uint32_t u32ToClk_Max = 1000000 / (CLK_GetHCLKFreq() / (1 << 8));
         uint32_t u32Divider     = (i32Timeout_us / u32ToClk_Max) / (1 << 16);
         uint32_t u32TOutCnt     = (i32Timeout_us / u32ToClk_Max) % (1 << 16);
 
-        //LOG_I("CLK_GetHCLKFreq(): %d, u32ToClk_Max: %d, u32Divider: %d, u32TOutCnt:%d",
-        //      CLK_GetHCLKFreq(), u32ToClk_Max, u32Divider, u32TOutCnt);
+        LOG_D("[%d] CLK_GetHCLKFreq(): %d, u32ToClk_Max: %d, u32Divider: %d, u32TOutCnt:%d",
+              u32ModChannId, CLK_GetHCLKFreq(), u32ToClk_Max, u32Divider, u32TOutCnt);
 
         PDMA_DisableTimeout(pdma,  1 << u32ModChannId);
         PDMA_EnableInt(pdma, u32ModChannId, PDMA_INT_TIMEOUT);    // Interrupt type
@@ -577,9 +585,13 @@ static rt_err_t nu_pdma_timeout_set(int i32ModChnID, int i32Timeout_us)
         }
 #else
         if (u32ModChannId < 8)
+        {
             pdma->TOUTPSC0_7 = (pdma->TOUTPSC0_7 & ~(0x7ul << (PDMA_TOUTPSC0_7_TOUTPSC0_Pos * u32ModChannId))) | (u32Divider << (PDMA_TOUTPSC0_7_TOUTPSC0_Pos * u32ModChannId));
+        }
         else
+        {
             pdma->TOUTPSC8_15 = (pdma->TOUTPSC8_15 & ~(0x7ul << (PDMA_TOUTPSC8_15_TOUTPSC8_Pos * (u32ModChannId % 8)))) | (u32Divider << (PDMA_TOUTPSC8_15_TOUTPSC8_Pos * (u32ModChannId % 8)));
+        }
 
         PDMA_SetTimeOut(pdma,  u32ModChannId, 1, u32TOutCnt);
 #endif
@@ -1246,6 +1258,10 @@ void pdma_isr(PDMA_T *pdma, int idx)
         // Clear all Timeout flags
         pdma->INTSTS = reqto;
     }
+
+    LOG_D("PDMA%d ISR: intsts=0x%08x, abtsts=0x%08x, tdsts=0x%08x, unalignsts=0x%08x, reqto_ch=0x%08x",
+          idx, intsts, abtsts, tdsts, unalignsts, reqto_ch);
+
     while ((i = nu_ctz(allch_sts)) < PDMA_CH_MAX)
     {
         int module_id = idx;
@@ -1297,16 +1313,13 @@ void pdma_isr(PDMA_T *pdma, int idx)
     }
 }
 
-void PDMA0_IRQHandler(void)
-{
-    /* enter interrupt */
-    rt_interrupt_enter();
+#if defined(PDMA0)
+MAKE_PDMA_ISR(0);
+#endif
 
-    pdma_isr(PDMA0, PDMA0_IDX);
-
-    /* leave interrupt */
-    rt_interrupt_leave();
-}
+#if defined(PDMA1)
+MAKE_PDMA_ISR(1);
+#endif
 
 static void nu_pdma_memfun_actor_init(void)
 {

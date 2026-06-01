@@ -346,8 +346,6 @@
 
 /* NUVOTON Drivers */
 
-#define PKG_USING_NUVOTON_CMSIS_DRIVER
-#define PKG_USING_NUVOTON_CMSIS_DRIVER_LATEST_VERSION
 #define PKG_USING_NUVOTON_SERIES_DRIVER
 #define PKG_USING_NUVOTON_SERIES_DRIVER_LATEST_VERSION
 /* end of NUVOTON Drivers */
@@ -363,6 +361,10 @@
 /* FT32 HAL & SDK Drivers */
 
 /* end of FT32 HAL & SDK Drivers */
+
+/* NOVOSNS Drivers */
+
+/* end of NOVOSNS Drivers */
 /* end of HAL & SDK Drivers */
 
 /* sensors drivers */
@@ -447,13 +449,13 @@
 
 /* On-chip Peripheral Drivers */
 
+#define SOC_FAMILY_NUMICRO
 #define SOC_SERIES_M460
+#define BSP_USING_GPIO
 #define BSP_USING_PDMA
 #define NU_PDMA_MEMFUN_ACTOR_MAX 2
 #define NU_PDMA_SGTBL_POOL_SIZE 32
-#define BSP_USING_GPIO
 #define BSP_USING_RTC
-#define NU_RTC_SUPPORT_MSH_CMD
 #define BSP_USING_UART
 #define BSP_USING_UART0
 /* end of On-chip Peripheral Drivers */
@@ -461,6 +463,10 @@
 /* On-board Peripheral Drivers */
 
 #define BSP_USING_NULINKME
+
+/* USB Device or Host function */
+
+/* end of USB Device or Host function */
 /* end of On-board Peripheral Drivers */
 
 /* Board extended module drivers */
@@ -469,8 +475,37 @@
 
 /* Nuvoton Packages Config */
 
-#define NU_PKG_USING_UTILS
+/* Sensors */
+
+/* end of Sensors */
+
+/* Audio Codecs */
+
+/* end of Audio Codecs */
+
+/* Displays */
+
+/* end of Displays */
+
+/* Touch */
+
+/* end of Touch */
+
+/* Storages */
+
+/* end of Storages */
+
+/* Others */
+
+#define NU_PKG_USING_NUUTILS
+/* end of Others */
+
+/* Demo */
+
+/* end of Demo */
 /* end of Nuvoton Packages Config */
 /* end of Hardware Drivers Config */
+#define UTEST_CMD_PREFIX "numicro.bsp.utest."
+#define BOARD_USE_UTEST
 
 #endif

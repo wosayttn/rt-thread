@@ -14,9 +14,9 @@
 #define DBG_TAG LOG_TAG
 #include "drv_log.h"
 
+//#define CONFIG_UART_USE_IDLE_TIMER
 #define UART_BUS_IDLE_TIMEOUT_ENABLE(uart)      (UART_ENABLE_INT(uart, UART_INTEN_TOCNTEN_Msk))
 #define UART_BUS_IDLE_TIMEOUT_DISABLE(uart)     (UART_DISABLE_INT(uart, UART_INTEN_TOCNTEN_Msk))
-//#define CONFIG_UART_USE_IDLE_TIMER
 
 #if defined(CONFIG_UART_USE_IDLE_TIMER)
     #define CONFIG_PDMA_USE_IT               (NU_PDMA_EVENT_TRANSFER_DONE)
@@ -26,8 +26,9 @@
 #else
     #define CONFIG_PDMA_USE_IT               (NU_PDMA_EVENT_TRANSFER_DONE | NU_PDMA_EVENT_TIMEOUT)
     #define CONFIG_UART_USE_RXDMA_IT         (UART_INTEN_RLSIEN_Msk | UART_INTEN_RXPDMAEN_Msk)
-    #define CONFIG_PDMA_IDLE_TIMEOUT_VALUE   (1000000 * 10 * (1 + psNuUart->dev.config.data_bits + (psNuUart->dev.config.stop_bits + 1)) / psNuUart->dev.config.baud_rate)
+    #define CONFIG_PDMA_IDLE_TIMEOUT_VALUE   (nu_uart_pdma_idle_timeout_us_get(psNuUart))
 #endif
+
 #define CONFIG_UART_USE_TXDMA_IT             (UART_INTEN_TXPDMAEN_Msk)
 #define MAKE_UART_NAME(x)         #x
 #define MAKE_PDMA_UART_TX(x)      PDMA_UART##x##_TX
@@ -86,10 +87,10 @@ enum
     UART7_IDX,
 #endif
 #if defined(BSP_USING_UART8)
-    UART7_IDX,
+    UART8_IDX,
 #endif
 #if defined(BSP_USING_UART9)
-    UART7_IDX,
+    UART9_IDX,
 #endif
     UART_CNT
 };
@@ -120,6 +121,32 @@ struct nu_uart
 
 };
 typedef struct nu_uart *nu_uart_t;
+
+rt_inline uint32_t nu_uart_frame_bits_get(nu_uart_t psNuUart)
+{
+    uint32_t frame_bits;
+
+    RT_ASSERT(psNuUart);
+
+    frame_bits = 1U + psNuUart->dev.config.data_bits;
+
+    if (psNuUart->dev.config.parity != PARITY_NONE)
+    {
+        frame_bits += 1U;
+    }
+
+    frame_bits += (uint32_t)(psNuUart->dev.config.stop_bits + 1);
+
+    return frame_bits;
+}
+
+rt_inline uint32_t nu_uart_pdma_idle_timeout_us_get(nu_uart_t psNuUart)
+{
+    RT_ASSERT(psNuUart);
+    RT_ASSERT(psNuUart->dev.config.baud_rate != 0);
+
+    return (1000000U * 10U * nu_uart_frame_bits_get(psNuUart)) / psNuUart->dev.config.baud_rate;
+}
 
 /* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_uart_configure(struct rt_serial_device *serial, struct serial_configure *cfg);
@@ -332,6 +359,27 @@ static struct nu_uart nu_uart_arr [] =
     MAKE_UART_ISR(4);
 #endif
 
+#if defined(BSP_USING_UART5)
+    MAKE_UART_ISR(5);
+#endif
+
+#if defined(BSP_USING_UART6)
+    MAKE_UART_ISR(6);
+#endif
+
+#if defined(BSP_USING_UART7)
+    MAKE_UART_ISR(7);
+#endif
+
+#if defined(BSP_USING_UART8)
+    MAKE_UART_ISR(8);
+#endif
+
+#if defined(BSP_USING_UART9)
+    MAKE_UART_ISR(9);
+#endif
+
+
 /**
  * All UART interrupt service routine
  */
@@ -424,7 +472,7 @@ static rt_err_t nu_uart_configure(struct rt_serial_device *serial, struct serial
     /* Get base address of uart register */
     UART_T *base = (UART_T *)psNuUart->m_module.base;
 
-    /* Check word len */
+    /* Check data bit length */
     switch (cfg->data_bits)
     {
     case DATA_BITS_5:
@@ -448,6 +496,8 @@ static rt_err_t nu_uart_configure(struct rt_serial_device *serial, struct serial
         ret = RT_EINVAL;
         goto exit_nu_uart_configure;
     }
+
+    /* Check stop bit length */
     switch (cfg->stop_bits)
     {
     case STOP_BITS_1:
@@ -463,6 +513,8 @@ static rt_err_t nu_uart_configure(struct rt_serial_device *serial, struct serial
         ret = RT_EINVAL;
         goto exit_nu_uart_configure;
     }
+
+    /* Check parity bit type */
     switch (cfg->parity)
     {
     case PARITY_NONE:
@@ -482,6 +534,7 @@ static rt_err_t nu_uart_configure(struct rt_serial_device *serial, struct serial
         ret = RT_EINVAL;
         goto exit_nu_uart_configure;
     }
+
     SYS_ResetModule(psNuUart->m_module.RstId);
 
     /* Open Uart and set UART Baudrate */
@@ -500,6 +553,7 @@ exit_nu_uart_configure:
 
     return -(ret);
 }
+
 #if defined(RT_SERIAL_USING_DMA)
 
 static void nu_pdma_uart_rxbuf_free(nu_uart_t psNuUart)
@@ -521,8 +575,6 @@ static rt_err_t nu_pdma_uart_rx_config(nu_uart_t psNuUart, uint8_t *pu8Buf, int3
     rt_err_t result = RT_EOK;
     struct nu_pdma_chn_cb sChnCB;
 
-    uint32_t u32IdleTimeoutInUs = 1500;
-
     /* Get base address of uart register */
     UART_T *base = (UART_T *)psNuUart->m_module.base;
 
@@ -537,6 +589,7 @@ static rt_err_t nu_pdma_uart_rx_config(nu_uart_t psNuUart, uint8_t *pu8Buf, int3
     {
         goto exit_nu_pdma_uart_rx_config;
     }
+
 #if defined(CONFIG_UART_USE_IDLE_TIMER)
     LOG_I("[%s] Set UART bus idle time to %d bit time.", psNuUart->m_module.name, CONFIG_UART_IDLE_TIMEOUT_VALUE);
 #else
@@ -593,12 +646,14 @@ static rt_err_t nu_pdma_uart_rx_config(nu_uart_t psNuUart, uint8_t *pu8Buf, int3
         {
             goto exit_nu_pdma_uart_rx_config;
         }
+
         result = nu_pdma_sg_transfer(psNuUart->pdma_chanid_rx, psNuUart->pdma_rx_desc, CONFIG_PDMA_IDLE_TIMEOUT_VALUE);
         if (result != RT_EOK)
         {
             goto exit_nu_pdma_uart_rx_config;
         }
     }
+
 #if defined(CONFIG_UART_USE_IDLE_TIMER)
     UART_SetTimeoutCnt(base, CONFIG_UART_IDLE_TIMEOUT_VALUE);
     UART_BUS_IDLE_TIMEOUT_ENABLE(base);
@@ -621,8 +676,6 @@ static void nu_pdma_uart_rx_cb(void *pvOwner, uint32_t u32Events)
 
     RT_ASSERT(psNuUart);
 
-    /* Get base address of uart register */
-    UART_T *base = (UART_T *)psNuUart->m_module.base;
     nu_rxbuf_ctx_t psNuRxBufCtx = &psNuUart->dmabuf;
 
     dma_put_index = nu_pdma_transferred_byte_get(psNuUart->pdma_chanid_rx, psNuRxBufCtx->bufsize);
@@ -631,10 +684,6 @@ static void nu_pdma_uart_rx_cb(void *pvOwner, uint32_t u32Events)
         if (u32Events & NU_PDMA_EVENT_TRANSFER_DONE)
         {
             dma_put_index = psNuRxBufCtx->bufsize;
-        }
-        else if ((u32Events & NU_PDMA_EVENT_TIMEOUT) && !UART_GET_RX_EMPTY(base))
-        {
-            return;
         }
 
         recv_len = dma_put_index - psNuRxBufCtx->put_index;
@@ -649,6 +698,12 @@ static void nu_pdma_uart_rx_cb(void *pvOwner, uint32_t u32Events)
     {
         recv_len = psNuRxBufCtx->bufsize;
     }
+
+    LOG_D("[%s] RXDMA cb: events=0x%08x, dma_put_index=%u, recv_len=%u",
+          psNuUart->m_module.name,
+          (unsigned int)u32Events,
+          (unsigned int)dma_put_index,
+          (unsigned int)recv_len);
 
     if (recv_len > 0)
     {
@@ -741,6 +796,8 @@ static int nu_hw_uart_dma_allocate(nu_uart_t psNuUart)
             psNuUart->dma_flag |= RT_DEVICE_FLAG_DMA_TX;
         }
     }
+
+    /* Allocate UART_RX nu_dma channel */
     if (psNuUart->pdma_perp_rx != NU_PDMA_UNUSED)
     {
         psNuUart->pdma_chanid_rx = nu_pdma_channel_allocate(psNuUart->pdma_perp_rx);
@@ -752,6 +809,9 @@ static int nu_hw_uart_dma_allocate(nu_uart_t psNuUart)
             RT_ASSERT(ret == RT_EOK);
         }
     }
+
+    LOG_I("UART DMA channels allocated: TX=%d, RX=%d", psNuUart->pdma_chanid_tx, psNuUart->pdma_chanid_rx);
+    LOG_I("UART DMA RX DESC@%p", psNuUart->pdma_rx_desc);
 
     return RT_EOK;
 }
@@ -829,6 +889,7 @@ static rt_err_t nu_uart_control(struct rt_serial_device *serial, int cmd, void *
             UART_ENABLE_INT(base, UART_INTEN_RDAIEN_Msk | UART_INTEN_RXTOIEN_Msk | UART_INTEN_TOCNTEN_Msk);
         }
         break;
+
 #if defined(RT_SERIAL_USING_DMA)
     case RT_DEVICE_CTRL_CONFIG:
         if (ctrl_arg == RT_DEVICE_FLAG_DMA_RX) /* Configure and trigger DMA-RX */
@@ -875,6 +936,7 @@ static rt_err_t nu_uart_control(struct rt_serial_device *serial, int cmd, void *
         break;
 
     }
+
     return result;
 }
 
@@ -946,6 +1008,7 @@ rt_err_t rt_hw_uart_init(void)
 
         nu_uart_arr[i].dev.ops    = &nu_uart_ops;
         nu_uart_arr[i].dev.config = nu_uart_default_config;
+
 #if defined(RT_SERIAL_USING_DMA)
         nu_uart_arr[i].dma_flag = 0;
         nu_hw_uart_dma_allocate(&nu_uart_arr[i]);
@@ -955,7 +1018,6 @@ rt_err_t rt_hw_uart_init(void)
 
         ret = rt_hw_serial_register(&nu_uart_arr[i].dev, nu_uart_arr[i].m_module.name, flag, NULL);
         RT_ASSERT(ret == RT_EOK);
-
     }
 
     return ret;

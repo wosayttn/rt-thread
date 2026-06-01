@@ -1,3 +1,9 @@
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "m460.h"
 #include "rtconfig.h"
 
@@ -122,14 +128,14 @@ void nutool_modclkcfg_deinit_crc(void)
 
 void nutool_modclkcfg_init_crpt(void)
 {
-    CLK_EnableModuleClock(CRPT_MODULE);
+    CLK_EnableModuleClock(CRYPTO_MODULE);
 
     return;
 }
 
 void nutool_modclkcfg_deinit_crpt(void)
 {
-    CLK_DisableModuleClock(CRPT_MODULE);
+    CLK_DisableModuleClock(CRYPTO_MODULE);
 
     return;
 }
@@ -1127,6 +1133,12 @@ void nutool_modclkcfg_init_base(void)
     return;
 }
 
+void Reset_Handler_PreInit(void)
+{
+    /* Enable base clock */
+    nutool_modclkcfg_init_base();
+}
+
 void nutool_modclkcfg_init(void)
 {
     /*---------------------------------------------------------------------------------------------------------*/
@@ -1150,7 +1162,7 @@ void nutool_modclkcfg_init(void)
     //SysTick->CTRL = (SysTick->CTRL & ~(0x00000005ul)) | 0x00000005ul;
 
     /* Enable base clock */
-    nutool_modclkcfg_init_base();
+    //nutool_modclkcfg_init_base();
 
     /* Enable module clock and set clock source */
 #if defined(BSP_USING_ACMP01)
@@ -1347,6 +1359,19 @@ void nutool_modclkcfg_init(void)
 #if defined(BSP_USING_UART5)
     nutool_modclkcfg_init_uart5();
 #endif
+#if defined(BSP_USING_UART6)
+    nutool_modclkcfg_init_uart6();
+#endif
+#if defined(BSP_USING_UART7)
+    nutool_modclkcfg_init_uart7();
+#endif
+#if defined(BSP_USING_UART8)
+    nutool_modclkcfg_init_uart8();
+#endif
+#if defined(BSP_USING_UART9)
+    nutool_modclkcfg_init_uart9();
+#endif
+
 #if defined(BSP_USING_USBD) || defined(BSP_USING_USBH)
     nutool_modclkcfg_init_usbd();
 #endif

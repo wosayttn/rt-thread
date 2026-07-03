@@ -1,0 +1,29 @@
+# RT-Thread building script for component
+
+Import('RTT_ROOT')
+from building import *
+import os
+
+cwd = GetCurrentDir()
+objs = []
+dir_list = os.listdir(cwd)
+src = ['usb_msh_cmd.c']
+CPPPATH = [cwd, os.path.join(cwd, 'glue'), os.path.join(cwd, 'ehci')]
+
+driver_deps = [
+    ('glue/glue_nuvoton.c',   ['RT_USING_CHERRYUSB']),
+    ('glue/usb_glue_m5531.c', ['RT_USING_CHERRYUSB', 'SOC_SERIES_M5531']),
+    ('glue/usb_glue_m460.c',  ['RT_USING_CHERRYUSB', 'SOC_SERIES_M460']),
+    ('nuvoton/usb_dc_fs.c',   ['RT_CHERRYUSB_DEVICE']),
+    ('nuvoton/usb_dc_hs.c',   ['RT_CHERRYUSB_DEVICE']),
+]
+
+for file_name, depend in driver_deps:
+    if all(GetDepend(d) for d in depend):
+        src.append(file_name)
+
+print('CherryUSB-port source files: %s' % src)
+
+group = DefineGroup('CherryUSB-port', src, depend = ['RT_USING_CHERRYUSB'], CPPPATH = CPPPATH)
+
+Return('group')

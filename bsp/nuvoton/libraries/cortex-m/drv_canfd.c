@@ -83,8 +83,8 @@ typedef struct nu_canfd *nu_canfd_t;
 /* Static Function Prototypes ------------------------------------------------*/
 static rt_err_t nu_canfd_configure(struct rt_can_device *can, struct can_configure *cfg);
 static rt_err_t nu_canfd_control(struct rt_can_device *can, int cmd, void *arg);
-static int nu_canfd_sendmsg(struct rt_can_device *can, const void *buf, rt_uint32_t boxno);
-static int nu_canfd_recvmsg(struct rt_can_device *can, void *buf, rt_uint32_t boxno);
+static rt_ssize_t nu_canfd_sendmsg(struct rt_can_device *can, const void *buf, rt_uint32_t boxno);
+static rt_ssize_t nu_canfd_recvmsg(struct rt_can_device *can, void *buf, rt_uint32_t boxno);
 static void nu_canfd_isr(nu_canfd_t can);
 
 /* Static Variables ----------------------------------------------------------*/
@@ -582,7 +582,7 @@ static rt_err_t nu_canfd_control(struct rt_can_device *can, int cmd, void *arg)
     return RT_EOK;
 }
 
-static int nu_canfd_sendmsg(struct rt_can_device *can, const void *buf, rt_uint32_t boxno)
+static rt_ssize_t nu_canfd_sendmsg(struct rt_can_device *can, const void *buf, rt_uint32_t boxno)
 {
     CANFD_TX_BUF_T sTxMsg = {0};
 
@@ -634,7 +634,7 @@ exit_nu_canfd_sendmsg:
     return -(RT_ERROR);
 }
 
-static int nu_canfd_recvmsg(struct rt_can_device *can, void *buf, rt_uint32_t boxno)
+static rt_ssize_t nu_canfd_recvmsg(struct rt_can_device *can, void *buf, rt_uint32_t boxno)
 {
     CANFD_RX_BUF_T sRxMsg;
     struct rt_can_msg *pmsg;

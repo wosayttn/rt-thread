@@ -1,14 +1,8 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2020-1-16       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <rtconfig.h>
 
@@ -51,7 +45,7 @@ static int audio_test(int argc, char **argv)
         {
             for (k = 0; k < sizeof(chnum) / sizeof(int); k++)
             {
-                snprintf(strbuf, sizeof(strbuf), "/mnt/sd0/%d_%d_%d.wav", smplrate[i], smplbit[j], chnum[k]);
+                snprintf(strbuf, sizeof(strbuf), "/sd0/%d_%d_%d.wav", smplrate[i], smplbit[j], chnum[k]);
 
                 rt_kprintf("==========================================================\n");
 
@@ -114,7 +108,7 @@ static int audio_overnight(int argc, char **argv)
 
     do
     {
-        snprintf(strbuf, sizeof(strbuf), "/test.wav");
+        snprintf(strbuf, sizeof(strbuf), "/sd0/audio_test.wav");
 
 #if defined(PKG_WP_USING_RECORD)
         rt_kprintf("Recording file at %s\n", strbuf);

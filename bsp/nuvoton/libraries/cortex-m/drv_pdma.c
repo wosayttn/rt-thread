@@ -11,23 +11,24 @@
 
 /* Defines / Macros ----------------------------------------------------------*/
 #undef LOG_TAG
+//#define DRV_DEBUG
 #define LOG_TAG "drv.pdma"
 #define DBG_TAG LOG_TAG
 #include "drv_log.h"
 
 #ifndef NU_PDMA_MEMFUN_ACTOR_MAX
-    #define NU_PDMA_MEMFUN_ACTOR_MAX (4)
+    #define NU_PDMA_MEMFUN_ACTOR_MAX      (2)
 #endif
-#define NU_PDMA_SG_TBL_MAXSIZE         (NU_PDMA_SG_LIMITED_DISTANCE/sizeof(DSCT_T))
+#define NU_PDMA_SG_TBL_MAXSIZE            (NU_PDMA_SG_LIMITED_DISTANCE/sizeof(DSCT_T))
 
-#define NU_PDMA_CH_MAX    (PDMA_CNT*PDMA_CH_MAX)
-#define NU_PDMA_CH_Msk    ((1<<PDMA_CH_MAX)-1)
+#define NU_PDMA_CH_MAX                    (PDMA_CNT*PDMA_CH_MAX)
+#define NU_PDMA_CH_Msk                    ((1<<PDMA_CH_MAX)-1)
 
-#define NU_PDMA_GET_MOD_CHIDX(ch)   ((ch&NU_PDMA_CHN_IDX_Msk)>>NU_PDMA_CHN_IDX_Pos)
-#define NU_PDMA_GET_MOD_IDX(ch)     ((ch&NU_PDMA_IDX_Msk)>>NU_PDMA_IDX_Pos)
-#define NU_PDMA_GET_BASE(ch)        ((PDMA_T *)nu_pdma_arr[NU_PDMA_GET_MOD_IDX(ch)].m_module.base)
+#define NU_PDMA_GET_MOD_CHIDX(ch)         ((ch&NU_PDMA_CHN_IDX_Msk)>>NU_PDMA_CHN_IDX_Pos)
+#define NU_PDMA_GET_MOD_IDX(ch)           ((ch&NU_PDMA_IDX_Msk)>>NU_PDMA_IDX_Pos)
+#define NU_PDMA_GET_BASE(ch)              ((PDMA_T *)nu_pdma_arr[NU_PDMA_GET_MOD_IDX(ch)].m_module.base)
 #define NU_PDMA_GET_ARRAY_IDX(iModChnID)  ((NU_PDMA_GET_IDX(iModChnID)*PDMA_CH_MAX)+NU_PDMA_GET_CHN_ID(iModChnID))
-#define DEF_SGTBL_TOKEN_NUM    (RT_ALIGN(NU_PDMA_SGTBL_POOL_SIZE, 32) / 32)
+#define DEF_SGTBL_TOKEN_NUM               (RT_ALIGN(NU_PDMA_SGTBL_POOL_SIZE, 32) / 32)
 
 #define DEFINE_NU_PDMA(_idx)             \
     [(_idx)] =                           \
@@ -482,7 +483,7 @@ static void nu_pdma_init(void)
         /* Assign first SG table address as PDMA SG table base address */
         pdma->SCATBA = (uint32_t)nu_pdma_arr[i].m_psSGTbl;
 
-        LOG_I("Set %s SCATBA address to 0x%08x.\n", nu_pdma_arr[i].m_module.name, pdma->SCATBA);
+        LOG_I("Set %s SCATBA address to 0x%08x.", nu_pdma_arr[i].m_module.name, pdma->SCATBA);
     }
 
     nu_pdma_inited = 1;
@@ -880,16 +881,37 @@ rt_err_t nu_pdma_desc_setup(int i32ModChnID, nu_pdma_desc_t dma_desc, uint32_t u
 
     rt_err_t ret = RT_EINVAL;
 
+    LOG_D("[%s] ch=%d, desc=0x%08x, width=%d, src=0x%08x, dst=0x%08x, cnt=%d, next=0x%08x, silent=%d",
+          __func__, i32ModChnID, (uint32_t)dma_desc, u32DataWidth, u32AddrSrc, u32AddrDst,
+          i32TransferCnt, (uint32_t)next, u32BeSilent);
+
     if (!dma_desc)
+    {
+        LOG_E("[%s] ch=%d: dma_desc is NULL.", __func__, i32ModChnID);
         goto exit_nu_pdma_desc_setup;
+    }
     else if (nu_pdma_check_is_nonallocated(i32ModChnID))
+    {
+        LOG_E("[%s] ch=%d: channel is not allocated.", __func__, i32ModChnID);
         goto exit_nu_pdma_desc_setup;
+    }
     else if (!(u32DataWidth == 8 || u32DataWidth == 16 || u32DataWidth == 32))
+    {
+        LOG_E("[%s] ch=%d: invalid data width %d (must be 8/16/32).", __func__, i32ModChnID, u32DataWidth);
         goto exit_nu_pdma_desc_setup;
+    }
     else if ((u32AddrSrc % (u32DataWidth / 8)) || (u32AddrDst % (u32DataWidth / 8)))
+    {
+        LOG_E("[%s] ch=%d: unaligned address src=0x%08x, dst=0x%08x for width %d.",
+              __func__, i32ModChnID, u32AddrSrc, u32AddrDst, u32DataWidth);
         goto exit_nu_pdma_desc_setup;
+    }
     else if (i32TransferCnt > NU_PDMA_MAX_TXCNT)
+    {
+        LOG_E("[%s] ch=%d: transfer count %d exceeds max %d.",
+              __func__, i32ModChnID, i32TransferCnt, NU_PDMA_MAX_TXCNT);
         goto exit_nu_pdma_desc_setup;
+    }
 
     pdma = NU_PDMA_GET_BASE(i32ModChnID);
 
@@ -935,6 +957,9 @@ rt_err_t nu_pdma_desc_setup(int i32ModChnID, nu_pdma_desc_t dma_desc, uint32_t u
     }
     if (u32BeSilent)
         dma_desc->CTL |= PDMA_DSCT_CTL_TBINTDIS_Msk;
+
+    LOG_D("[%s] ch=%d: desc setup done, CTL=0x%08x, SA=0x%08x, DA=0x%08x, NEXT=0x%08x",
+          __func__, i32ModChnID, dma_desc->CTL, dma_desc->SA, dma_desc->DA, dma_desc->NEXT);
 
     ret = RT_EOK;
 
@@ -1009,7 +1034,7 @@ rt_err_t nu_pdma_sgtbls_allocate(int i32ModChnID, nu_pdma_desc_t *ppsSgtbls, int
         /* Get token. */
         if ((idx = nu_pdma_sgtbls_token_allocate(&nu_pdma_arr[mod_idx])) < 0)
         {
-            LOG_E("No available sgtbl.\n");
+            LOG_E("No available sgtbl.");
             goto fail_nu_pdma_sgtbls_allocate;
         }
 

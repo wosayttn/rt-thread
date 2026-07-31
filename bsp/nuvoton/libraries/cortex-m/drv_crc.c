@@ -47,19 +47,19 @@ void CRC_IRQHandler(void)
 
     if (u32CRCDMAStatus & CRC_DMASTS_FINISH_Msk)
     {
-        LOG_D("\tIRQ - CRC DMA Finish\n\n");
+        LOG_D("\tIRQ - CRC DMA Finish");
     }
     if (u32CRCDMAStatus & CRC_DMASTS_ABORTED_Msk)
     {
-        LOG_D("\tIRQ - CRC DMA Abort\n");
+        LOG_D("\tIRQ - CRC DMA Abort");
     }
     if (u32CRCDMAStatus & CRC_DMASTS_CFGERR_Msk)
     {
-        LOG_D("\tIRQ - CRC DMA CFG Error\n\n");
+        LOG_D("\tIRQ - CRC DMA CFG Error");
     }
     if (u32CRCDMAStatus & CRC_DMASTS_ACCERR_Msk)
     {
-        LOG_D("\tIRQ - CRC DMA Access Error\n\n");
+        LOG_D("\tIRQ - CRC DMA Access Error");
     }
 
     /* leave interrupt */
@@ -131,20 +131,20 @@ static rt_uint32_t nu_crc_run(
 
             if (u32CRCDMAStatus != CRC_DMASTS_FINISH_Msk)
             {
-                LOG_D("CRC DMA Address@0x%08X\n", (uint32_t)pu8InTempData);
-                LOG_D("CRC DMA Length: %d\n", (uint32_t)i32Remain_WordAligned);
+                LOG_D("CRC DMA Address@0x%08X", (uint32_t)pu8InTempData);
+                LOG_D("CRC DMA Length: %d", (uint32_t)i32Remain_WordAligned);
 
                 if (u32CRCDMAStatus & CRC_DMASTS_ABORTED_Msk)
                 {
-                    LOG_D("CRC DMA Abort\n");
+                    LOG_D("CRC DMA Abort");
                 }
                 if (u32CRCDMAStatus & CRC_DMASTS_CFGERR_Msk)
                 {
-                    LOG_D("CRC DMA CFG Error\n");
+                    LOG_D("CRC DMA CFG Error");
                 }
                 if (u32CRCDMAStatus & CRC_DMASTS_ACCERR_Msk)
                 {
-                    LOG_D("CRC DMA Access Error\n");
+                    LOG_D("CRC DMA Access Error");
                 }
             }
             else

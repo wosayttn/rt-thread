@@ -1,11 +1,8 @@
-/**************************************************************************//**
- * @file     LCDLIB.h
- * @version  V3.00
- * @brief    RHE6616TP01(8-COM, 40-SEG, 1/4 Bias) LCD library header file
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
- * @copyright (C) 2019-2020 Nuvoton Technology Corp. All rights reserved.
- *****************************************************************************/
+ */
 #ifndef __M2354_LCDLIB_H
 #define __M2354_LCDLIB_H
 

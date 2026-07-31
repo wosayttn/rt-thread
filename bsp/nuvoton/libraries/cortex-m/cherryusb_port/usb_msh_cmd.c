@@ -38,6 +38,13 @@ static void cherryusb_init(void)
 #endif
 
 #endif
+
+#if defined(BOARD_USING_USB_SWOTG) && defined(RT_USING_ADC) && defined(RT_USING_PIN)
+    LOG_I("CherryUSB SWOTG stack init.");
+    int swotg_init(void);
+    swotg_init();
+#endif
+
 }
 MSH_CMD_EXPORT(cherryusb_init, start cherryusb stack);
 

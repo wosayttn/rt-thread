@@ -7,6 +7,17 @@
 
 /* rt_vsnprintf options */
 
+#define RT_KLIBC_USING_VSNPRINTF_LONGLONG
+#define RT_KLIBC_USING_VSNPRINTF_STANDARD
+#define RT_KLIBC_USING_VSNPRINTF_DECIMAL_SPECIFIERS
+#define RT_KLIBC_USING_VSNPRINTF_EXPONENTIAL_SPECIFIERS
+#define RT_KLIBC_USING_VSNPRINTF_WRITEBACK_SPECIFIER
+#define RT_KLIBC_USING_VSNPRINTF_CHECK_NUL_IN_FORMAT_SPECIFIER
+#define RT_KLIBC_USING_VSNPRINTF_INTEGER_BUFFER_SIZE 32
+#define RT_KLIBC_USING_VSNPRINTF_DECIMAL_BUFFER_SIZE 32
+#define RT_KLIBC_USING_VSNPRINTF_FLOAT_PRECISION 6
+#define RT_KLIBC_USING_VSNPRINTF_MAX_INTEGRAL_DIGITS_FOR_DECIMAL 9
+#define RT_KLIBC_USING_VSNPRINTF_LOG10_TAYLOR_TERMS 4
 /* end of rt_vsnprintf options */
 
 /* rt_vsscanf options */
@@ -73,6 +84,9 @@
 #define RT_USING_IDLE_HOOK
 #define RT_IDLE_HOOK_LIST_SIZE 4
 #define IDLE_THREAD_STACK_SIZE 1024
+#define RT_USING_TIMER_SOFT
+#define RT_TIMER_THREAD_PRIO 4
+#define RT_TIMER_THREAD_STACK_SIZE 1024
 
 /* kservice options */
 
@@ -96,6 +110,8 @@
 
 #define RT_USING_MEMPOOL
 #define RT_USING_SMALL_MEM
+#define RT_USING_MEMHEAP
+#define RT_MEMHEAP_FAST_MODE
 #define RT_USING_SMALL_MEM_AS_HEAP
 #define RT_USING_HEAP
 /* end of Memory Management */
@@ -121,6 +137,7 @@
 #define RT_USING_USER_MAIN
 #define RT_MAIN_THREAD_STACK_SIZE 2048
 #define RT_MAIN_THREAD_PRIORITY 10
+#define RT_USING_LEGACY
 #define RT_USING_MSH
 #define RT_USING_FINSH
 #define FINSH_USING_MSH
@@ -138,7 +155,43 @@
 
 /* DFS: device virtual file system */
 
+#define RT_USING_DFS
+#define DFS_USING_POSIX
+#define DFS_USING_WORKDIR
+#define RT_USING_DFS_MNTTABLE
+#define DFS_FD_MAX 16
+#define RT_USING_DFS_V1
+#define DFS_FILESYSTEMS_MAX 4
+#define DFS_FILESYSTEM_TYPES_MAX 4
+#define RT_USING_DFS_ELMFAT
+
+/* elm-chan's FatFs, Generic FAT Filesystem Module */
+
+#define RT_DFS_ELM_CODE_PAGE 437
+#define RT_DFS_ELM_WORD_ACCESS
+#define RT_DFS_ELM_USE_LFN_3
+#define RT_DFS_ELM_USE_LFN 3
+#define RT_DFS_ELM_LFN_UNICODE_0
+#define RT_DFS_ELM_LFN_UNICODE 0
+#define RT_DFS_ELM_MAX_LFN 255
+#define RT_DFS_ELM_DRIVES 8
+#define RT_DFS_ELM_MAX_SECTOR_SIZE 4096
+#define RT_DFS_ELM_USE_ERASE
+#define RT_DFS_ELM_REENTRANT
+#define RT_DFS_ELM_MUTEX_TIMEOUT 3000
+#define RT_DFS_ELM_USE_EXFAT
+/* end of elm-chan's FatFs, Generic FAT Filesystem Module */
+#define RT_USING_DFS_DEVFS
+#define RT_USING_DFS_ROMFS
+#define RT_USING_DFS_ROMFS_USER_ROOT
 /* end of DFS: device virtual file system */
+#define RT_USING_FAL
+#define FAL_USING_DEBUG
+#define FAL_PART_HAS_TABLE_CFG
+#define FAL_USING_SFUD_PORT
+#define FAL_USING_NOR_FLASH_DEV_NAME "norflash0"
+#define FAL_DEV_NAME_MAX 24
+#define FAL_DEV_BLK_MAX 6
 
 /* Device Drivers */
 
@@ -151,6 +204,36 @@
 #define RT_USING_SERIAL_V1
 #define RT_SERIAL_USING_DMA
 #define RT_SERIAL_RB_BUFSZ 128
+#define RT_USING_CLOCK_TIME
+#define RT_USING_I2C
+#define RT_USING_I2C_BITOPS
+#define RT_USING_RTC
+#define RT_USING_SDIO
+#define RT_SDIO_STACK_SIZE 2048
+#define RT_SDIO_THREAD_PRIORITY 15
+#define RT_MMCSD_STACK_SIZE 2048
+#define RT_MMCSD_THREAD_PRIORITY 22
+#define RT_MMCSD_MAX_PARTITION 16
+#define RT_USING_SPI
+#define RT_USING_SPI_ISR
+#define RT_USING_QSPI
+#define RT_USING_SFUD
+#define RT_SFUD_USING_SFDP
+#define RT_SFUD_USING_FLASH_INFO_TABLE
+#define RT_SFUD_USING_QSPI
+#define RT_SFUD_SPI_MAX_HZ 48000000
+#define RT_USING_WDT
+#define RT_USING_AUDIO
+#define RT_AUDIO_REPLAY_MP_BLOCK_SIZE 4096
+#define RT_AUDIO_REPLAY_MP_BLOCK_COUNT 2
+#define RT_AUDIO_RECORD_PIPE_SIZE 2048
+#define RT_USING_BLK
+
+/* Partition Types */
+
+#define RT_BLK_PARTITION_DFS
+#define RT_BLK_PARTITION_EFI
+/* end of Partition Types */
 #define RT_USING_PIN
 /* end of Device Drivers */
 
@@ -189,6 +272,21 @@
 
 /* Utilities */
 
+#define RT_USING_ULOG
+#define ULOG_OUTPUT_LVL_D
+#define ULOG_OUTPUT_LVL 7
+#define ULOG_USING_ISR_LOG
+#define ULOG_ASSERT_ENABLE
+#define ULOG_LINE_BUF_SIZE 512
+
+/* log format */
+
+#define ULOG_USING_COLOR
+#define ULOG_OUTPUT_TIME
+#define ULOG_OUTPUT_LEVEL
+#define ULOG_OUTPUT_TAG
+/* end of log format */
+#define ULOG_BACKEND_USING_CONSOLE
 #define RT_USING_UTEST
 #define UTEST_THR_STACK_SIZE 4096
 #define UTEST_THR_PRIORITY 20
@@ -204,32 +302,286 @@
 
 /* end of RT-Thread Utestcases */
 
+/* RT-Thread online packages */
+
+/* IoT - internet of things */
+
+
+/* Wi-Fi */
+
+/* Marvell WiFi */
+
+/* end of Marvell WiFi */
+
+/* Wiced WiFi */
+
+/* end of Wiced WiFi */
+
+/* CYW43012 WiFi */
+
+/* end of CYW43012 WiFi */
+
+/* BL808 WiFi */
+
+/* end of BL808 WiFi */
+
+/* CYW43439 WiFi */
+
+/* end of CYW43439 WiFi */
+/* end of Wi-Fi */
+
+/* IoT Cloud */
+
+/* end of IoT Cloud */
+/* end of IoT - internet of things */
+
+/* security packages */
+
+/* end of security packages */
+
+/* language packages */
+
+/* JSON: JavaScript Object Notation, a lightweight data-interchange format */
+
+/* end of JSON: JavaScript Object Notation, a lightweight data-interchange format */
+
+/* XML: Extensible Markup Language */
+
+/* end of XML: Extensible Markup Language */
+/* end of language packages */
+
+/* multimedia packages */
+
+/* LVGL: powerful and easy-to-use embedded GUI library */
+
+/* end of LVGL: powerful and easy-to-use embedded GUI library */
+
+/* u8g2: a monochrome graphic library */
+
+/* end of u8g2: a monochrome graphic library */
+#define PKG_USING_WAVPLAYER
+#define PKG_WP_USING_PLAY
+#define PKG_WP_PLAY_DEVICE "sound0"
+#define PKG_WP_USING_RECORD
+#define PKG_WP_RECORD_DEVICE "sound0"
+#define PKG_USING_WAVPLAYER_LATEST_VERSION
+#define PKG_USING_HELIX
+#define PKG_USING_HELIX_LATEST_VERSION
+#define PKG_USING_MP3PLAYER
+#define MP3_SOUND_DEVICE_NAME "sound0"
+#define MP3_INPUT_BUFFER_SIZE 2048
+#define MP3_OUTPUT_BUFFER_SIZE 4608
+#define MP3_PLAYER_VOLUME_DEFAULT 30
+#define PKG_USING_MP3PLAYER_LATEST_VERSION
+/* end of multimedia packages */
+
+/* tools packages */
+
+/* end of tools packages */
+
+/* system packages */
+
+/* enhanced kernel services */
+
+/* end of enhanced kernel services */
+
+/* acceleration: Assembly language or algorithmic acceleration packages */
+
+/* end of acceleration: Assembly language or algorithmic acceleration packages */
+
+/* CMSIS: ARM Cortex-M Microcontroller Software Interface Standard */
+
+/* end of CMSIS: ARM Cortex-M Microcontroller Software Interface Standard */
+
+/* Micrium: Micrium software products porting for RT-Thread */
+
+/* end of Micrium: Micrium software products porting for RT-Thread */
+/* end of system packages */
+
+/* peripheral libraries and drivers */
+
+/* HAL & SDK Drivers */
+
+/* STM32 HAL & SDK Drivers */
+
+/* end of STM32 HAL & SDK Drivers */
+
+/* Infineon HAL Packages */
+
+/* end of Infineon HAL Packages */
+
+/* Kendryte SDK */
+
+/* end of Kendryte SDK */
+
+/* WCH HAL & SDK Drivers */
+
+/* end of WCH HAL & SDK Drivers */
+
+/* AT32 HAL & SDK Drivers */
+
+/* end of AT32 HAL & SDK Drivers */
+
+/* HC32 DDL Drivers */
+
+/* end of HC32 DDL Drivers */
+
+/* NXP HAL & SDK Drivers */
+
+/* end of NXP HAL & SDK Drivers */
+
+/* NUVOTON Drivers */
+
+#define PKG_USING_NUVOTON_SERIES_DRIVER
+#define PKG_USING_NUVOTON_SERIES_DRIVER_LATEST_VERSION
+/* end of NUVOTON Drivers */
+
+/* GD32 Drivers */
+
+/* end of GD32 Drivers */
+
+/* HPMicro SDK */
+
+/* end of HPMicro SDK */
+
+/* FT32 HAL & SDK Drivers */
+
+/* end of FT32 HAL & SDK Drivers */
+
+/* NOVOSNS Drivers */
+
+/* end of NOVOSNS Drivers */
+/* end of HAL & SDK Drivers */
+
+/* sensors drivers */
+
+/* end of sensors drivers */
+
+/* touch drivers */
+
+/* end of touch drivers */
+/* end of peripheral libraries and drivers */
+
+/* AI packages */
+
+/* end of AI packages */
+
+/* Signal Processing and Control Algorithm Packages */
+
+/* end of Signal Processing and Control Algorithm Packages */
+
+/* miscellaneous packages */
+
+/* project laboratory */
+
+/* end of project laboratory */
+
+/* samples: kernel and components samples */
+
+/* end of samples: kernel and components samples */
+
+/* entertainment: terminal games and other interesting software packages */
+
+/* end of entertainment: terminal games and other interesting software packages */
+#define PKG_USING_OPTPARSE
+#define PKG_USING_OPTPARSE_LATEST_VERSION
+/* end of miscellaneous packages */
+
+/* Arduino libraries */
+
+
+/* Projects and Demos */
+
+/* end of Projects and Demos */
+
+/* Sensors */
+
+/* end of Sensors */
+
+/* Display */
+
+/* end of Display */
+
+/* Timing */
+
+/* end of Timing */
+
+/* Data Processing */
+
+/* end of Data Processing */
+
+/* Data Storage */
+
+/* Communication */
+
+/* end of Communication */
+
+/* Device Control */
+
+/* end of Device Control */
+
+/* Other */
+
+/* end of Other */
+
+/* Signal IO */
+
+/* end of Signal IO */
+
+/* Uncategorized */
+
+/* end of Arduino libraries */
+/* end of RT-Thread online packages */
+
 /* Hardware Drivers Config */
 
 /* On-chip Peripheral Drivers */
 
 #define SOC_FAMILY_NUMICRO
+#define EMAC_IS_NUVOTON
 #define SOC_SERIES_M480
-#define BSP_USING_PDMA
-#define NU_PDMA_MEMFUN_ACTOR_MAX 2
-#define NU_PDMA_SGTBL_POOL_SIZE 16
+#define BSP_USING_FMC
 #define BSP_USING_GPIO
+#define BSP_USING_I2C
+#define BSP_USING_I2C0
+#define BSP_USING_I2C1
+#define BSP_USING_I2C2
+#define BSP_USING_I2S
+#define BSP_USING_I2S0
+#define NU_I2S_DMA_FIFO_SIZE 2048
+#define BSP_USING_PDMA
+#define NU_PDMA_MEMFUN_ACTOR_MAX 4
+#define NU_PDMA_SGTBL_POOL_SIZE 16
+#define BSP_USING_QSPI
+#define BSP_USING_QSPI0
+#define BSP_USING_QSPI0_PDMA
+#define BSP_USING_RTC
+#define BSP_USING_SDH
+#define BSP_USING_SDH0
+#define BSP_USING_SPI
+#define BSP_USING_SPI_PDMA
 #define BSP_USING_UART
 #define BSP_USING_UART0
+#define BSP_USING_USB
+#define BSP_USING_USBD
+#define BSP_USING_USBH
+#define BSP_USING_OTG
+#define BSP_USING_HSUSBD
 /* end of On-chip Peripheral Drivers */
 
 /* On-board Peripheral Drivers */
 
 #define BSP_USING_NULINKME
+#define BOARD_USING_NAU88L25
+#define BOARD_USING_STORAGE_SDCARD
+#define BOARD_USING_QSPI_FLASH
+#define BOARD_USING_USBD
+#define BOARD_USING_HSOTG
 /* end of On-board Peripheral Drivers */
 
 /* Board extended module drivers */
 
-/* end of Board extended module drivers */
-
 /* Nuvoton Packages Config */
-
-#define NU_PKG_USING_UTILS
 
 /* Sensors */
 
@@ -237,11 +589,30 @@
 
 /* Audio Codecs */
 
+#define NU_PKG_USING_NAU88L25
 /* end of Audio Codecs */
 
 /* Displays */
 
 /* end of Displays */
+
+/* Touch */
+
+/* end of Touch */
+
+/* Storages */
+
+#define NU_PKG_USING_QSPINOR
+/* end of Storages */
+
+/* Others */
+
+#define NU_PKG_USING_NUUTILS
+/* end of Others */
+
+/* Demo */
+
+/* end of Demo */
 /* end of Nuvoton Packages Config */
 /* end of Hardware Drivers Config */
 

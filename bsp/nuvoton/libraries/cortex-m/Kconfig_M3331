@@ -185,6 +185,7 @@ menuconfig BSP_USING_GPIO
     select RT_USING_PIN
     default y
 
+
 menuconfig BSP_USING_I2C
     bool "Enable Inter-Integrated Circuit(I2C)"
     select RT_USING_I2C
@@ -446,6 +447,22 @@ menuconfig BSP_USING_UART
             bool "Enable UART5"
     endif
 
+menuconfig BSP_USING_USB
+    bool "Enable USB Interfaces"
+
+    if BSP_USING_USB
+        config BSP_USING_HSOTG
+            bool "Enable High-Speed USB On-The-Go(HSOTG)"
+            select BSP_USING_HSUSBH
+            select BSP_USING_HSUSBD
+
+        config BSP_USING_HSUSBD
+            bool "Enable High-Speed USB Device Controller(HSUSBD)"
+
+        config BSP_USING_HSUSBH
+            bool "Enable High-Speed USB Host Controller(HSUSBH)"
+    endif
+
 menuconfig BSP_USING_USCI
     bool "Enable Universal Serial Control Interface(USCI)"
 
@@ -533,17 +550,6 @@ menuconfig BSP_USING_USCI
                 depends on BSP_USING_USPI1
         endif
     endif
-
-config BSP_USING_HSUSBD
-    bool "Enable High-Speed USB Device Controller(HSUSBD)"
-
-config BSP_USING_HSUSBH
-    bool "Enable High-Speed USB Host Controller(HSUSBH)"
-
-config BSP_USING_HSOTG
-    bool "Enable High-Speed USB On-The-Go(HSOTG)"
-    select BSP_USING_HSUSBH
-    select BSP_USING_HSUSBD
 
 config BSP_USING_WDT
     bool "Enable Watchdog Timer(WDT)"

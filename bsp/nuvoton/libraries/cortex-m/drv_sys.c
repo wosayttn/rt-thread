@@ -94,14 +94,14 @@ void devmem(int argc, char *argv[])
     {
         *((volatile uint32_t *)u32Addr) = value;
     }
-    rt_kprintf("0x%08x\n", *((volatile uint32_t *)u32Addr));
+    LOG_D("0x%08x", *((volatile uint32_t *)u32Addr));
 
     return;
 
 exit_devmem:
 
-    rt_kprintf("Read: devmem <physical address in hex>\n");
-    rt_kprintf("Write: devmem <physical address in hex> <value in hex format>\n");
+    LOG_D("Read: devmem <physical address in hex>");
+    LOG_D("Write: devmem <physical address in hex> <value in hex format>");
 
     return;
 }
@@ -149,7 +149,7 @@ void devmem2(int argc, char *argv[])
 
 exit_devmem:
 
-    rt_kprintf("devmem2: <physical address in hex> <count in dec>\n");
+    LOG_D("devmem2: <physical address in hex> <count in dec>");
 
     return;
 }
@@ -172,18 +172,20 @@ rt_err_t rt_hw_spi_device_attach(const char *bus_name, const char *device_name, 
     spi_device = (struct rt_spi_device *)rt_malloc(sizeof(struct rt_spi_device));
     if (spi_device == RT_NULL)
     {
-        LOG_E("no memory, spi bus attach device failed!\n");
+        LOG_E("no memory, spi bus attach device failed!");
         result = -RT_ENOMEM;
         goto __exit;
     }
+    rt_memset(spi_device, 0, sizeof(struct rt_spi_device));
 
     cs_pin = (rt_base_t *)rt_malloc(sizeof(rt_base_t));
     if (cs_pin == RT_NULL)
     {
-        LOG_E("no memory, spi bus attach device failed!\n");
+        LOG_E("no memory, spi bus attach device failed!");
         result = -RT_ENOMEM;
         goto __exit;
     }
+    rt_memset(cs_pin, 0, sizeof(rt_base_t));
 
     *cs_pin = cs;
     rt_pin_mode(cs, PIN_MODE_OUTPUT);
@@ -192,7 +194,7 @@ rt_err_t rt_hw_spi_device_attach(const char *bus_name, const char *device_name, 
     result = rt_spi_bus_attach_device(spi_device, device_name, bus_name, (void *)cs_pin);
     if(result != RT_EOK)
     {
-        LOG_E("spi bus attach device failed!\n");
+        LOG_E("spi bus attach device failed!");
     }
 
 __exit:
@@ -217,11 +219,10 @@ __exit:
 /**
   * Attach the qspi device to QSPI bus, this function must be used after initialization.
   */
-rt_err_t rt_hw_qspi_device_attach(const char *bus_name, const char *device_name, rt_base_t cs, rt_uint8_t data_line_width, void (*enter_qspi_mode)(), void (*exit_qspi_mode)())
+rt_err_t rt_hw_qspi_device_attach(const char *bus_name, const char *device_name, rt_base_t cs_pin, rt_uint8_t data_line_width, void (*enter_qspi_mode)(), void (*exit_qspi_mode)())
 {
     struct rt_qspi_device *qspi_device = RT_NULL;
     rt_err_t result = RT_EOK;
-    rt_base_t *cs_pin = RT_NULL;
 
     RT_ASSERT(bus_name != RT_NULL);
     RT_ASSERT(device_name != RT_NULL);
@@ -230,20 +231,18 @@ rt_err_t rt_hw_qspi_device_attach(const char *bus_name, const char *device_name,
     qspi_device = (struct rt_qspi_device *)rt_malloc(sizeof(struct rt_qspi_device));
     if (qspi_device == RT_NULL)
     {
-        LOG_E("no memory, qspi bus attach device failed!\n");
+        LOG_E("no memory, qspi bus attach device failed!");
         result = -RT_ENOMEM;
         goto __exit;
     }
 
-    *cs_pin = cs;
-    rt_pin_mode(cs, PIN_MODE_OUTPUT);
-    rt_pin_write(cs, PIN_HIGH);
+    rt_memset(qspi_device, 0, sizeof(struct rt_qspi_device));
 
     qspi_device->enter_qspi_mode = enter_qspi_mode;
     qspi_device->exit_qspi_mode = exit_qspi_mode;
     qspi_device->config.qspi_dl_width = data_line_width;
 
-    result = rt_spi_bus_attach_device(&qspi_device->parent, device_name, bus_name, RT_NULL);
+    result = rt_spi_bus_attach_device_cspin(&qspi_device->parent, device_name, bus_name, cs_pin, RT_NULL);
 
 __exit:
     if (result != RT_EOK)
@@ -251,10 +250,6 @@ __exit:
         if (qspi_device)
         {
             rt_free(qspi_device);
-        }
-        if (cs_pin)
-        {
-            rt_free(cs_pin);
         }
     }
 

@@ -170,11 +170,11 @@ static rt_err_t nu_aes_crypt_run(
 
     if ((u32DataLen % 16) && (CRYPTO->AES_STS & (CRYPTO_AES_STS_OUTBUFEMPTY_Msk | CRYPTO_AES_STS_INBUFEMPTY_Msk)))
     {
-        LOG_W("AES WARNING - AES Data length(%d) is not enough. -> %d \n", u32DataLen, RT_ALIGN(u32DataLen, 16));
+        LOG_W("AES WARNING - AES Data length(%d) is not enough. -> %d ", u32DataLen, RT_ALIGN(u32DataLen, 16));
     }
     else if (CRYPTO->INTSTS & (CRYPTO_INTSTS_AESEIF_Msk) || (CRYPTO->AES_STS & (CRYPTO_AES_STS_BUSERR_Msk | CRYPTO_AES_STS_CNTERR_Msk)))
     {
-        LOG_E("AES ERROR - CRYPTO->INTSTS-%08x, CRYPTO->AES_STS-%08x\n", CRYPTO->INTSTS, CRYPTO->AES_STS);
+        LOG_E("AES ERROR - CRYPTO->INTSTS-%08x, CRYPTO->AES_STS-%08x", CRYPTO->INTSTS, CRYPTO->AES_STS);
     }
 
     /* Clear AES interrupt status */
@@ -374,7 +374,7 @@ static void SHABlockUpdate(uint32_t u32OpMode, uint32_t u32SrcAddr, uint32_t u32
 
     if (CRYPTO->INTSTS & (CRYPTO_INTSTS_HMACEIF_Msk) || (CRYPTO->HMAC_STS & (CRYPTO_HMAC_STS_DMAERR_Msk)))
     {
-        LOG_E("SHA ERROR - CRYPTO->INTSTS-%08x, CRYPTO->HMAC_STS-%08x\n", CRYPTO->INTSTS, CRYPTO->HMAC_STS);
+        LOG_E("SHA ERROR - CRYPTO->INTSTS-%08x, CRYPTO->HMAC_STS-%08x", CRYPTO->INTSTS, CRYPTO->HMAC_STS);
     }
 
     /* Clear SHA interrupt status */

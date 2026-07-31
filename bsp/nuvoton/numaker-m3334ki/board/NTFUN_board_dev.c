@@ -10,9 +10,7 @@
 *
 ******************************************************************************/
 
-#include <rtdevice.h>
-#include "NuMicro.h"
-#include "drv_common.h"
+#include "drv_sys.h"
 
 #if defined(BOARD_USING_NUFUN)
 

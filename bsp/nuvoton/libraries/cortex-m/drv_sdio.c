@@ -20,7 +20,11 @@
     #define SDH_ALIGN_LEN   4
 #endif
 
-#define SDH_BUFF_SIZE   512
+#if !defined(SDH_BLOCK_SIZE)
+    #define SDH_BLOCK_SIZE   512UL
+#endif
+
+#define SDH_BUFF_SIZE   SDH_BLOCK_SIZE
 
 #define SDH_SetClock SDH_Set_clock
 
@@ -354,7 +358,7 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
             {
                 if ((NuSdh->u32CmdResp0 == sdh->RESP0) && (NuSdh->u32CmdResp1 == sdh->RESP1))
                 {
-                    //LOG_W("False CMD5-RESP issue occured.\n");
+                    //LOG_W("False CMD5-RESP issue occured.");
                     ret = __LINE__;
                     goto exit_nu_sdh_sendcmd;
                 }
@@ -373,7 +377,7 @@ static int nu_sdh_sendcmd(struct rt_mmcsd_host *host, struct rt_mmcsd_cmd *cmd, 
         ret = SDH_GetBusStatus(sdh, 0);
         if (ret)
         {
-            LOG_E("ERROR: Busy %d\n", ret);
+            LOG_E("ERROR: Busy %d", ret);
             ret = __LINE__;
             goto exit_nu_sdh_sendcmd;
         }

@@ -143,7 +143,7 @@ static inline rt_err_t nu_i2c_wait_ready_with_timeout(nu_i2c_bus_t bus)
     {
         if ((rt_tick_get() - start) > bus->parent.timeout)
         {
-            LOG_E("\ni2c: timeout!\n");
+            LOG_E("i2c: timeout!");
             return -RT_ETIMEOUT;
         }
     }
@@ -172,7 +172,7 @@ static rt_err_t nu_i2c_send_address(nu_i2c_bus_t nu_i2c,
         addr1 = 0xf0 | ((msg->addr >> 7) & 0x06);
         addr2 = msg->addr & 0xff;
 
-        LOG_D("address1: %d, address2: %d\n", addr1, addr2);
+        LOG_D("address1: %d, address2: %d", addr1, addr2);
 
         ret = nu_i2c_send_data(nu_i2c, addr1);
         if (ret != RT_EOK) /* for timeout condition */
@@ -180,7 +180,7 @@ static rt_err_t nu_i2c_send_address(nu_i2c_bus_t nu_i2c,
 
         if ((I2C_GET_STATUS((I2C_T *)nu_i2c->m_module.base) != NU_I2C_MASTER_STATUS_TRANSMIT_ADDRESS_ACK) && !ignore_nack)
         {
-            LOG_E("NACK: sending first address failed\n");
+            LOG_E("NACK: sending first address failed");
 
             return -RT_EIO;
         }
@@ -191,14 +191,14 @@ static rt_err_t nu_i2c_send_address(nu_i2c_bus_t nu_i2c,
 
         if ((I2C_GET_STATUS((I2C_T *)nu_i2c->m_module.base) != NU_I2C_MASTER_STATUS_TRANSMIT_ADDRESS_ACK) && !ignore_nack)
         {
-            LOG_E("NACK: sending second address failed\n");
+            LOG_E("NACK: sending second address failed");
 
             return -RT_EIO;
         }
 
         if (flags & RT_I2C_RD)
         {
-            LOG_D("send repeated START signal\n");
+            LOG_D("send repeated START signal");
 
             I2C_SET_CONTROL_REG((I2C_T *)nu_i2c->m_module.base, I2C_CTL_STA_SI);
             ret = nu_i2c_wait_ready_with_timeout(nu_i2c);
@@ -207,7 +207,7 @@ static rt_err_t nu_i2c_send_address(nu_i2c_bus_t nu_i2c,
 
             if ((I2C_GET_STATUS((I2C_T *)nu_i2c->m_module.base) != NU_I2C_MASTER_STATUS_REPEAT_START) && !ignore_nack)
             {
-                //LOG_E("sending repeated START failed\n");
+                //LOG_E("sending repeated START failed");
 
                 return -RT_EIO;
             }
@@ -220,7 +220,7 @@ static rt_err_t nu_i2c_send_address(nu_i2c_bus_t nu_i2c,
 
             if ((I2C_GET_STATUS((I2C_T *)nu_i2c->m_module.base) != NU_I2C_MASTER_STATUS_RECEIVE_ADDRESS_ACK) && !ignore_nack)
             {
-                LOG_E("NACK: sending read address failed\n");
+                LOG_E("NACK: sending read address failed");
 
                 return -RT_EIO;
             }
@@ -242,7 +242,7 @@ static rt_err_t nu_i2c_send_address(nu_i2c_bus_t nu_i2c,
                 != ((flags & RT_I2C_RD) ? NU_I2C_MASTER_STATUS_RECEIVE_ADDRESS_ACK : NU_I2C_MASTER_STATUS_TRANSMIT_ADDRESS_ACK))
                 && !ignore_nack)
         {
-            //LOG_E("sending address failed\n");
+            //LOG_E("sending address failed");
             return -RT_EIO;
         }
     }

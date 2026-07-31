@@ -1,6 +1,9 @@
 config SOC_FAMILY_NUMICRO
     bool
 
+config EMAC_IS_SYNOPSYS
+    bool
+
 config SOC_SERIES_M460
     bool
     select ARCH_ARM_CORTEX_M4
@@ -8,6 +11,7 @@ config SOC_SERIES_M460
     select RT_USING_COMPONENTS_INIT
     select RT_USING_USER_MAIN
     select PKG_USING_NUVOTON_SERIES_DRIVER
+    select EMAC_IS_SYNOPSYS
     default y
 
     menuconfig BSP_USING_BPWM
@@ -151,6 +155,10 @@ config SOC_SERIES_M460
                 bool "Enable EADC2"
         endif
 
+    menuconfig BSP_USING_EBI
+        bool "Enable External Bus Interface(EBI)"
+        default n
+
     menuconfig BSP_USING_ECAP
         bool "Enable Enhanced Input Capture Timer(ECAP)"
 
@@ -171,10 +179,6 @@ config SOC_SERIES_M460
                 bool "Enable ECAP3"
                 select RT_USING_INPUT_CAPTURE
         endif
-
-    menuconfig BSP_USING_EBI
-        bool "Enable External Bus Interface(EBI)"
-        default n
 
     menuconfig BSP_USING_EMAC
         bool "Enable Ethernet MAC Controller(EMAC)"
@@ -796,6 +800,33 @@ config SOC_SERIES_M460
                 depends on BSP_USING_UART9 && RT_SERIAL_USING_DMA
         endif
 
+    menuconfig BSP_USING_USB
+        bool "Enable USB Interfaces"
+
+        if BSP_USING_USB
+            config BSP_USING_USBD
+                bool "Enable Full-Speed USB Device Controller(USBD)"
+
+            config BSP_USING_USBH
+                bool "Enable Full-Speed USB Host Controller(USBH)"
+
+            config BSP_USING_OTG
+                bool "Enable USB On-The-Go(OTG)"
+                select BSP_USING_USBH
+                select BSP_USING_USBD
+
+            config BSP_USING_HSUSBD
+                bool "Enable High-Speed USB Device Controller(HSUSBD)"
+
+            config BSP_USING_HSUSBH
+                bool "Enable High-Speed USB Host Controller(HSUSBH)"
+
+            config BSP_USING_HSOTG
+                bool "Enable High-Speed USB On-The-Go(HSOTG)"
+                select BSP_USING_HSUSBH
+                select BSP_USING_HSUSBD
+        endif
+
     menuconfig BSP_USING_USCI
         bool "Enable Universal Serial Control Interface Controller(USCI)"
 
@@ -847,33 +878,6 @@ config SOC_SERIES_M460
                     select BSP_USING_USPI_PDMA
                     depends on BSP_USING_USPI0
             endif
-        endif
-
-    menuconfig BSP_USING_USB
-        bool "Enable USB Interfaces"
-
-        if BSP_USING_USB
-            config BSP_USING_USBD
-                bool "Enable Full-Speed USB Device Controller(USBD)"
-
-            config BSP_USING_USBH
-                bool "Enable Full-Speed USB Host Controller(USBH)"
-
-            config BSP_USING_OTG
-                bool "Enable USB On-The-Go(OTG)"
-                select BSP_USING_USBH
-                select BSP_USING_USBD
-
-            config BSP_USING_HSUSBD
-                bool "Enable High-Speed USB Device Controller(HSUSBD)"
-
-            config BSP_USING_HSUSBH
-                bool "Enable High-Speed USB Host Controller(HSUSBH)"
-
-            config BSP_USING_HSOTG
-                bool "Enable High-Speed USB On-The-Go(HSOTG)"
-                select BSP_USING_HSUSBH
-                select BSP_USING_HSUSBD
         endif
 
     menuconfig BSP_USING_WDT

@@ -39,14 +39,13 @@ DefaultEnvironment(tools=[])
 env = Environment(tools = ['mingw'],
     AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
     CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
+    CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
     AR = rtconfig.AR, ARFLAGS = '-rc',
-    LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
-env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
+    LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS,
+    CXXCOM = '$CXX -o $TARGET -c $CXXFLAGS $_CCCOMCOM $SOURCES')
 
-if rtconfig.PLATFORM in ['iccarm']:
-    env.Replace(CCCOM = ['$CC $CFLAGS $CPPFLAGS $_CPPDEFFLAGS $_CPPINCFLAGS -o $TARGET $SOURCES'])
-    env.Replace(ARFLAGS = [''])
-    env.Replace(LINKCOM = env["LINKCOM"] + ' --map rt-thread.map')
+env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
+env['ASCOM'] = env['ASPPCOM']
 
 Export('RTT_ROOT')
 Export('rtconfig')

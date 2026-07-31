@@ -354,38 +354,38 @@ static void nu_pdma_uuart_rx_cb(void *pvOwner, uint32_t u32Events)
     rt_size_t recv_len = 0;
     rt_size_t transferred_rxbyte = 0;
     struct rt_serial_device *serial = (struct rt_serial_device *)pvOwner;
-    nu_uuart_t puuart = (nu_uuart_t)serial;
+    nu_uuart_t psNuUUart = (nu_uuart_t)serial;
     RT_ASSERT(serial);
 
     /* Get base address of uuart register */
-    UUART_T *uuart_base = (UUART_T *)puuart->m_module.base;
+    UUART_T *uuart_base = (UUART_T *)psNuUUart->m_module.base;
 
-    transferred_rxbyte = nu_pdma_transferred_byte_get(puuart->pdma_chanid_rx, puuart->rxdma_trigger_len);
+    transferred_rxbyte = nu_pdma_transferred_byte_get(psNuUUart->pdma_chanid_rx, psNuUUart->rxdma_trigger_len);
 
     if (u32Events & (NU_PDMA_EVENT_TRANSFER_DONE | NU_PDMA_EVENT_TIMEOUT))
     {
         if (u32Events & NU_PDMA_EVENT_TRANSFER_DONE)
         {
-            transferred_rxbyte = puuart->rxdma_trigger_len;
+            transferred_rxbyte = psNuUUart->rxdma_trigger_len;
         }
         else if ((u32Events & NU_PDMA_EVENT_TIMEOUT) && !UUART_GET_RX_EMPTY(uuart_base))
         {
             return;
         }
 
-        recv_len = transferred_rxbyte - puuart->rx_write_offset;
+        recv_len = transferred_rxbyte - psNuUUart->rx_write_offset;
 
-        puuart->rx_write_offset = transferred_rxbyte % puuart->rxdma_trigger_len;
+        psNuUUart->rx_write_offset = transferred_rxbyte % psNuUUart->rxdma_trigger_len;
     }
 
     if ((serial->config.bufsz == 0) && (u32Events & NU_PDMA_EVENT_TRANSFER_DONE))
     {
-        recv_len = puuart->rxdma_trigger_len;
+        recv_len = psNuUUart->rxdma_trigger_len;
     }
 
     if (recv_len)
     {
-        rt_hw_serial_isr(&puuart->dev, RT_SERIAL_EVENT_RX_DMADONE | (recv_len << 8));
+        rt_hw_serial_isr(&psNuUUart->dev, RT_SERIAL_EVENT_RX_DMADONE | (recv_len << 8));
     }
 }
 
@@ -405,16 +405,16 @@ static rt_err_t nu_pdma_uuart_tx_config(struct rt_serial_device *serial)
 
 static void nu_pdma_uuart_tx_cb(void *pvOwner, uint32_t u32Events)
 {
-    nu_uuart_t puuart = (nu_uuart_t)pvOwner;
+    nu_uuart_t psNuUUart = (nu_uuart_t)pvOwner;
 
-    RT_ASSERT(puuart);
+    RT_ASSERT(psNuUUart);
 
     // Stop DMA TX transfer
-    UUART_PDMA_DISABLE((UUART_T *)puuart->m_module.base, UUART_PDMACTL_TXPDMAEN_Msk);
+    UUART_PDMA_DISABLE((UUART_T *)psNuUUart->m_module.base, UUART_PDMACTL_TXPDMAEN_Msk);
 
     if (u32Events & NU_PDMA_EVENT_TRANSFER_DONE)
     {
-        rt_hw_serial_isr(&puuart->dev, RT_SERIAL_EVENT_TX_DMADONE);
+        rt_hw_serial_isr(&psNuUUart->dev, RT_SERIAL_EVENT_TX_DMADONE);
     }
 }
 
@@ -459,30 +459,33 @@ static rt_ssize_t nu_uuart_dma_transmit(struct rt_serial_device *serial, rt_uint
     return result;
 }
 
-static int nu_hw_uuart_dma_allocate(nu_uuart_t puuart)
+static int nu_hw_uuart_dma_allocate(nu_uuart_t psNuUUart)
 {
-    RT_ASSERT(puuart);
+    RT_ASSERT(psNuUUart);
 
     /* Allocate UUART_TX nu_dma channel */
-    if (puuart->pdma_perp_tx != NU_PDMA_UNUSED)
+    if (psNuUUart->pdma_perp_tx != NU_PDMA_UNUSED)
     {
-        puuart->pdma_chanid_tx = nu_pdma_channel_allocate(puuart->pdma_perp_tx);
-        if (puuart->pdma_chanid_tx >= 0)
+        psNuUUart->pdma_chanid_tx = nu_pdma_channel_allocate(psNuUUart->pdma_perp_tx);
+        if (psNuUUart->pdma_chanid_tx >= 0)
         {
-            puuart->dma_flag |= RT_DEVICE_FLAG_DMA_TX;
+            psNuUUart->dma_flag |= RT_DEVICE_FLAG_DMA_TX;
         }
     }
-    if (puuart->pdma_perp_rx != NU_PDMA_UNUSED)
+    if (psNuUUart->pdma_perp_rx != NU_PDMA_UNUSED)
     {
-        puuart->pdma_chanid_rx = nu_pdma_channel_allocate(puuart->pdma_perp_rx);
-        if (puuart->pdma_chanid_rx >= 0)
+        psNuUUart->pdma_chanid_rx = nu_pdma_channel_allocate(psNuUUart->pdma_perp_rx);
+        if (psNuUUart->pdma_chanid_rx >= 0)
         {
             rt_err_t ret = RT_EOK;
-            puuart->dma_flag |= RT_DEVICE_FLAG_DMA_RX;
-            ret = nu_pdma_sgtbls_allocate(puuart->pdma_chanid_rx, &puuart->pdma_rx_desc, 1);
+            psNuUUart->dma_flag |= RT_DEVICE_FLAG_DMA_RX;
+            ret = nu_pdma_sgtbls_allocate(psNuUUart->pdma_chanid_rx, &psNuUUart->pdma_rx_desc, 1);
             RT_ASSERT(ret == RT_EOK);
         }
     }
+
+    LOG_I("UUART DMA channels allocated: TX=%d, RX=%d", psNuUart->pdma_chanid_tx, psNuUart->pdma_chanid_rx);
+    LOG_I("UUART DMA RX DESC@%p", psNuUart->pdma_rx_desc);
 
     return RT_EOK;
 }

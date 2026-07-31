@@ -139,10 +139,12 @@ static rt_err_t nu_eadc_enabled(struct rt_adc_device *device, rt_int8_t channel,
             break;
         #endif
 
+        #if defined(SYS_VREFCTL_VBGFEN_Msk) 
         case EADC_CH_VBG:
             /* Force to enable internal voltage band-gap. */
             SYS->VREFCTL |= SYS_VREFCTL_VBGFEN_Msk;
             break;
+        #endif
 
         case EADC_CH_VTEMP:
             /* Enable temperature sensor */
@@ -168,10 +170,12 @@ static rt_err_t nu_eadc_enabled(struct rt_adc_device *device, rt_int8_t channel,
             break;
         #endif
 
+        #if defined(SYS_VREFCTL_VBGFEN_Msk) 
         case EADC_CH_VBG:
             /* Force to enable internal voltage band-gap. */
             SYS->VREFCTL &= ~SYS_VREFCTL_VBGFEN_Msk;
             break;
+        #endif
 
         case EADC_CH_VTEMP:
             /* Disable temperature sensor */
@@ -195,7 +199,10 @@ static rt_uint32_t _eadc_convert(nu_eadc_t psNuEADC, rt_uint32_t channel)
 {
 #define CONFIG_CONV_INTSEL             0
 #define CONFIG_EXT_SMPL_TIME           0xff
-#define CONFIG_SMPL_MODULE_ACU_TIMES   (psNuEADC->conv_power << EADC_MCTL1_ACU_Pos)
+
+#if defined(EADC_MCTL1_ACU_Pos)
+    #define CONFIG_SMPL_MODULE_ACU_TIMES   (psNuEADC->conv_power << EADC_MCTL1_ACU_Pos)
+#endif
 
     rt_uint32_t u32ConvValue, u32ModuleNum;
 
@@ -212,11 +219,13 @@ static rt_uint32_t _eadc_convert(nu_eadc_t psNuEADC, rt_uint32_t channel)
     /* Set sample module external sampling time to 0xF */
     EADC_SetExtendSampleTime((EADC_T *)psNuEADC->m_module.base, u32ModuleNum, CONFIG_EXT_SMPL_TIME);
 
+    #if defined(CONFIG_SMPL_MODULE_ACU_TIMES)
     /* Enable Accumulate feature */
     EADC_ENABLE_ACU((EADC_T *)psNuEADC->m_module.base, u32ModuleNum, CONFIG_SMPL_MODULE_ACU_TIMES);
 
     /* Enable Average feature */
     EADC_ENABLE_AVG((EADC_T *)psNuEADC->m_module.base, u32ModuleNum);
+    #endif
 
     /* Clear the A/D ADINT0 interrupt flag for safe */
     EADC_CLR_INT_FLAG((EADC_T *)psNuEADC->m_module.base, EADC_STATUS2_ADIF0_Msk);
@@ -231,11 +240,13 @@ static rt_uint32_t _eadc_convert(nu_eadc_t psNuEADC, rt_uint32_t channel)
     /* Disable the sample module interrupt. */
     EADC_DISABLE_INT((EADC_T *)psNuEADC->m_module.base, (1 << CONFIG_CONV_INTSEL));
 
+    #if defined(CONFIG_SMPL_MODULE_ACU_TIMES)
     /* Disable Average feature */
     EADC_DISABLE_AVG((EADC_T *)psNuEADC->m_module.base, u32ModuleNum);
 
     /* Disable Accumulate feature */
     EADC_DISABLE_ACU((EADC_T *)psNuEADC->m_module.base, u32ModuleNum);
+    #endif
 
     u32ConvValue = EADC_GET_CONV_DATA((EADC_T *)psNuEADC->m_module.base, u32ModuleNum);
 

@@ -7,6 +7,17 @@
 
 /* rt_vsnprintf options */
 
+#define RT_KLIBC_USING_VSNPRINTF_LONGLONG
+#define RT_KLIBC_USING_VSNPRINTF_STANDARD
+#define RT_KLIBC_USING_VSNPRINTF_DECIMAL_SPECIFIERS
+#define RT_KLIBC_USING_VSNPRINTF_EXPONENTIAL_SPECIFIERS
+#define RT_KLIBC_USING_VSNPRINTF_WRITEBACK_SPECIFIER
+#define RT_KLIBC_USING_VSNPRINTF_CHECK_NUL_IN_FORMAT_SPECIFIER
+#define RT_KLIBC_USING_VSNPRINTF_INTEGER_BUFFER_SIZE 32
+#define RT_KLIBC_USING_VSNPRINTF_DECIMAL_BUFFER_SIZE 32
+#define RT_KLIBC_USING_VSNPRINTF_FLOAT_PRECISION 6
+#define RT_KLIBC_USING_VSNPRINTF_MAX_INTEGRAL_DIGITS_FOR_DECIMAL 9
+#define RT_KLIBC_USING_VSNPRINTF_LOG10_TAYLOR_TERMS 4
 /* end of rt_vsnprintf options */
 
 /* rt_vsscanf options */
@@ -72,10 +83,10 @@
 #define RT_HOOK_USING_FUNC_PTR
 #define RT_USING_IDLE_HOOK
 #define RT_IDLE_HOOK_LIST_SIZE 4
-#define IDLE_THREAD_STACK_SIZE 1024
+#define IDLE_THREAD_STACK_SIZE 2048
 #define RT_USING_TIMER_SOFT
 #define RT_TIMER_THREAD_PRIO 4
-#define RT_TIMER_THREAD_STACK_SIZE 1024
+#define RT_TIMER_THREAD_STACK_SIZE 2048
 
 /* kservice options */
 
@@ -172,6 +183,8 @@
 #define RT_USING_FAL
 #define FAL_USING_DEBUG
 #define FAL_PART_HAS_TABLE_CFG
+#define FAL_USING_SFUD_PORT
+#define FAL_USING_NOR_FLASH_DEV_NAME "norflash0"
 #define FAL_DEV_NAME_MAX 24
 #define FAL_DEV_BLK_MAX 6
 
@@ -179,11 +192,88 @@
 
 #define RT_USING_DEVICE_IPC
 #define RT_UNAMED_PIPE_NUMBER 64
+#define RT_USING_SYSTEM_WORKQUEUE
+#define RT_SYSTEM_WORKQUEUE_STACKSIZE 4096
+#define RT_SYSTEM_WORKQUEUE_PRIORITY 23
 #define RT_USING_SERIAL
 #define RT_USING_SERIAL_V1
 #define RT_SERIAL_USING_DMA
 #define RT_SERIAL_RB_BUFSZ 2048
+#define RT_USING_CAN
+#define RT_CANMSG_BOX_SZ 16
+#define RT_CANSND_BOX_NUM 1
+#define RT_CANSND_MSG_TIMEOUT 100
+#define RT_CAN_NB_TX_FIFO_SIZE 256
+#define RT_USING_I2C
+#define RT_USING_I2C_BITOPS
+#define RT_USING_ADC
+#define RT_USING_PWM
+#define RT_USING_PULSE_ENCODER
+#define RT_USING_SDIO
+#define RT_SDIO_STACK_SIZE 1024
+#define RT_SDIO_THREAD_PRIORITY 15
+#define RT_MMCSD_STACK_SIZE 1024
+#define RT_MMCSD_THREAD_PRIORITY 22
+#define RT_MMCSD_MAX_PARTITION 16
+#define RT_USING_SPI
+#define RT_USING_SPI_ISR
+#define RT_USING_QSPI
+#define RT_USING_SFUD
+#define RT_SFUD_USING_SFDP
+#define RT_SFUD_USING_FLASH_INFO_TABLE
+#define RT_SFUD_USING_QSPI
+#define RT_SFUD_SPI_MAX_HZ 50000000
+#define RT_USING_AUDIO
+#define RT_AUDIO_REPLAY_MP_BLOCK_SIZE 4096
+#define RT_AUDIO_REPLAY_MP_BLOCK_COUNT 2
+#define RT_AUDIO_RECORD_PIPE_SIZE 2048
+#define RT_USING_SENSOR
+#define RT_USING_SENSOR_V2
+#define RT_USING_SENSOR_CMD
+#define RT_USING_TOUCH
+#define RT_USING_BLK
+
+/* Partition Types */
+
+#define RT_BLK_PARTITION_DFS
+#define RT_BLK_PARTITION_EFI
+/* end of Partition Types */
 #define RT_USING_PIN
+#define RT_USING_CHERRYUSB
+#define RT_CHERRYUSB_DEVICE
+#define RT_CHERRYUSB_DEVICE_CUSTOM
+#define RT_CHERRYUSB_DEVICE_HID
+#define CONFIG_USBDEV_REQUEST_BUFFER_LEN 512
+#define CONFIG_USBDEV_MSC_MAX_BUFSIZE 512
+#define RT_CHERRYUSB_DEVICE_TEMPLATE_HID_MOUSE
+#define RT_CHERRYUSB_HOST
+#define RT_CHERRYUSB_HOST_EHCI_CUSTOM
+#define RT_CHERRYUSB_HOST_CDC_ACM
+#define RT_CHERRYUSB_HOST_HID
+#define RT_CHERRYUSB_HOST_MSC
+#define RT_CHERRYUSB_HOST_CDC_ECM
+#define RT_CHERRYUSB_HOST_CDC_RNDIS
+#define RT_CHERRYUSB_HOST_CDC_NCM
+#define RT_CHERRYUSB_HOST_ASIX
+#define RT_CHERRYUSB_HOST_RTL8152
+#define CONFIG_USBHOST_SERIAL
+#define CONFIG_USBHOST_PLATFORM_CDC_ECM
+#define CONFIG_USBHOST_PLATFORM_CDC_RNDIS
+#define CONFIG_USBHOST_PLATFORM_CDC_NCM
+#define CONFIG_USBHOST_PLATFORM_ASIX
+#define CONFIG_USBHOST_PLATFORM_RTL8152
+#define CONFIG_USBHOST_PSC_PRIO 0
+#define CONFIG_USBHOST_PSC_STACKSIZE 4096
+#define CONFIG_USBHOST_REQUEST_BUFFER_LEN 512
+#define CONFIG_USBHOST_CONTROL_TRANSFER_TIMEOUT 500
+#define CONFIG_USBHOST_SERIAL_RX_SIZE 2048
+#define RT_LWIP_PBUF_POOL_BUFSIZE 1600
+#define CONFIG_USB_DFS_MOUNT_POINT "/"
+
+/* Select USB host template, please select class driver first */
+
+#define CONFIG_TEST_USBH_HID 0
+/* end of Select USB host template, please select class driver first */
 /* end of Device Drivers */
 
 /* C/C++ and POSIX layer */
@@ -213,6 +303,69 @@
 
 /* Network */
 
+#define RT_USING_SAL
+#define SAL_INTERNET_CHECK
+#define SOCKET_TABLE_STEP_LEN 4
+
+/* Docking with protocol stacks */
+
+#define SAL_USING_LWIP
+/* end of Docking with protocol stacks */
+#define SAL_USING_POSIX
+#define RT_USING_NETDEV
+#define NETDEV_USING_IFCONFIG
+#define NETDEV_USING_PING
+#define NETDEV_USING_NETSTAT
+#define NETDEV_USING_AUTO_DEFAULT
+#define NETDEV_IPV4 1
+#define NETDEV_IPV6 0
+#define RT_USING_LWIP
+#define RT_USING_LWIP212
+#define RT_USING_LWIP_VER_NUM 0x20102
+#define RT_LWIP_MEM_ALIGNMENT 4
+#define RT_LWIP_IGMP
+#define RT_LWIP_ICMP
+#define RT_LWIP_DNS
+#define RT_LWIP_DHCP
+#define IP_SOF_BROADCAST 1
+#define IP_SOF_BROADCAST_RECV 1
+
+/* Static IPv4 Address */
+
+#define RT_LWIP_IPADDR "192.168.1.30"
+#define RT_LWIP_GWADDR "192.168.1.1"
+#define RT_LWIP_MSKADDR "255.255.255.0"
+/* end of Static IPv4 Address */
+#define RT_LWIP_UDP
+#define RT_LWIP_TCP
+#define RT_LWIP_RAW
+#define RT_MEMP_NUM_NETCONN 8
+#define RT_LWIP_PBUF_NUM 16
+#define RT_LWIP_RAW_PCB_NUM 4
+#define RT_LWIP_UDP_PCB_NUM 4
+#define RT_LWIP_TCP_PCB_NUM 4
+#define RT_LWIP_TCP_SEG_NUM 40
+#define RT_LWIP_TCP_SND_BUF 8196
+#define RT_LWIP_TCP_WND 8196
+#define RT_LWIP_TCPTHREAD_PRIORITY 10
+#define RT_LWIP_TCPTHREAD_MBOX_SIZE 8
+#define RT_LWIP_TCPTHREAD_STACKSIZE 4096
+#define LWIP_NO_RX_THREAD
+#define LWIP_NO_TX_THREAD
+#define RT_LWIP_ETHTHREAD_PRIORITY 12
+#define RT_LWIP_ETHTHREAD_STACKSIZE 4096
+#define RT_LWIP_ETHTHREAD_MBOX_SIZE 8
+#define LWIP_NETIF_STATUS_CALLBACK 1
+#define LWIP_NETIF_LINK_CALLBACK 1
+#define RT_LWIP_NETIF_NAMESIZE 6
+#define SO_REUSE 1
+#define LWIP_SO_RCVTIMEO 1
+#define LWIP_SO_SNDTIMEO 1
+#define LWIP_SO_RCVBUF 1
+#define LWIP_SO_LINGER 0
+#define RT_LWIP_NETIF_LOOPBACK
+#define LWIP_NETIF_LOOPBACK 1
+#define RT_LWIP_USING_PING
 /* end of Network */
 
 /* Memory protection */
@@ -299,26 +452,277 @@
 /* end of Tmpfs Testcase */
 /* end of RT-Thread Utestcases */
 
+/* RT-Thread online packages */
+
+/* IoT - internet of things */
+
+
+/* Wi-Fi */
+
+/* Marvell WiFi */
+
+/* end of Marvell WiFi */
+
+/* Wiced WiFi */
+
+/* end of Wiced WiFi */
+
+/* CYW43012 WiFi */
+
+/* end of CYW43012 WiFi */
+
+/* BL808 WiFi */
+
+/* end of BL808 WiFi */
+
+/* CYW43439 WiFi */
+
+/* end of CYW43439 WiFi */
+/* end of Wi-Fi */
+#define PKG_USING_NETUTILS
+#define PKG_USING_NETUTILS_LATEST_VERSION
+#define PKG_NETUTILS_VER_NUM 0x99999
+
+/* IoT Cloud */
+
+/* end of IoT Cloud */
+#define PKG_USING_RYANMQTT
+#define PKG_USING_RYANMQTT_EXAMPLE
+#define PKG_USING_RYANMQTT_LATEST_VERSION
+#define PKG_RYANMQTT_VER_NUM 0xfff
+/* end of IoT - internet of things */
+
+/* security packages */
+
+/* end of security packages */
+
+/* language packages */
+
+/* JSON: JavaScript Object Notation, a lightweight data-interchange format */
+
+/* end of JSON: JavaScript Object Notation, a lightweight data-interchange format */
+
+/* XML: Extensible Markup Language */
+
+/* end of XML: Extensible Markup Language */
+/* end of language packages */
+
+/* multimedia packages */
+
+/* LVGL: powerful and easy-to-use embedded GUI library */
+
+/* end of LVGL: powerful and easy-to-use embedded GUI library */
+
+/* u8g2: a monochrome graphic library */
+
+/* end of u8g2: a monochrome graphic library */
+/* end of multimedia packages */
+
+/* tools packages */
+
+/* end of tools packages */
+
+/* system packages */
+
+/* enhanced kernel services */
+
+/* end of enhanced kernel services */
+
+/* acceleration: Assembly language or algorithmic acceleration packages */
+
+/* end of acceleration: Assembly language or algorithmic acceleration packages */
+
+/* CMSIS: ARM Cortex-M Microcontroller Software Interface Standard */
+
+/* end of CMSIS: ARM Cortex-M Microcontroller Software Interface Standard */
+
+/* Micrium: Micrium software products porting for RT-Thread */
+
+/* end of Micrium: Micrium software products porting for RT-Thread */
+#define PKG_CHERRYUSB_DEVICE_SPEED_HS
+/* end of system packages */
+
+/* peripheral libraries and drivers */
+
+/* HAL & SDK Drivers */
+
+/* STM32 HAL & SDK Drivers */
+
+/* end of STM32 HAL & SDK Drivers */
+
+/* Infineon HAL Packages */
+
+/* end of Infineon HAL Packages */
+
+/* Kendryte SDK */
+
+/* end of Kendryte SDK */
+
+/* WCH HAL & SDK Drivers */
+
+/* end of WCH HAL & SDK Drivers */
+
+/* AT32 HAL & SDK Drivers */
+
+/* end of AT32 HAL & SDK Drivers */
+
+/* HC32 DDL Drivers */
+
+/* end of HC32 DDL Drivers */
+
+/* NXP HAL & SDK Drivers */
+
+/* end of NXP HAL & SDK Drivers */
+
+/* NUVOTON Drivers */
+
+#define PKG_USING_NUVOTON_SERIES_DRIVER
+#define PKG_USING_NUVOTON_SERIES_DRIVER_LATEST_VERSION
+/* end of NUVOTON Drivers */
+
+/* GD32 Drivers */
+
+/* end of GD32 Drivers */
+
+/* HPMicro SDK */
+
+/* end of HPMicro SDK */
+
+/* FT32 HAL & SDK Drivers */
+
+/* end of FT32 HAL & SDK Drivers */
+
+/* NOVOSNS Drivers */
+
+/* end of NOVOSNS Drivers */
+/* end of HAL & SDK Drivers */
+
+/* sensors drivers */
+
+/* end of sensors drivers */
+
+/* touch drivers */
+
+/* end of touch drivers */
+#define PKG_USING_AT24CXX
+
+/* Select the Type of AT24CXX EEPROM */
+
+#define PKG_AT24CXX_EE_TYPE_AT24C02
+#define PKG_AT24CXX_EE_TYPE 1
+/* end of Select the Type of AT24CXX EEPROM */
+#define PKG_USING_AT24CXX_LATEST_VERSION
+/* end of peripheral libraries and drivers */
+
+/* AI packages */
+
+/* end of AI packages */
+
+/* Signal Processing and Control Algorithm Packages */
+
+/* end of Signal Processing and Control Algorithm Packages */
+
+/* miscellaneous packages */
+
+/* project laboratory */
+
+/* end of project laboratory */
+
+/* samples: kernel and components samples */
+
+/* end of samples: kernel and components samples */
+
+/* entertainment: terminal games and other interesting software packages */
+
+/* end of entertainment: terminal games and other interesting software packages */
+/* end of miscellaneous packages */
+
+/* Arduino libraries */
+
+
+/* Projects and Demos */
+
+/* end of Projects and Demos */
+
+/* Sensors */
+
+/* end of Sensors */
+
+/* Display */
+
+/* end of Display */
+
+/* Timing */
+
+/* end of Timing */
+
+/* Data Processing */
+
+/* end of Data Processing */
+
+/* Data Storage */
+
+/* Communication */
+
+/* end of Communication */
+
+/* Device Control */
+
+/* end of Device Control */
+
+/* Other */
+
+/* end of Other */
+
+/* Signal IO */
+
+/* end of Signal IO */
+
+/* Uncategorized */
+
+/* end of Arduino libraries */
+/* end of RT-Thread online packages */
+
 /* Hardware Drivers Config */
 
 /* On-chip Peripheral Drivers */
 
 #define SOC_FAMILY_NUMICRO
 #define SOC_SERIES_M3331
+#define BSP_USING_BPWM
+#define BSP_USING_BPWM0
+#define BSP_USING_CANFD
+#define BSP_USING_CANFD0
+#define BSP_USING_EADC
+#define BSP_USING_EADC0
+#define BSP_USING_EPWM
+#define BSP_USING_EPWM1
+#define BSP_USING_EQEI
+#define BSP_USING_EQEI0
 #define BSP_USING_FMC
 #define BSP_USING_GPIO
+#define BSP_USING_I2C
+#define BSP_USING_I2C0
+#define BSP_USING_I2C1
+#define BSP_USING_I2C2
 #define BSP_USING_PDMA
 #define BSP_USING_PDMA0
 #define NU_PDMA_SGTBL_POOL_SIZE 16
 #define NU_PDMA_MEMFUN_ACTOR_MAX 2
+#define BSP_USING_QSPI
+#define BSP_USING_QSPI0
+#define BSP_USING_SPI
+#define BSP_USING_SPI1
 #define BSP_USING_UART
 #define BSP_USING_UART0
+#define BSP_USING_UART2
+#define BSP_USING_HSUSBH
 /* end of On-chip Peripheral Drivers */
 
 /* On-board Peripheral Drivers */
 
 #define BOARD_USING_NULINKME
-#define BOARD_USING_USB_NONE
+#define BOARD_USING_HSUSBH
 /* end of On-board Peripheral Drivers */
 
 /* Board extended module drivers */
@@ -327,8 +731,6 @@
 /* end of Board extended module drivers */
 
 /* Nuvoton Packages Config */
-
-#define NU_PKG_USING_UTILS
 
 /* Sensors */
 
@@ -354,6 +756,10 @@
 
 #define NU_PKG_USING_NUUTILS
 /* end of Others */
+
+/* Demo */
+
+/* end of Demo */
 /* end of Nuvoton Packages Config */
 /* end of Hardware Drivers Config */
 

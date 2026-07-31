@@ -12,10 +12,11 @@ CPPPATH = [cwd, os.path.join(cwd, 'glue'), os.path.join(cwd, 'ehci')]
 
 driver_deps = [
     ('glue/glue_nuvoton.c',   ['RT_USING_CHERRYUSB']),
-    ('glue/usb_glue_m5531.c', ['RT_USING_CHERRYUSB', 'SOC_SERIES_M5531']),
-    ('glue/usb_glue_m460.c',  ['RT_USING_CHERRYUSB', 'SOC_SERIES_M460']),
-    ('nuvoton/usb_dc_fs.c',   ['RT_CHERRYUSB_DEVICE']),
-    ('nuvoton/usb_dc_hs.c',   ['RT_CHERRYUSB_DEVICE']),
+    ('glue/usb_glue_m5531.c', ['RT_USING_CHERRYUSB',  'SOC_SERIES_M5531']),
+    ('glue/usb_glue_m460.c',  ['RT_USING_CHERRYUSB',  'SOC_SERIES_M460']),
+    ('glue/usb_glue_m3331.c', ['RT_USING_CHERRYUSB',  'SOC_SERIES_M3331']),
+    ('nuvoton/usb_dc_hs.c',   ['RT_CHERRYUSB_DEVICE', 'BSP_USING_HSUSBD']),
+    ('nuvoton/usb_dc_fs.c',   ['RT_CHERRYUSB_DEVICE', 'BSP_USING_USBD']),
 ]
 
 for file_name, depend in driver_deps:

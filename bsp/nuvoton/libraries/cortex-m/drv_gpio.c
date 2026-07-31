@@ -130,9 +130,10 @@ DEFINE_GPIO_IRQ_HANDLER(N)
 static rt_err_t nu_port_check(rt_int32_t pin)
 {
     if (NU_GET_PORT(pin) >= NU_PORT_CNT)
+    {
+        LOG_E("Invalid pin %d, port index %d is out of range.", pin, NU_GET_PORT(pin));
         return -(RT_ERROR);
-    else if ((NU_GET_PORT(pin) == (NU_PORT_CNT-1)))
-        return -(RT_ERROR);
+    }
 
     return RT_EOK;
 }
@@ -142,8 +143,8 @@ static rt_int32_t nu_find_irqindex(rt_uint32_t pin_index)
     rt_int32_t irqindex;
     rt_int32_t u32PinIrqStatus = g_u32PinIrqMask;
 
-    // Find index of pin is attached in pool.
-    while ((irqindex = nu_ctz(u32PinIrqStatus)) < IRQ_MAX_NUM) // Count Trailing Zeros == > Find First One
+    /* Find the index where the pin is attached in the pool. */
+    while ((irqindex = nu_ctz(u32PinIrqStatus)) < IRQ_MAX_NUM) /* Count Trailing Zeros -> Find First One */
     {
         if (pin_irq_hdr_tab[irqindex].pin == pin_index)
             return irqindex;
@@ -159,7 +160,7 @@ static void pin_irq_hdr(rt_uint32_t irq_status, rt_uint32_t port_index)
     rt_int32_t irqindex, i;
     rt_int32_t pinindex = port_index * GPIO_PIN_MAX ;
 
-    while ((i = nu_ctz(irq_status)) < GPIO_PIN_MAX)// Count Trailing Zeros == > Find First One
+    while ((i = nu_ctz(irq_status)) < GPIO_PIN_MAX) /* Count Trailing Zeros -> Find First One */
     {
         int pin_mask = (1 << i);
         irqindex = nu_find_irqindex(pinindex + i);
@@ -177,18 +178,20 @@ static void pin_irq_hdr(rt_uint32_t irq_status, rt_uint32_t port_index)
 static rt_base_t nu_gpio_pin_get(const char *name)
 {
     char port;
+    rt_base_t port_index;
     rt_base_t index = 2;
     rt_base_t number = 0;
 
-    /* Get pin number by name, such as PA.0, PF12 */
+    /* Get pin number by name */
     if ((name == RT_NULL) || (name[0] != 'P' && name[0] != 'p'))
         return -(RT_EINVAL);
 
     port = name[1];
-    if ((port >= 'a') && (port <= 'h'))
+    if ((port >= 'a') && (port <= 'z'))
         port -= ('a' - 'A');
 
-    if ((port < 'A') || (port > 'H'))
+    port_index = port - 'A';
+    if ((port_index < 0) || (port_index >= NU_PORT_CNT))
         return -(RT_EINVAL);
 
     if (name[index] == '.')
@@ -209,7 +212,7 @@ static rt_base_t nu_gpio_pin_get(const char *name)
         index ++;
     } while (name[index] != '\0');
 
-    return ((port - 'A') << 4) + number;
+    return (port_index << 4) + number;
 }
 
 static void nu_gpio_mode(struct rt_device *device, rt_base_t pin, rt_uint8_t mode)
@@ -217,7 +220,9 @@ static void nu_gpio_mode(struct rt_device *device, rt_base_t pin, rt_uint8_t mod
     GPIO_T *PORT;
 
     if (nu_port_check(pin))
+    {
         return;
+    }
 
     PORT = (GPIO_T *)(GPIOA_BASE + (NU_GET_PORT(pin) * PORT_OFFSET));
 
@@ -250,7 +255,9 @@ static void nu_gpio_mode(struct rt_device *device, rt_base_t pin, rt_uint8_t mod
 static void nu_gpio_write(struct rt_device *device, rt_base_t pin, rt_uint8_t value)
 {
     if (nu_port_check(pin))
+    {
         return;
+    }
 
     GPIO_PIN_DATA(NU_GET_PORT(pin), NU_GET_PINS(pin)) = value;
 }
@@ -271,16 +278,18 @@ static rt_err_t nu_gpio_attach_irq(struct rt_device *device, rt_base_t pin, rt_u
     rt_int32_t irqindex;
 
     if (nu_port_check(pin))
+    {
         return -(RT_ERROR);
+    }
 
     level = rt_hw_interrupt_disable();
 
-    // Find index of pin is attached in pool.
+    /* Find the index where the pin is already attached in the pool. */
     if ((irqindex = nu_find_irqindex(pin)) >= 0)
         goto exit_nu_gpio_attach_irq;
 
-    // Find available index of pin in pool.
-    if ((irqindex = nu_cto(g_u32PinIrqMask)) < IRQ_MAX_NUM)  // Count Trailing Ones == > Find First Zero
+    /* Find an available index in the pool. */
+    if ((irqindex = nu_cto(g_u32PinIrqMask)) < IRQ_MAX_NUM)  /* Count Trailing Ones -> Find First Zero */
         goto exit_nu_gpio_attach_irq;
 
     rt_hw_interrupt_enable(level);
@@ -307,14 +316,16 @@ static rt_err_t nu_gpio_detach_irq(struct rt_device *device, rt_base_t pin)
     rt_int32_t u32PinIrqStatus;
 
     if (nu_port_check(pin))
+    {
         return -(RT_ERROR);
+    }
 
     level = rt_hw_interrupt_disable();
 
     u32PinIrqStatus = g_u32PinIrqMask;
 
-    // Find index of pin is attached in pool.
-    while ((irqindex = nu_ctz(u32PinIrqStatus)) < IRQ_MAX_NUM)// Count Trailing Zeros == > Find First One
+    /* Find the index where the pin is attached in the pool. */
+    while ((irqindex = nu_ctz(u32PinIrqStatus)) < IRQ_MAX_NUM) /* Count Trailing Zeros -> Find First One */
     {
         if (pin_irq_hdr_tab[irqindex].pin == pin)
         {
@@ -341,7 +352,9 @@ static rt_err_t nu_gpio_irq_enable(struct rt_device *device, rt_base_t pin, rt_u
     rt_err_t ret = RT_EOK;
 
     if (nu_port_check(pin))
+    {
         return -(RT_ERROR);
+    }
 
     level = rt_hw_interrupt_disable();
 
@@ -367,7 +380,10 @@ static rt_err_t nu_gpio_irq_enable(struct rt_device *device, rt_base_t pin, rt_u
         else if (pin_irq_hdr_tab[irqindex].mode == PIN_IRQ_MODE_LOW_LEVEL)
             u32IntAttribs = GPIO_INT_LOW;
         else
+        {
+            ret = RT_ERROR;
             goto exit_nu_gpio_irq_enable;
+        }
 
         GPIO_EnableInt(PORT, NU_GET_PINS(pin), u32IntAttribs);
 

@@ -103,7 +103,7 @@ static rt_err_t nu_bpwm_set(struct rt_device_pwm *device, struct rt_pwm_configur
     if (BPWM_GET_CNR(pwm_base, pwm_channel) != 0)
     {
         pwm_period = ((nu_bpwm_t)device)->pwm_period_time;
-        LOG_I("%s output frequency is determined, user can only change the duty\n", ((nu_bpwm_t)device)->m_module.name);
+        LOG_I("%s output frequency is determined, user can only change the duty", ((nu_bpwm_t)device)->m_module.name);
     }
     else
     {
@@ -140,7 +140,7 @@ static rt_err_t nu_bpwm_get(struct rt_device_pwm *device, struct rt_pwm_configur
     ((struct rt_pwm_configuration *)configuration)->period = pwm_real_period;
     ((struct rt_pwm_configuration *)configuration)->pulse = pwm_real_duty;
 
-    LOG_I("%s %d %d %d\n", ((nu_bpwm_t)device)->m_module.name, configuration->channel, configuration->period, configuration->pulse);
+    LOG_I("%s %d %d %d", ((nu_bpwm_t)device)->m_module.name, configuration->channel, configuration->period, configuration->pulse);
 
     return RT_EOK;
 }

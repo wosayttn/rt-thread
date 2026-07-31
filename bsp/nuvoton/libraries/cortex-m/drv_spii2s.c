@@ -13,11 +13,6 @@
 #define DBG_TAG LOG_TAG
 #include "drv_log.h"
 
-#define DBG_ENABLE
-#define DBG_LEVEL DBG_LOG
-#define DBG_SECTION_NAME  "spii2s"
-#define DBG_COLOR
-
 #define DEFINE_NU_SPII2S(_idx)                \
     {                                         \
         .m_module = {                         \
@@ -616,6 +611,8 @@ static rt_err_t nu_hw_spii2s_pdma_allocate(nu_i2s_dai_t psNuSPII2sDai)
     {
         goto nu_hw_spii2s_pdma_allocate;
     }
+
+    LOG_I("Allocate PDMA channel %d for I2S DAI %d", psNuSPII2sDai->pdma_chanid, psNuSPII2sDai->pdma_perp);
 
     return RT_EOK;
 

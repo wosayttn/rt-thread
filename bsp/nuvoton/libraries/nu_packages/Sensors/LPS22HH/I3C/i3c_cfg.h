@@ -1,11 +1,8 @@
-/**************************************************************************//**
- * @file     i3c_cfg.c
- * @version  V3.00
- * @brief    i3c_cfg header file.
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
  *
- * @copyright SPDX-License-Identifier: Apache-2.0
- * @copyright Copyright (C) 2025 Nuvoton Technology Corp. All rights reserved.
- ******************************************************************************/
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #ifndef __I3C_CFG_H__
 #define __I3C_CFG_H__

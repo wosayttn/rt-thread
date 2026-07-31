@@ -36,7 +36,6 @@ struct nu_spi
     int8_t  pdma_chanid_rx;
     rt_sem_t m_psSemBus;
 #endif
-    struct rt_qspi_configuration  configuration;
 };
 
 typedef struct nu_spi *nu_spi_t;

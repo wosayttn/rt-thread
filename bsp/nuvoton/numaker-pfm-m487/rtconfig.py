@@ -28,7 +28,6 @@ BUILD = ''
 
 if PLATFORM == 'gcc':
     # toolchains
-
     PREFIX = 'arm-none-eabi-'
     CC = PREFIX + 'gcc'
     AS = PREFIX + 'gcc'

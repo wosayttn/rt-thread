@@ -13,11 +13,6 @@
 #define DBG_TAG LOG_TAG
 #include "drv_log.h"
 
-#define DBG_ENABLE
-#define DBG_LEVEL DBG_LOG
-#define DBG_SECTION_NAME  "i2s"
-#define DBG_COLOR
-
 #define DEFINE_NU_I2S(_idx)                         \
     {                                               \
         .m_module = {                               \
@@ -76,7 +71,7 @@ static void nu_pdma_i2s_rx_cb(void *pvUserData, uint32_t u32EventFilter)
 
     RT_ASSERT(psNuI2s != RT_NULL);
     psNuI2sDai = &psNuI2s->i2s_dais[NU_I2S_DAI_CAPTURE];
-    
+
     if (u32EventFilter & NU_PDMA_EVENT_TRANSFER_DONE)
     {
         // Report a buffer ready.
@@ -236,7 +231,7 @@ static rt_err_t nu_i2s_dai_setup(nu_i2s_t psNuI2s, struct rt_audio_configure *pc
         /* Open I2S0 interface and set to slave mode, stereo channel, I2S format */
         if (pconfig->samplerate != real_samplerate)
         {
-            LOG_W("Real sample rate: %d Hz != preferred sample rate: %d Hz\n", real_samplerate, pconfig->samplerate);
+            LOG_W("Real sample rate: %d Hz != preferred sample rate: %d Hz", real_samplerate, pconfig->samplerate);
         }
         I2S_EnableMCLK((I2S_T *)psNuI2s->m_module.base, 12000000);
 
@@ -593,7 +588,7 @@ int rt_hw_i2s_init(void)
             psNuI2sDai->fifo = pu8ptr;
             rt_memset(pu8ptr, 0, NU_I2S_DMA_FIFO_SIZE);
             RT_ASSERT(psNuI2sDai->fifo != RT_NULL);
-            LOG_D("psNuI2sDai->fifo=%08x\n", (uint32_t)psNuI2sDai->fifo);
+            LOG_D("psNuI2sDai->fifo=%08x", (uint32_t)psNuI2sDai->fifo);
 
             psNuI2sDai->pdma_chanid = -1;
             psNuI2sDai->fifo_block_idx = 0;

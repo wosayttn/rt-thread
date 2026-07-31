@@ -198,7 +198,7 @@ static void soft_time_freqeucy_change(uint32_t new_hz, soft_time_handle_t *const
 
     if (corner_case)
     {
-        LOG_W("pm frequency change cause wdt internal left iterations convert to 0.\n\r  \
+        LOG_W("pm frequency change cause wdt internal left iterations convert to 0.\r  \
                wdt driver will add another 1 iteration for this corner case.");
     }
 }
@@ -208,7 +208,7 @@ static void hw_wdt_init(void)
 {
     if (WDT_GET_RESET_FLAG(WDT))
     {
-        LOG_W("System re-boots from watchdog timer reset.\n");
+        LOG_W("System re-boots from watchdog timer reset.");
         WDT_CLEAR_RESET_FLAG(WDT);
     }
 

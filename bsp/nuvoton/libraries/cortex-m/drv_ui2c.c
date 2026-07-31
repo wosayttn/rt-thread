@@ -45,8 +45,8 @@ struct nu_ui2c
 typedef struct nu_ui2c *nu_ui2c_t;
 
 /* Static Function Prototypes ------------------------------------------------*/
-static rt_size_t nu_ui2c_mst_xfer(struct rt_i2c_bus_device *bus, struct rt_i2c_msg msgs[], rt_uint32_t num);
-static rt_err_t nu_ui2c_control(struct rt_i2c_bus_device *bus, rt_uint32_t u32Cmd, rt_uint32_t u32Value);
+static rt_ssize_t nu_ui2c_mst_xfer(struct rt_i2c_bus_device *bus, struct rt_i2c_msg msgs[], rt_uint32_t num);
+static rt_err_t nu_ui2c_control(struct rt_i2c_bus_device *bus, int cmd, void *args);
 
 /* Static Variables ----------------------------------------------------------*/
 static struct nu_ui2c nu_ui2c_arr [ ] =
@@ -67,15 +67,15 @@ static const struct rt_i2c_bus_device_ops nu_ui2c_ops =
 };
 
 /* Functions Implementation --------------------------------------------------*/
-static rt_err_t nu_ui2c_control(struct rt_i2c_bus_device *bus, rt_uint32_t u32Cmd, rt_uint32_t u32Value)
+static rt_err_t nu_ui2c_control(struct rt_i2c_bus_device *bus, int cmd, void *args)
 {
     nu_ui2c_t psNuUi2c = (nu_ui2c_t) bus;
     RT_ASSERT(bus);
 
-    switch (u32Cmd)
+    switch (cmd)
     {
     case RT_I2C_DEV_CTRL_CLK:
-        UI2C_SetBusClockFreq((UI2C_T *)psNuUi2c->m_module.base, u32Value);
+        UI2C_SetBusClockFreq((UI2C_T *)psNuUi2c->m_module.base, (rt_uint32_t)(rt_ubase_t)args);
         break;
     default:
         return -RT_EIO;
@@ -127,7 +127,7 @@ static rt_err_t nu_ui2c_send_address(nu_ui2c_t psNuUi2c,
         addr1 = ((msg->addr >> 8) | SLV_10BIT_ADDR) << 1;
         addr2 = msg->addr & 0xff;
 
-        LOG_D("addr1: %d, addr2: %d\n", addr1, addr2);
+        LOG_D("addr1: %d, addr2: %d", addr1, addr2);
 
         ret = nu_ui2c_send_data(psNuUi2c, addr1);
         if (ret != RT_EOK) //for timeout condition
@@ -135,7 +135,7 @@ static rt_err_t nu_ui2c_send_address(nu_ui2c_t psNuUi2c,
 
         if (((UI2C_GET_PROT_STATUS((UI2C_T *)psNuUi2c->m_module.base) & UI2C_PROTSTS_ACKIF_Msk) != UI2C_PROTSTS_ACKIF_Msk) && !ignore_nack)
         {
-            LOG_E("NACK: sending first addr\n");
+            LOG_E("NACK: sending first addr");
 
             return -RT_EIO;
         }
@@ -147,7 +147,7 @@ static rt_err_t nu_ui2c_send_address(nu_ui2c_t psNuUi2c,
 
         if (((UI2C_GET_PROT_STATUS((UI2C_T *)psNuUi2c->m_module.base) & UI2C_PROTSTS_ACKIF_Msk) != UI2C_PROTSTS_ACKIF_Msk) && !ignore_nack)
         {
-            LOG_E("NACK: sending second addr\n");
+            LOG_E("NACK: sending second addr");
 
             return -RT_EIO;
         }
@@ -155,7 +155,7 @@ static rt_err_t nu_ui2c_send_address(nu_ui2c_t psNuUi2c,
 
         if (flags & RT_I2C_RD)
         {
-            LOG_D("send repeated start condition\n");
+            LOG_D("send repeated start condition");
 
             UI2C_SET_CONTROL_REG((UI2C_T *)psNuUi2c->m_module.base, (UI2C_CTL_PTRG | UI2C_CTL_STA));
             ret = nu_ui2c_wait_ready_with_timeout(psNuUi2c);
@@ -164,7 +164,7 @@ static rt_err_t nu_ui2c_send_address(nu_ui2c_t psNuUi2c,
 
             if (((UI2C_GET_PROT_STATUS((UI2C_T *)psNuUi2c->m_module.base) & UI2C_PROTSTS_STARIF_Msk) != UI2C_PROTSTS_STARIF_Msk) && !ignore_nack)
             {
-                LOG_E("sending repeated START fail\n");
+                LOG_E("sending repeated START fail");
 
                 return -RT_EIO;
             }
@@ -178,7 +178,7 @@ static rt_err_t nu_ui2c_send_address(nu_ui2c_t psNuUi2c,
 
             if (((UI2C_GET_PROT_STATUS((UI2C_T *)psNuUi2c->m_module.base) & UI2C_PROTSTS_ACKIF_Msk) != UI2C_PROTSTS_ACKIF_Msk) && !ignore_nack)
             {
-                LOG_E("NACK: sending repeated addr\n");
+                LOG_E("NACK: sending repeated addr");
                 return -RT_EIO;
             }
             UI2C_CLR_PROT_INT_FLAG((UI2C_T *)psNuUi2c->m_module.base, UI2C_PROTSTS_ACKIF_Msk);
@@ -199,7 +199,7 @@ static rt_err_t nu_ui2c_send_address(nu_ui2c_t psNuUi2c,
         if (((UI2C_GET_PROT_STATUS((UI2C_T *)psNuUi2c->m_module.base) & UI2C_PROTSTS_ACKIF_Msk) != UI2C_PROTSTS_ACKIF_Msk)
                 && !ignore_nack)
         {
-            LOG_E("sending addr fail\n");
+            LOG_E("sending addr fail");
             return -RT_EIO;
         }
         UI2C_CLR_PROT_INT_FLAG((UI2C_T *)psNuUi2c->m_module.base, UI2C_PROTSTS_ACKIF_Msk);
@@ -208,9 +208,9 @@ static rt_err_t nu_ui2c_send_address(nu_ui2c_t psNuUi2c,
     return RT_EOK;
 }
 
-static rt_size_t nu_ui2c_mst_xfer(struct rt_i2c_bus_device *bus,
-                                  struct rt_i2c_msg msgs[],
-                                  rt_uint32_t num)
+static rt_ssize_t nu_ui2c_mst_xfer(struct rt_i2c_bus_device *bus,
+                                   struct rt_i2c_msg msgs[],
+                                   rt_uint32_t num)
 {
     struct rt_i2c_msg *msg;
     rt_size_t i = 0;

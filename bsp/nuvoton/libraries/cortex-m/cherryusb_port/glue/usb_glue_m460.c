@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "rtthread.h"
-#include "NuMicro.h"
-#include "glue_nuvoton.h"
 
 #include "drv_sys.h"
+#include "glue_nuvoton.h"
 #include "usbh_core.h"
 #include "usb_hc.h"
 

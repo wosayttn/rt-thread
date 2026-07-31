@@ -1,14 +1,8 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2024 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2024-7-8        Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #ifndef _DISPLIB_
 #define _DISPLIB_

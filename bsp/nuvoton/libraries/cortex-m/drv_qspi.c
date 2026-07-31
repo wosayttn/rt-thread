@@ -87,10 +87,28 @@ static struct nu_spi nu_qspi_arr [] =
 }; /* qspi nu_qspi */
 
 /* Functions Implementation --------------------------------------------------*/
+/**
+  * @brief Get QSPI data width.
+  * @param[in] qspi       Pointer to QSPI module.
+  * @return The current data width of the QSPI module.
+  */
+static uint32_t QSPI_GetDataWidth(QSPI_T *qspi)
+{
+    uint32_t u32RegWidth = (qspi->CTL & QSPI_CTL_DWIDTH_Msk) >> QSPI_CTL_DWIDTH_Pos;
+
+    if (u32RegWidth == 0UL)
+    {
+        return 32UL;
+    }
+
+    return u32RegWidth;
+}
+
 static rt_err_t nu_qspi_bus_configure(struct rt_spi_device *device,
                                       struct rt_spi_configuration *configuration)
 {
     struct nu_spi *spi_bus;
+    struct rt_qspi_configuration *qspi_cfg;
     rt_uint32_t u32SPIMode;
     rt_uint32_t u32BusClock;
     rt_err_t ret = RT_EOK;
@@ -100,8 +118,12 @@ static rt_err_t nu_qspi_bus_configure(struct rt_spi_device *device,
 
     spi_bus = (struct nu_spi *) device->bus;
 
+    /* rt_qspi_configure() stores the settings in rt_qspi_device.config, not in
+       the rt_spi_device.config passed in here. Use the actual QSPI configuration. */
+    qspi_cfg = &((struct rt_qspi_device *)device)->config;
+
     /* Check mode */
-    switch (configuration->mode & RT_SPI_MODE_3)
+    switch (qspi_cfg->parent.mode & RT_SPI_MODE_3)
     {
     case RT_SPI_MODE_0:
         u32SPIMode = SPI_MODE_0;
@@ -119,48 +141,45 @@ static rt_err_t nu_qspi_bus_configure(struct rt_spi_device *device,
         ret = RT_EIO;
         goto exit_nu_qspi_bus_configure;
     }
-    if (!(configuration->data_width == 8  ||
-            configuration->data_width == 16 ||
-            configuration->data_width == 24 ||
-            configuration->data_width == 32))
+    if (!(qspi_cfg->parent.data_width == 8  ||
+            qspi_cfg->parent.data_width == 16 ||
+            qspi_cfg->parent.data_width == 24 ||
+            qspi_cfg->parent.data_width == 32))
     {
         ret = RT_EINVAL;
         goto exit_nu_qspi_bus_configure;
     }
-    u32BusClock = QSPI_SetBusClock((QSPI_T *)spi_bus->m_module.base, configuration->max_hz);
-    if (configuration->max_hz > u32BusClock)
+    u32BusClock = QSPI_SetBusClock((QSPI_T *)spi_bus->m_module.base, qspi_cfg->parent.max_hz);
+    if (qspi_cfg->parent.max_hz > u32BusClock)
     {
-        LOG_W("%s clock max frequency is %dHz ( != %dHz)\n", spi_bus->m_module.name, u32BusClock, configuration->max_hz);
-        configuration->max_hz = u32BusClock;
+        LOG_W("%s clock max frequency is %dHz ( != %dHz)", spi_bus->m_module.name, u32BusClock, qspi_cfg->parent.max_hz);
+        qspi_cfg->parent.max_hz = u32BusClock;
     }
-    if (rt_memcmp(configuration, &spi_bus->configuration, sizeof(struct rt_spi_configuration)) != 0)
+
+    QSPI_Open((QSPI_T *)spi_bus->m_module.base, SPI_MASTER, u32SPIMode, qspi_cfg->parent.data_width, u32BusClock);
+
+    if (qspi_cfg->parent.mode & RT_SPI_CS_HIGH)
     {
-        rt_memcpy(&spi_bus->configuration, configuration, sizeof(struct rt_spi_configuration));
-
-        QSPI_Open((QSPI_T *)spi_bus->m_module.base, SPI_MASTER, u32SPIMode, configuration->data_width, u32BusClock);
-
-        if (configuration->mode & RT_SPI_CS_HIGH)
-        {
-            /* Set CS pin to LOW */
-            SPI_SET_SS_LOW((SPI_T *)spi_bus->m_module.base);
-        }
-        else
-        {
-            /* Set CS pin to HIGH */
-            SPI_SET_SS_HIGH((SPI_T *)spi_bus->m_module.base);
-        }
-
-        if (configuration->mode & RT_SPI_MSB)
-        {
-            /* Set sequence to MSB first */
-            SPI_SET_MSB_FIRST((SPI_T *)spi_bus->m_module.base);
-        }
-        else
-        {
-            /* Set sequence to LSB first */
-            SPI_SET_LSB_FIRST((SPI_T *)spi_bus->m_module.base);
-        }
+        /* Set CS pin to LOW */
+        SPI_SET_SS_LOW((SPI_T *)spi_bus->m_module.base);
     }
+    else
+    {
+        /* Set CS pin to HIGH */
+         SPI_SET_SS_HIGH((SPI_T *)spi_bus->m_module.base);
+    }
+
+    if (qspi_cfg->parent.mode & RT_SPI_MSB)
+    {
+        /* Set sequence to MSB first */
+        SPI_SET_MSB_FIRST((SPI_T *)spi_bus->m_module.base);
+    }
+    else
+    {
+        /* Set sequence to LSB first */
+        SPI_SET_LSB_FIRST((SPI_T *)spi_bus->m_module.base);
+    }
+
     nu_spi_drain_rxfifo((SPI_T *)spi_bus->m_module.base);
 
 exit_nu_qspi_bus_configure:
@@ -184,7 +203,7 @@ static int nu_qspi_mode_config(struct nu_spi *qspi_bus, rt_uint8_t *tx, rt_uint8
                 QSPI_ENABLE_QUAD_OUTPUT_MODE(qspi_base);
                 break;
             default:
-                LOG_E("Data line is not supported.\n");
+                LOG_E("Data line is not supported.");
                 break;
             }
         }
@@ -199,7 +218,7 @@ static int nu_qspi_mode_config(struct nu_spi *qspi_bus, rt_uint8_t *tx, rt_uint8
                 QSPI_ENABLE_QUAD_INPUT_MODE(qspi_base);
                 break;
             default:
-                LOG_E("Data line is not supported.\n");
+                LOG_E("Data line is not supported.");
                 break;
             }
         }
@@ -227,9 +246,9 @@ static rt_ssize_t nu_qspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
 
     qspi_bus = (struct nu_spi *) device->bus;
     qspi_base = (QSPI_T *)qspi_bus->m_module.base;
-    qspi_configuration = &qspi_bus->configuration;
+    qspi_configuration = &((struct rt_qspi_device *)device)->config;
 
-    bytes_per_word = qspi_configuration->parent.data_width / 8;
+    bytes_per_word = QSPI_GetDataWidth(qspi_base) / 8;
 
     if (message->cs_take && !(qspi_configuration->parent.mode & RT_SPI_NO_CS))
     {
@@ -384,7 +403,7 @@ static int rt_hw_qspi_init(void)
         {
             if (nu_hw_spi_pdma_allocate(&nu_qspi_arr[i]) != RT_EOK)
             {
-                LOG_E("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.\n", nu_qspi_arr[i].m_module.name);
+                LOG_E("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.", nu_qspi_arr[i].m_module.name);
             }
         }
 #endif

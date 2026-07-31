@@ -1144,9 +1144,6 @@ void nutool_modclkcfg_init(void)
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
     SystemCoreClockUpdate();
 
-    /* Lock protected registers */
-    SYS_LockReg();
-
     return;
 }
 

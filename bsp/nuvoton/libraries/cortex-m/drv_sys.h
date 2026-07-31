@@ -29,6 +29,6 @@ typedef struct nu_module* nu_module_t;
 void nu_pin_func(rt_base_t pin, int data);
 void nu_read_uid(uint32_t *id);
 rt_err_t rt_hw_spi_device_attach(const char *bus_name, const char *device_name, rt_base_t cs);
-rt_err_t rt_hw_qspi_device_attach(const char *bus_name, const char *device_name, rt_base_t cs, rt_uint8_t data_line_width, void (*enter_qspi_mode)(), void (*exit_qspi_mode)());
+rt_err_t rt_hw_qspi_device_attach(const char *bus_name, const char *device_name, rt_base_t cs_pin, rt_uint8_t data_line_width, void (*enter_qspi_mode)(), void (*exit_qspi_mode)());
 
 #endif /* __DRV_SYS_H__ */

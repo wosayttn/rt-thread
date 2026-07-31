@@ -150,7 +150,7 @@ static rt_err_t nu_epwm_get(struct rt_device_pwm *device, struct rt_pwm_configur
     ((struct rt_pwm_configuration *)configuration)->period = pwm_real_period;
     ((struct rt_pwm_configuration *)configuration)->pulse = pwm_real_duty;
 
-    LOG_I("%s %d %d %d\n", ((nu_epwm_t)device)->m_module.name, configuration->channel, configuration->period, configuration->pulse);
+    LOG_I("%s %d %d %d", ((nu_epwm_t)device)->m_module.name, configuration->channel, configuration->period, configuration->pulse);
 
     return RT_EOK;
 }

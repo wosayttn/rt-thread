@@ -1,28 +1,20 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2019 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2020-1-16       Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <rtthread.h>
 
+#undef LOG_TAG
+#define LOG_TAG "mnt"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
+
 #if defined(RT_USING_DFS)
-
-#define LOG_TAG         "mnt"
-#define DBG_ENABLE
-#define DBG_SECTION_NAME "mnt"
-#define DBG_LEVEL DBG_ERROR
-#define DBG_COLOR
-#include <rtdbg.h>
-
 #include <dfs_fs.h>
 #include <dfs_file.h>
+#include <dfs_romfs.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -32,145 +24,143 @@
     #include <fal.h>
 #endif
 
-#if defined(BOARD_USING_STORAGE_SPIFLASH)
-    #define MOUNT_POINT_SPIFLASH0 "/"
-#endif
 
 #ifdef RT_USING_DFS_MNTTABLE
-
-/*
-const char   *device_name;
-const char   *path;
-const char   *filesystemtype;
-unsigned long rwflag;
-const void   *data;
-*/
-
 const struct dfs_mount_tbl mount_table[] =
 {
-    { "sd0", "/mnt/sd0", "elm", 0, RT_NULL },
-    { "sd0p0", "/mnt/sd0p0", "elm", 0, RT_NULL },
-    { "sd0p1", "/mnt/sd0p1", "elm", 0, RT_NULL },
-    { "sd1", "/mnt/sd1", "elm", 0, RT_NULL },
-    { "sd1p0", "/mnt/sd1p0", "elm", 0, RT_NULL },
-    { "sd1p1", "/mnt/sd1p1", "elm", 0, RT_NULL },
+    /* The SD card is mounted dynamically by the automount thread below,
+       so it is intentionally not listed here. */
     {0},
 };
 #endif
 
+#if defined(RT_USING_DFS_ROMFS)
+static const rt_uint8_t _romfs_readme_txt[] =
+    "RT-Thread ROMFS root.\r\n"
+    "Writable paths are mounted separately on /sd0 and /sf.\r\n";
 
-#if defined(BOARD_USING_STORAGE_SPIFLASH)
-
-#if defined(RT_USB_DEVICE_MSTORAGE)
-int mnt_init_spiflash0(void)
+static const struct romfs_dirent _romfs_root_dirent[] =
 {
-    rt_kprintf("Sorry, you enabled RT_USB_DEVICE_MSTORAGE option in menu, so we won't mount flash0 on /.\n");
-    return 0;
-}
-#else
+    {ROMFS_DIRENT_DIR, "sd0", RT_NULL, 0},
+    {ROMFS_DIRENT_DIR, "udisk", RT_NULL, 0},
+    {ROMFS_DIRENT_DIR, "sf", RT_NULL, 0},
+    {ROMFS_DIRENT_FILE, "readme.txt", _romfs_readme_txt, sizeof(_romfs_readme_txt) - 1},
+};
 
-/* Recursive mkdir */
-#if defined(RT_USBH_MSTORAGE) && defined(UDISK_MOUNTPOINT)
-static int mkdir_p(const char *dir, const mode_t mode)
+const struct romfs_dirent romfs_root =
 {
-    int ret = -1;
-    char *tmp = NULL;
-    char *p = NULL;
-    struct stat sb;
-    rt_size_t len;
+    ROMFS_DIRENT_DIR,
+    "/",
+    (const rt_uint8_t *)_romfs_root_dirent,
+    sizeof(_romfs_root_dirent) / sizeof(_romfs_root_dirent[0])
+};
+#endif
 
-    if (!dir)
-        goto exit_mkdir_p;
+#if defined(BSP_USING_SDH)
 
-    /* Copy path */
-    /* Get the string length */
-    len = strlen(dir);
-    tmp = rt_strdup(dir);
+#define SD_CARD_DEVICE_NAME    "sd0"
+#define SD_CARD_MOUNT_POINT    "/sd0"
+#define SD_CARD_CHECK_INTERVAL 1000      /* Card detect poll interval, in ms */
 
-    /* Remove trailing slash */
-    if (tmp[len - 1] == '/')
+/* Automount thread: mount the SD card on insertion and release it on removal.
+   The block framework unregisters the "sd0" device and unmounts it when the
+   card is pulled out, so we only need to react to the device presence edges. */
+static void sd_automount_thread_entry(void *parameter)
+{
+    rt_bool_t prev_present = RT_FALSE;
+
+    while (1)
     {
-        tmp[len - 1] = '\0';
-        len--;
-    }
+        rt_bool_t present = (rt_device_find(SD_CARD_DEVICE_NAME) != RT_NULL);
 
-    /* check if path exists and is a directory */
-    if (stat(tmp, &sb) == 0)
-    {
-        if (S_ISDIR(sb.st_mode))
+        if (present && !prev_present)
         {
-            ret = 0;
-            goto exit_mkdir_p;
+            /* Card just inserted */
+            if (dfs_mount(SD_CARD_DEVICE_NAME, SD_CARD_MOUNT_POINT, "elm", 0, RT_NULL) == RT_EOK)
+            {
+                LOG_I("mount %s on %s: ok", SD_CARD_DEVICE_NAME, SD_CARD_MOUNT_POINT);
+            }
+            else
+            {
+                LOG_W("mount %s on %s failed.", SD_CARD_DEVICE_NAME, SD_CARD_MOUNT_POINT);
+                LOG_W("Try to execute 'mkfs -t elm %s' first, then re-insert the card.", SD_CARD_DEVICE_NAME);
+            }
         }
-    }
-
-    /* Recursive mkdir */
-    for (p = tmp + 1; p - tmp <= len; p++)
-    {
-        if ((*p == '/') || (p - tmp == len))
+        else if (!present && prev_present)
         {
-            *p = 0;
-
-            /* Test path */
-            if (stat(tmp, &sb) != 0)
-            {
-                /* Path does not exist - create directory */
-                if (mkdir(tmp, mode) < 0)
-                {
-                    goto exit_mkdir_p;
-                }
-            }
-            else if (!S_ISDIR(sb.st_mode))
-            {
-                /* Not a directory */
-                goto exit_mkdir_p;
-            }
-            if (p - tmp != len)
-                *p = '/';
+            /* Card just removed. It is unmounted automatically by the block
+               framework; call dfs_unmount() defensively to release the mount point. */
+            dfs_unmount(SD_CARD_MOUNT_POINT);
+            LOG_I("card removed, %s unmounted", SD_CARD_MOUNT_POINT);
         }
+
+        prev_present = present;
+        rt_thread_mdelay(SD_CARD_CHECK_INTERVAL);
     }
-
-    ret = 0;
-
-exit_mkdir_p:
-
-    if (tmp)
-        rt_free(tmp);
-
-    return ret;
 }
 
-#endif
-
-int mnt_init_spiflash0(void)
+static rt_err_t sd_automount_init(void)
 {
-    if (dfs_mount("flash0", MOUNT_POINT_SPIFLASH0, "elm", 0, 0) != 0)
+    rt_thread_t tid;
+
+    tid = rt_thread_create("sd_mount", sd_automount_thread_entry, RT_NULL,
+                           1024, RT_THREAD_PRIORITY_MAX - 2, 20);
+    if (tid == RT_NULL)
     {
-        rt_kprintf("Failed to mount elm on %s.\n", MOUNT_POINT_SPIFLASH0);
-        rt_kprintf("Try to execute 'mkfs -t elm flash0' first, then reboot.\n");
-        goto exit_mnt_init_spiflash0;
+        LOG_E("failed to create sd_mount thread.");
+        return -RT_ERROR;
     }
-    rt_kprintf("mount flash0 with elmfat type: ok\n");
-    mkdir_p("/mnt/sd0", 0x777);
-    mkdir_p("/mnt/sd0p0", 0x777);
-    mkdir_p("/mnt/sd0p1", 0x777);
-    mkdir_p("/mnt/sd1", 0x777);
-    mkdir_p("/mnt/sd1p0", 0x777);
-    mkdir_p("/mnt/sd1p1", 0x777);
 
-#if defined(RT_USBH_MSTORAGE) && defined(UDISK_MOUNTPOINT)
-    if (mkdir_p(UDISK_MOUNTPOINT, 0) < 0)
-    {
-        rt_kprintf("Failed to create directory on %s for RT_USBH_MSTORAGE.\n", UDISK_MOUNTPOINT);
-    }
-#endif
-
-exit_mnt_init_spiflash0:
-
-    return 0;
+    rt_thread_startup(tid);
+    return RT_EOK;
 }
 #endif
-INIT_ENV_EXPORT(mnt_init_spiflash0);
+
+/* Initialize the filesystem */
+int filesystem_init(void)
+{
+    rt_err_t result = RT_EOK;
+
+#if defined(RT_USING_FAL)
+    extern int fal_init_check(void);
+    if (!fal_init_check())
+        fal_init();
 #endif
 
+#if defined(RT_USING_DFS_ROMFS)
+    if (dfs_mount(RT_NULL, "/", "rom", 0, (const void *)&romfs_root) != 0)
+    {
+        LOG_E("failed to mount romfs on \"/\"");
+        result = -RT_ERROR;
+        goto exit_filesystem_init;
+    }
+
+    LOG_I("romfs mounted on \"/\".");
+
+    struct rt_device *psSPIFlash = fal_blk_device_create("sf");
+
+    if (!psSPIFlash)
+    {
+        LOG_E("Failed to create block device for sf.");
+        goto exit_filesystem_init;
+    }
+    else if (dfs_mount(psSPIFlash->parent.name, "/sf", "elm", 0, 0) != 0)
+    {
+        LOG_E("Failed to mount elm on /sf.");
+        LOG_E("Try to execute 'mkfs -t elm %s' first, then reboot.", "sf");
+        goto exit_filesystem_init;
+    }
+    LOG_I("mount %s with elmfat type: ok", "sf");
+#endif
+
+#if defined(BSP_USING_SDH)
+    /* Start SD card automount (hot-plug mount/unmount on /sd0) */
+    sd_automount_init();
+#endif
+
+exit_filesystem_init:
+
+    return -result;
+}
+INIT_ENV_EXPORT(filesystem_init);
 #endif

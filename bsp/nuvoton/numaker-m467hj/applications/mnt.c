@@ -99,7 +99,7 @@ int filesystem_init(void)
 #endif
 
 #if defined(RT_USING_DFS_RAMFS) && defined(BOARD_USING_EXTERNAL_HYPERRAM)
-    result = mount_ramfs(MOUNT_POINT_HYPERRAM, pool, hyperram_size);
+    result = mount_ramfs("/hyperram", pool, hyperram_size);
     if (result != RT_EOK)
         goto exit_filesystem_init;
 #endif

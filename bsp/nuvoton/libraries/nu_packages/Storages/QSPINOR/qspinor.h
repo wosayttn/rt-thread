@@ -10,8 +10,8 @@
 #include <rtdevice.h>
 
 #if defined(RT_USING_SFUD)
-    #include "spi_flash.h"
-    #include "spi_flash_sfud.h"
+    #include "dev_spi_flash.h"
+    #include "dev_spi_flash_sfud.h"
 #endif
 
 #include "drv_qspi.h"

@@ -156,7 +156,7 @@ static rt_err_t nu_uspi_bus_configure(struct rt_spi_device *device,
     u32BusClock = USPI_SetBusClock((USPI_T *)uspi_bus->m_module.base, configuration->max_hz);
     if (configuration->max_hz > u32BusClock)
     {
-        LOG_W("%s clock max frequency is %dHz ( != %dHz)\n", uspi_bus->m_module.name, u32BusClock, configuration->max_hz);
+        LOG_W("%s clock max frequency is %dHz ( != %dHz)", uspi_bus->m_module.name, u32BusClock, configuration->max_hz);
         configuration->max_hz = u32BusClock;
     }
     if (rt_memcmp(configuration, &uspi_bus->configuration, sizeof(*configuration)) != 0)
@@ -384,6 +384,9 @@ static rt_err_t nu_hw_uspi_pdma_allocate(struct nu_uspi *uspi_bus)
         goto exit_nu_hw_uspi_pdma_allocate;
     }
 
+    LOG_I("Allocate PDMA channel %d for USPI bus %d", uspi_bus->pdma_chanid_tx, uspi_bus->pdma_perp_tx);
+    LOG_I("Allocate PDMA channel %d for USPI bus %d", uspi_bus->pdma_chanid_rx, uspi_bus->pdma_perp_rx);
+
     uspi_bus->m_psSemBus = rt_sem_create("uspibus_sem", 0, RT_IPC_FLAG_FIFO);
     RT_ASSERT(uspi_bus->m_psSemBus != RT_NULL);
 
@@ -425,7 +428,7 @@ static int nu_uspi_read(USPI_T *uspi_base, uint8_t *recv_addr, uint8_t bytes_per
             *recv_addr = USPI_READ_RX(uspi_base);
             break;
         default:
-            LOG_E("Data length is not supported.\n");
+            LOG_E("Data length is not supported.");
             break;
         }
         size = bytes_per_word;
@@ -448,7 +451,7 @@ static int nu_uspi_write(USPI_T *uspi_base, const uint8_t *send_addr, uint8_t by
         USPI_WRITE_TX(uspi_base, *((uint8_t *)send_addr));
         break;
     default:
-        LOG_E("Data length is not supported.\n");
+        LOG_E("Data length is not supported.");
         break;
     }
 
@@ -561,7 +564,7 @@ static rt_ssize_t nu_uspi_bus_xfer(struct rt_spi_device *device, struct rt_spi_m
     if ((message->length % bytes_per_word) != 0)
     {
         /* Say bye. */
-        LOG_E("%s: error payload length(%d%%%d != 0).\n", uspi_bus->m_module.name, message->length, bytes_per_word);
+        LOG_E("%s: error payload length(%d%%%d != 0).", uspi_bus->m_module.name, message->length, bytes_per_word);
         return 0;
     }
 
@@ -652,7 +655,7 @@ static int rt_hw_uspi_init(void)
         {
             if (nu_hw_uspi_pdma_allocate(&nu_uspi_arr[i]) != RT_EOK)
             {
-                LOG_E("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.\n", nu_uspi_arr[i].name);
+                LOG_E("Failed to allocate DMA channels for %s. We will use poll-mode for this bus.", nu_uspi_arr[i].name);
             }
         }
 #endif

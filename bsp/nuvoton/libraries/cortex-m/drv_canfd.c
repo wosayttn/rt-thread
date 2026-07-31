@@ -237,7 +237,7 @@ static void nu_canfd_isr(nu_canfd_t psNuCANFD)
 
     if (u32Status & CANFD_IR_PED_Msk)
     {
-        LOG_E("[%s] LEC: %03x\n", psNuCANFD->m_module.name, base->PSR & CANFD_PSR_LEC_Msk) ;
+        LOG_E("[%s] LEC: %03x", psNuCANFD->m_module.name, base->PSR & CANFD_PSR_LEC_Msk) ;
     }
 }
 

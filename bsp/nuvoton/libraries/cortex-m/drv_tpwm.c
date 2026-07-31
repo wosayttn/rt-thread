@@ -146,14 +146,14 @@ static rt_err_t nu_tpwm_get(struct rt_device_pwm *tpwm_dev, struct rt_pwm_config
     u32TPWMClockFreq = TIMER_GetModuleClock((TIMER_T *)psNuTPWM->m_module.base);
     time_tick = (uint64_t)1000000000000 / u32TPWMClockFreq;
 
-    LOG_I("%s reg--> %d %d %d %d %d\n", psNuTPWM->m_module.name, tpwm_prescale, tpwm_period, tpwm_pulse, u32TPWMClockFreq, time_tick);
+    LOG_I("%s reg--> %d %d %d %d %d", psNuTPWM->m_module.name, tpwm_prescale, tpwm_period, tpwm_pulse, u32TPWMClockFreq, time_tick);
 
     tpwm_real_period = (((tpwm_prescale + 1) * (tpwm_period + 1)) * time_tick) / 1000;
     tpwm_real_duty = (((tpwm_prescale + 1) * tpwm_pulse * time_tick)) / 1000;
     tpwm_config->period = tpwm_real_period;
     tpwm_config->pulse = tpwm_real_duty;
 
-    LOG_I("%s %d %d %d\n", psNuTPWM->m_module.name, tpwm_config->channel, tpwm_config->period, tpwm_config->pulse);
+    LOG_I("%s %d %d %d", psNuTPWM->m_module.name, tpwm_config->channel, tpwm_config->period, tpwm_config->pulse);
 
     return RT_EOK;
 }

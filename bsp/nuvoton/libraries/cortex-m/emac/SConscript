@@ -1,12 +1,15 @@
+# RT-Thread building script for component
+
 Import('RTT_ROOT')
 from building import *
 
 cwd = GetCurrentDir()
-src = Glob('*.c')
-group = []
+objs = []
 
-CPPPATH = [cwd]
+if GetDepend('EMAC_IS_NUVOTON'):
+    objs += SConscript('nuvoton/SConscript')
 
-group = DefineGroup('Drivers', src, depend = ['BSP_USING_EMAC'], CPPPATH = CPPPATH)
+if GetDepend('EMAC_IS_SYNOPSYS'):
+    objs += SConscript('synopsys/SConscript')
 
-Return('group')
+Return('objs')

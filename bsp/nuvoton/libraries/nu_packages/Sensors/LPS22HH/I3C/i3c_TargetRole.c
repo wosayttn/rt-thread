@@ -1,11 +1,8 @@
-/**************************************************************************//**
- * @file     i3c_TargetRole.c
- * @version  V3.00
- * @brief    Functions for I3C Target Role.
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
  *
- * @copyright SPDX-License-Identifier: Apache-2.0
- * @copyright Copyright (C) 2025 Nuvoton Technology Corp. All rights reserved.
- ******************************************************************************/
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "i3c_DeviceFunc.h"
 

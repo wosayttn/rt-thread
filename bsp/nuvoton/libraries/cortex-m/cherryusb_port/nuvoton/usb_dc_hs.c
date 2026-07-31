@@ -211,13 +211,24 @@ int usb_hs_dc_init(uint8_t busid)
     // Initial USB engine
     husbd->PHYCTL |= HSUSBD_PHYCTL_PHYEN_Msk;
 
-    u32TimeOutCnt = SystemCoreClock/128;
-
     // wait PHY clock ready
+    #if defined(HSUSBD_PHYCTL_PHYCLKSTB_Msk)
+    u32TimeOutCnt = SystemCoreClock >> 5;;
     while (!(husbd->PHYCTL & HSUSBD_PHYCTL_PHYCLKSTB_Msk))
     {
         if (--u32TimeOutCnt == 0) break;
     }
+    #else
+    //Wayne: For Legacy USBD IP, is without PHYCLKSTB bit, so we need to wait a while for PHY clock ready.
+    while (1)
+    {
+        husbd->EP[EPA].EPMPS = 0x20ul;
+        if (husbd->EP[EPA].EPMPS == 0x20ul)
+        {
+            break;
+        }
+    }
+    #endif
 
     // Enable USB BUS, CEP global interrupt
     husbd->GINTEN = (HSUSBD_GINTEN_USBIEN_Msk | HSUSBD_GINTEN_CEPIEN_Msk);
@@ -500,7 +511,7 @@ int usbd_hs_ep_start_read(uint8_t busid, const uint8_t ep, uint8_t *data, uint32
     {
         if (ep_state->xfer_len)
         {
-            uint32_t u32TimeOutCnt = SystemCoreClock >> 2;
+            uint32_t u32TimeOutCnt = SystemCoreClock >> 5;;
 
             while (ep_state->xfer_len < (husbd->CEPRXCNT & HSUSBD_CEPRXCNT_RXCNT_Msk))
                 if (--u32TimeOutCnt == 0) return -1;
@@ -575,10 +586,22 @@ NVT_ITCM void HSUSBDn_IRQHandler(uint8_t busid)
         if (u32BusSts & HSUSBD_BUSINTSTS_RESUMEIF_Msk)
         {
             husbd->PHYCTL |= (HSUSBD_PHYCTL_PHYEN_Msk | HSUSBD_PHYCTL_DPPUEN_Msk);
-            u32TimeOutCnt = SystemCoreClock; /* 1 second time-out */
 
+            #if defined(HSUSBD_PHYCTL_PHYCLKSTB_Msk)
+            u32TimeOutCnt = SystemCoreClock >> 5;;
             while (!(husbd->PHYCTL & HSUSBD_PHYCTL_PHYCLKSTB_Msk))
                 if (--u32TimeOutCnt == 0) break;
+            #else
+            //Wayne: For Legacy USBD IP, is without PHYCLKSTB bit, so we need to wait a while for PHY clock ready.
+            while (1)
+            {
+                husbd->EP[EPA].EPMPS = 0x20ul;
+                if (husbd->EP[EPA].EPMPS == 0x20ul)
+                {
+                    break;
+                }
+            }
+            #endif
 
             husbd->BUSINTEN = (HSUSBD_BUSINTEN_RSTIEN_Msk | HSUSBD_BUSINTEN_SUSPENDIEN_Msk);
             husbd->BUSINTSTS = HSUSBD_BUSINTSTS_RESUMEIF_Msk;
@@ -613,10 +636,21 @@ NVT_ITCM void HSUSBDn_IRQHandler(uint8_t busid)
                 // USB Plug In
                 husbd->PHYCTL |= (HSUSBD_PHYCTL_PHYEN_Msk | HSUSBD_PHYCTL_DPPUEN_Msk);
 
-                u32TimeOutCnt = SystemCoreClock; // 1 second time-out
-
+                #if defined(HSUSBD_PHYCTL_PHYCLKSTB_Msk)
+                u32TimeOutCnt = SystemCoreClock >> 5;;
                 while (!(husbd->PHYCTL & HSUSBD_PHYCTL_PHYCLKSTB_Msk))
                     if (--u32TimeOutCnt == 0) break;
+                #else
+                //Wayne: For Legacy USBD IP, is without PHYCLKSTB bit, so we need to wait a while for PHY clock ready.
+                while (1)
+                {
+                    husbd->EP[EPA].EPMPS = 0x20ul;
+                    if (husbd->EP[EPA].EPMPS == 0x20ul)
+                    {
+                        break;
+                    }
+                }
+                #endif
 
                 husbd->OPER = HSUSBD_OPER_HISPDEN_Msk;
 #if defined(HSUSBD_OPER_HISHSEN_Msk) //Wayne

@@ -56,7 +56,6 @@ menu "Hardware Drivers Config"
                     Choose this option if you need USBH function mode.
 
             config BOARD_USING_OTG
-                select BSP_USING_USB
                 select BSP_USING_OTG
                 bool "Enable USB OTG"
                 help
@@ -86,8 +85,7 @@ menu "Hardware Drivers Config"
                     Choose this option if you need HSUSBH function mode.
 
             config BOARD_USING_HSOTG
-                select BSP_USING_USB
-                select BSP_USING_OTG
+                select BSP_USING_HSOTG
                 bool "Enable HSUSB OTG"
                 help
                     Choose this option if you need HSUSB Device, Host and H/W OTG function.

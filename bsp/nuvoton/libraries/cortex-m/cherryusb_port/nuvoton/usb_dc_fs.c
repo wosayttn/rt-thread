@@ -406,7 +406,16 @@ NVT_ITCM void USBDn_IRQHandler(uint8_t busid)
 {
     USBD_t *husbd = USBD_HW(busid);
     volatile uint32_t u32IntSts = husbd->INTSTS;
+#if defined(USBD_EPINTSTS_EPEVT0_Pos)
     volatile uint32_t u32EpIntSts = husbd->EPINTSTS;
+#else
+/*
+    For Legacy USBD IP, is with EPINTSTS register, but without EPEVT0~31 bits, 
+    so we need to read EPINTSTS register to get the EP event status.
+*/
+    volatile uint32_t u32EpIntSts = (u32IntSts & (((1 << USBD_MAX_EP) - 1) << USBD_INTSTS_EPEVT0_Pos));
+#endif
+
     volatile uint32_t u32BusSts = husbd->ATTR & 0x300f;
 
     //------------------------------------------------------------------
@@ -491,15 +500,24 @@ NVT_ITCM void USBDn_IRQHandler(uint8_t busid)
             uint32_t mask;
             USBD_EP_t *periph_ep;
             usb_dc_ep_state *ep_state;
+            #if defined(USBD_EPINTSTS_EPEVT0_Msk)
+                mask= USBD_EPINTSTS_EPEVT0_Msk;
+            #else
+                mask= USBD_INTSTS_EPEVT0_Msk;
+            #endif
 
-            for (ep_index = PERIPH_EP0, mask = USBD_EPINTSTS_EPEVT0_Msk, periph_ep = &husbd->EP[PERIPH_EP0], ep_state = &g_nuvoton_udc->ep_state[PERIPH_EP0];
+            for (ep_index = PERIPH_EP0, periph_ep = &husbd->EP[PERIPH_EP0], ep_state = &g_nuvoton_udc->ep_state[PERIPH_EP0];
                  ep_index < PERIPH_MAX_EP;
                  ep_index++, mask <<= 1U, periph_ep++, ep_state++)
             {
                 if (u32EpIntSts & mask)
                 {
                     // Clear event flag
+                    #if defined(USBD_EPINTSTS_EPEVT0_Pos)
                     husbd->EPINTSTS = mask;
+                    #else
+                    husbd->INTSTS = mask;
+                    #endif
                     uint8_t const ep_addr = g_nuvoton_udc->ep_state[ep_index].ep_addr;
 
                     if (USB_EP_DIR_IS_IN(ep_addr))

@@ -53,6 +53,9 @@ config SOC_SERIES_M480
 
             config BSP_USING_CAN1
                 bool "Enable CAN1"
+
+            config BSP_USING_CAN2
+                bool "Enable CAN2"
         endif
 
     menuconfig BSP_USING_CLK
@@ -68,6 +71,18 @@ config SOC_SERIES_M480
             config NU_CLK_INVOKE_WKTMR
                 bool "Enable SPD1 and DPD mode wakeup timer. (About 6.6 Secs)"
                 default y
+        endif
+
+    menuconfig BSP_USING_DAC
+        bool "Enable Digital-to-Analog Converter(DAC)"
+        select RT_USING_DAC
+
+        if BSP_USING_DAC
+            config BSP_USING_DAC0
+                bool "Enable DAC0"
+
+            config BSP_USING_DAC1
+                bool "Enable DAC1"
         endif
 
     menuconfig BSP_USING_EADC

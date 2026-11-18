@@ -45,6 +45,12 @@ enum
 #if defined(BSP_USING_TPWM3)
     TPWM3_IDX,
 #endif
+#if defined(BSP_USING_TPWM4)
+    TPWM4_IDX,
+#endif
+#if defined(BSP_USING_TPWM5)
+    TPWM5_IDX,
+#endif
     TPWM_CNT
 };
 
@@ -77,6 +83,12 @@ static struct nu_tpwm nu_tpwm_arr [] =
 #endif
 #if defined(BSP_USING_TPWM3)
     DEFINE_NU_TPWM(3),
+#endif
+#if defined(BSP_USING_TPWM4)
+    DEFINE_NU_TPWM(4),
+#endif
+#if defined(BSP_USING_TPWM5)
+    DEFINE_NU_TPWM(5),
 #endif
 };
 

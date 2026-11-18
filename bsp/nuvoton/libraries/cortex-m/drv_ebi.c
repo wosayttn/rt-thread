@@ -35,7 +35,7 @@ rt_err_t nu_ebi_init(uint32_t u32Bank,
 
     /* Initialize EBI */
     EBI_Open(u32Bank, u32DataWidth, u32TimingClass, u32BusMode, u32CSActiveLevel);
-    EBI_ENABLE_WRITE_BUFFER();
+    EBI_ENABLE_WRITE_BUFFER(EBI);
 
     nu_ebi_bank_mask |= (1 << u32Bank);
 

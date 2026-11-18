@@ -171,14 +171,14 @@ void nutool_modclkcfg_deinit_crc(void)
 
 void nutool_modclkcfg_init_crpt(void)
 {
-    CLK_EnableModuleClock(CRPT_MODULE);
+    CLK_EnableModuleClock(CRYPTO_MODULE);
 
     return;
 }
 
 void nutool_modclkcfg_deinit_crpt(void)
 {
-    CLK_DisableModuleClock(CRPT_MODULE);
+    CLK_DisableModuleClock(CRYPTO_MODULE);
 
     return;
 }
@@ -1071,7 +1071,7 @@ void nutool_modclkcfg_deinit_uart5(void)
 void nutool_modclkcfg_init_usbd(void)
 {
     CLK_EnableModuleClock(USBD_MODULE);
-    CLK_SetModuleClock(USBD_MODULE, CLK_CLKSEL0_USBSEL_HIRC48, CLK_CLKDIV0_USB(1));
+    CLK_SetModuleClock(USBD_MODULE, CLK_CLKSEL0_USBSEL_PLL, CLK_CLKDIV0_USB(2));
 
     return;
 }
@@ -1086,7 +1086,7 @@ void nutool_modclkcfg_deinit_usbd(void)
 void nutool_modclkcfg_init_usbh(void)
 {
     CLK_EnableModuleClock(USBH_MODULE);
-    CLK_SetModuleClock(USBH_MODULE, CLK_CLKSEL0_USBSEL_HIRC48, CLK_CLKDIV0_USB(1));
+    CLK_SetModuleClock(USBH_MODULE, CLK_CLKSEL0_USBSEL_PLL, CLK_CLKDIV0_USB(2));
 
     return;
 }
@@ -1399,9 +1399,6 @@ void nutool_modclkcfg_init(void)
     /* Update System Core Clock */
     /* User can use SystemCoreClockUpdate() to calculate SystemCoreClock. */
     SystemCoreClockUpdate();
-
-    /* Lock protected registers */
-    SYS_LockReg();
 
     return;
 }

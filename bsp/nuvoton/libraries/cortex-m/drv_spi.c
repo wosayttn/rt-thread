@@ -203,7 +203,7 @@ static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device, struct rt_spi
     static rt_size_t nu_spi_pdma_transmit(struct nu_spi *spi_bus, const uint8_t *send_addr, uint8_t *recv_addr, int length, uint8_t bytes_per_word);
 #endif
 /* Static Variables ----------------------------------------------------------*/
-static struct rt_spi_ops nu_spi_poll_ops =
+static const struct rt_spi_ops nu_spi_poll_ops =
 {
     .configure = nu_spi_bus_configure,
     .xfer      = nu_spi_bus_xfer,
@@ -247,8 +247,6 @@ static struct nu_spi nu_spi_arr [] =
 }; /* spi nu_spi */
 
 /* Functions Implementation --------------------------------------------------*/
-void nu_spi_transfer(struct nu_spi *spi_bus, uint8_t *tx, uint8_t *rx, int length, uint8_t bytes_per_word);
-void nu_spi_drain_rxfifo(SPI_T *spi_base);
 
 /**
   * @brief Get SPI data width.
@@ -365,6 +363,7 @@ static rt_err_t nu_spi_bus_configure(struct rt_spi_device *device,
         SPI_SET_LSB_FIRST((SPI_T *)spi_bus->m_module.base);
     }
 
+    /* Clear SPI RX FIFO */
     nu_spi_drain_rxfifo((SPI_T *)spi_bus->m_module.base);
 
 exit_nu_spi_bus_configure:
@@ -427,6 +426,8 @@ static rt_err_t nu_pdma_spi_rx_config(struct nu_spi *spi_bus, uint8_t *pu8Buf, i
     {
         goto exit_nu_pdma_spi_rx_config;
     }
+
+    /* Register Disable engine dma trigger callback function */
     sChnCB.m_eCBType = eCBType_Disable;
     sChnCB.m_pfnCBHandler = nu_pdma_spi_rx_cb_disable;
     sChnCB.m_pvUserData = (void *)spi_base;
@@ -489,6 +490,8 @@ static rt_err_t nu_pdma_spi_tx_config(struct nu_spi *spi_bus, const uint8_t *pu8
         memctrl = eMemCtl_SrcInc_DstFix;
         src_addr = (rt_uint8_t *)pu8Buf;
     }
+
+    /* Register Disable engine dma trigger callback function */
     sChnCB.m_eCBType = eCBType_Trigger;
     sChnCB.m_pfnCBHandler = nu_pdma_spi_tx_cb_trigger;
     sChnCB.m_pvUserData = (void *)spi_base;
@@ -656,7 +659,8 @@ static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
             send_addr += nu_spi_write(spi_base, send_addr, bytes_per_word);
             length -= bytes_per_word;
         }
-    }
+    } // if (send_addr != RT_NULL && recv_addr == RT_NULL)
+    // Read-only
     else if ((send_addr == RT_NULL) && (recv_addr != RT_NULL))
     {
         spi_bus->dummy[0] = 0;
@@ -668,7 +672,8 @@ static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
             /* Read data from RX FIFO */
             recv_addr += nu_spi_read(spi_base, recv_addr, bytes_per_word);
         }
-    }
+    } // else if (send_addr == RT_NULL && recv_addr != RT_NULL)
+    // Read&Write
     else
     {
         while (length > 0)
@@ -680,7 +685,9 @@ static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
             /* Read data from RX FIFO */
             recv_addr += nu_spi_read(spi_base, recv_addr, bytes_per_word);
         }
-    }
+    } // else
+
+    /* Wait RX or drain RX-FIFO */
     if (recv_addr)
     {
         // Wait SPI transmission done
@@ -704,7 +711,8 @@ static void nu_spi_transmission_with_poll(struct nu_spi *spi_bus,
     }
 }
 
-void nu_spi_transfer(struct nu_spi *spi_bus, uint8_t *tx, uint8_t *rx, int length, uint8_t bytes_per_word)
+void nu_spi_transfer(struct nu_spi *spi_bus, 
+         uint8_t *tx, uint8_t *rx, int length, uint8_t bytes_per_word)
 {
     RT_ASSERT(spi_bus != RT_NULL);
 #if defined(BSP_USING_SPI_PDMA)
@@ -713,10 +721,12 @@ void nu_spi_transfer(struct nu_spi *spi_bus, uint8_t *tx, uint8_t *rx, int lengt
             !((uint32_t)tx % bytes_per_word) &&
             !((uint32_t)rx % bytes_per_word) &&
             (bytes_per_word != 3) &&
-            ((((SPI_T *)spi_bus->m_module.base)->CTL & SPI_CTL_SLAVE_Msk) || (length >= NU_SPI_USE_PDMA_MIN_THRESHOLD)))
-        /* DMA transfer constrains */
+            ((((SPI_T *)spi_bus->m_module.base)->CTL & SPI_CTL_SLAVE_Msk) ||
+               (length >= NU_SPI_USE_PDMA_MIN_THRESHOLD)))
+    {
         nu_spi_pdma_transmit(spi_bus, tx, rx, length, bytes_per_word);
-    else
+    }
+	else
 #endif
     {
         if (((SPI_T *)spi_bus->m_module.base)->CTL & SPI_CTL_SLAVE_Msk)
@@ -784,7 +794,8 @@ static rt_ssize_t nu_spi_bus_xfer(struct rt_spi_device *device, struct rt_spi_me
             }
         }
 
-        nu_spi_transfer(spi_bus, (uint8_t *)message->send_buf, (uint8_t *)message->recv_buf, message->length, bytes_per_word);
+        nu_spi_transfer(spi_bus, (uint8_t *)message->send_buf,
+		        (uint8_t *)message->recv_buf, message->length, bytes_per_word);
 
         if (message->cs_release && !(configuration->mode & RT_SPI_NO_CS))
         {

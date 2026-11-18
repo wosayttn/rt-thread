@@ -137,7 +137,20 @@
 
 /* DFS: device virtual file system */
 
+#define RT_USING_DFS
+#define DFS_USING_POSIX
+#define DFS_USING_WORKDIR
+#define DFS_FD_MAX 16
+#define RT_USING_DFS_V1
+#define DFS_FILESYSTEMS_MAX 4
+#define DFS_FILESYSTEM_TYPES_MAX 4
+#define RT_USING_DFS_DEVFS
 /* end of DFS: device virtual file system */
+#define RT_USING_FAL
+#define FAL_USING_DEBUG
+#define FAL_PART_HAS_TABLE_CFG
+#define FAL_DEV_NAME_MAX 24
+#define FAL_DEV_BLK_MAX 6
 
 /* Device Drivers */
 
@@ -150,7 +163,73 @@
 #define RT_USING_SERIAL_V1
 #define RT_SERIAL_USING_DMA
 #define RT_SERIAL_RB_BUFSZ 128
+#define RT_USING_CAN
+#define RT_CANMSG_BOX_SZ 16
+#define RT_CANSND_BOX_NUM 1
+#define RT_CANSND_MSG_TIMEOUT 100
+#define RT_CAN_NB_TX_FIFO_SIZE 256
+#define RT_USING_CLOCK_TIME
+#define RT_USING_I2C
+#define RT_USING_I2C_BITOPS
+#define RT_USING_ADC
+#define RT_USING_DAC
+#define RT_USING_PWM
+#define RT_USING_PULSE_ENCODER
+#define RT_USING_INPUT_CAPTURE
+#define RT_INPUT_CAPTURE_RB_SIZE 100
+#define RT_USING_RTC
+#define RT_USING_SDIO
+#define RT_SDIO_STACK_SIZE 512
+#define RT_SDIO_THREAD_PRIORITY 15
+#define RT_MMCSD_STACK_SIZE 1024
+#define RT_MMCSD_THREAD_PRIORITY 22
+#define RT_MMCSD_MAX_PARTITION 16
+#define RT_USING_SPI
+#define RT_USING_SPI_ISR
+#define RT_USING_QSPI
+#define RT_USING_WDT
+#define RT_USING_AUDIO
+#define RT_AUDIO_REPLAY_MP_BLOCK_SIZE 4096
+#define RT_AUDIO_REPLAY_MP_BLOCK_COUNT 2
+#define RT_AUDIO_RECORD_PIPE_SIZE 2048
+#define RT_USING_HWCRYPTO
+#define RT_HWCRYPTO_DEFAULT_NAME "hwcryto"
+#define RT_HWCRYPTO_IV_MAX_SIZE 16
+#define RT_HWCRYPTO_KEYBIT_MAX_SIZE 256
+#define RT_HWCRYPTO_USING_AES
+#define RT_HWCRYPTO_USING_AES_ECB
+#define RT_HWCRYPTO_USING_AES_CBC
+#define RT_HWCRYPTO_USING_AES_CFB
+#define RT_HWCRYPTO_USING_AES_CTR
+#define RT_HWCRYPTO_USING_AES_OFB
+#define RT_HWCRYPTO_USING_SHA1
+#define RT_HWCRYPTO_USING_SHA2
+#define RT_HWCRYPTO_USING_SHA2_224
+#define RT_HWCRYPTO_USING_SHA2_256
+#define RT_HWCRYPTO_USING_SHA2_384
+#define RT_HWCRYPTO_USING_SHA2_512
+#define RT_HWCRYPTO_USING_RNG
+#define RT_HWCRYPTO_USING_CRC
+#define RT_HWCRYPTO_USING_CRC_07
+#define RT_HWCRYPTO_USING_CRC_8005
+#define RT_HWCRYPTO_USING_CRC_1021
+#define RT_HWCRYPTO_USING_CRC_04C11DB7
+#define RT_USING_BLK
+
+/* Partition Types */
+
+#define RT_BLK_PARTITION_DFS
+#define RT_BLK_PARTITION_EFI
+/* end of Partition Types */
 #define RT_USING_PIN
+#define RT_USING_CHERRYUSB
+#define RT_CHERRYUSB_DEVICE
+#define RT_CHERRYUSB_DEVICE_SPEED_FS
+#define RT_CHERRYUSB_DEVICE_CUSTOM
+#define RT_CHERRYUSB_DEVICE_HID
+#define CONFIG_USBDEV_REQUEST_BUFFER_LEN 512
+#define CONFIG_USBDEV_MSC_MAX_BUFSIZE 512
+#define RT_CHERRYUSB_DEVICE_TEMPLATE_HID_MOUSE
 /* end of Device Drivers */
 
 /* C/C++ and POSIX layer */
@@ -180,6 +259,29 @@
 
 /* Network */
 
+#define RT_USING_SAL
+#define SAL_INTERNET_CHECK
+#define SOCKET_TABLE_STEP_LEN 4
+
+/* Docking with protocol stacks */
+
+#define SAL_USING_AT
+/* end of Docking with protocol stacks */
+#define SAL_USING_POSIX
+#define RT_USING_NETDEV
+#define NETDEV_USING_IFCONFIG
+#define NETDEV_USING_PING
+#define NETDEV_USING_NETSTAT
+#define NETDEV_USING_AUTO_DEFAULT
+#define NETDEV_USING_LINK_STATUS_CALLBACK
+#define NETDEV_IPV4 1
+#define NETDEV_IPV6 0
+#define RT_USING_AT
+#define AT_USING_CLIENT
+#define AT_CLIENT_NUM_MAX 1
+#define AT_USING_SOCKET
+#define AT_USING_CLI
+#define AT_SW_VERSION_NUM 0x10301
 /* end of Network */
 
 /* Memory protection */
@@ -203,42 +305,381 @@
 
 /* end of RT-Thread Utestcases */
 
+/* RT-Thread online packages */
+
+/* IoT - internet of things */
+
+
+/* Wi-Fi */
+
+/* Marvell WiFi */
+
+/* end of Marvell WiFi */
+
+/* Wiced WiFi */
+
+/* end of Wiced WiFi */
+
+/* CYW43012 WiFi */
+
+/* end of CYW43012 WiFi */
+
+/* BL808 WiFi */
+
+/* end of BL808 WiFi */
+
+/* CYW43439 WiFi */
+
+/* end of CYW43439 WiFi */
+/* end of Wi-Fi */
+#define PKG_USING_AT_DEVICE
+#define AT_DEVICE_USING_ESP8266
+#define AT_DEVICE_ESP8266_INIT_ASYN
+#define AT_DEVICE_ESP8266_SOCKET
+#define AT_DEVICE_ESP8266_SAMPLE
+#define ESP8266_SAMPLE_WIFI_SSID "NT_ZY_BUFFALO"
+#define ESP8266_SAMPLE_WIFI_PASSWORD "12345678"
+#define ESP8266_SAMPLE_CLIENT_NAME "uart4"
+#define ESP8266_SAMPLE_RECV_BUFF_LEN 2048
+#define PKG_USING_AT_DEVICE_LATEST_VERSION
+#define PKG_AT_DEVICE_VER_NUM 0x99999
+
+/* IoT Cloud */
+
+/* end of IoT Cloud */
+/* end of IoT - internet of things */
+
+/* security packages */
+
+/* end of security packages */
+
+/* language packages */
+
+/* JSON: JavaScript Object Notation, a lightweight data-interchange format */
+
+/* end of JSON: JavaScript Object Notation, a lightweight data-interchange format */
+
+/* XML: Extensible Markup Language */
+
+/* end of XML: Extensible Markup Language */
+/* end of language packages */
+
+/* multimedia packages */
+
+/* LVGL: powerful and easy-to-use embedded GUI library */
+
+/* end of LVGL: powerful and easy-to-use embedded GUI library */
+
+/* u8g2: a monochrome graphic library */
+
+/* end of u8g2: a monochrome graphic library */
+/* end of multimedia packages */
+
+/* tools packages */
+
+/* end of tools packages */
+
+/* system packages */
+
+/* enhanced kernel services */
+
+/* end of enhanced kernel services */
+
+/* acceleration: Assembly language or algorithmic acceleration packages */
+
+/* end of acceleration: Assembly language or algorithmic acceleration packages */
+
+/* CMSIS: ARM Cortex-M Microcontroller Software Interface Standard */
+
+/* end of CMSIS: ARM Cortex-M Microcontroller Software Interface Standard */
+
+/* Micrium: Micrium software products porting for RT-Thread */
+
+/* end of Micrium: Micrium software products porting for RT-Thread */
+/* end of system packages */
+
+/* peripheral libraries and drivers */
+
+/* HAL & SDK Drivers */
+
+/* STM32 HAL & SDK Drivers */
+
+/* end of STM32 HAL & SDK Drivers */
+
+/* Infineon HAL Packages */
+
+/* end of Infineon HAL Packages */
+
+/* Kendryte SDK */
+
+/* end of Kendryte SDK */
+
+/* WCH HAL & SDK Drivers */
+
+/* end of WCH HAL & SDK Drivers */
+
+/* AT32 HAL & SDK Drivers */
+
+/* end of AT32 HAL & SDK Drivers */
+
+/* HC32 DDL Drivers */
+
+/* end of HC32 DDL Drivers */
+
+/* NXP HAL & SDK Drivers */
+
+/* end of NXP HAL & SDK Drivers */
+
+/* NUVOTON Drivers */
+
+#define PKG_USING_NUVOTON_SERIES_DRIVER
+#define PKG_USING_NUVOTON_SERIES_DRIVER_LATEST_VERSION
+/* end of NUVOTON Drivers */
+
+/* GD32 Drivers */
+
+/* end of GD32 Drivers */
+
+/* HPMicro SDK */
+
+/* end of HPMicro SDK */
+
+/* FT32 HAL & SDK Drivers */
+
+/* end of FT32 HAL & SDK Drivers */
+
+/* NOVOSNS Drivers */
+
+/* end of NOVOSNS Drivers */
+/* end of HAL & SDK Drivers */
+
+/* sensors drivers */
+
+/* end of sensors drivers */
+
+/* touch drivers */
+
+/* end of touch drivers */
+/* end of peripheral libraries and drivers */
+
+/* AI packages */
+
+/* end of AI packages */
+
+/* Signal Processing and Control Algorithm Packages */
+
+/* end of Signal Processing and Control Algorithm Packages */
+
+/* miscellaneous packages */
+
+/* project laboratory */
+
+/* end of project laboratory */
+
+/* samples: kernel and components samples */
+
+/* end of samples: kernel and components samples */
+
+/* entertainment: terminal games and other interesting software packages */
+
+/* end of entertainment: terminal games and other interesting software packages */
+/* end of miscellaneous packages */
+
+/* Arduino libraries */
+
+
+/* Projects and Demos */
+
+/* end of Projects and Demos */
+
+/* Sensors */
+
+/* end of Sensors */
+
+/* Display */
+
+/* end of Display */
+
+/* Timing */
+
+/* end of Timing */
+
+/* Data Processing */
+
+/* end of Data Processing */
+
+/* Data Storage */
+
+/* Communication */
+
+/* end of Communication */
+
+/* Device Control */
+
+/* end of Device Control */
+
+/* Other */
+
+/* end of Other */
+
+/* Signal IO */
+
+/* end of Signal IO */
+
+/* Uncategorized */
+
+/* end of Arduino libraries */
+/* end of RT-Thread online packages */
+
 /* Hardware Drivers Config */
 
 /* On-chip Peripheral Drivers */
 
 #define SOC_FAMILY_NUMICRO
 #define SOC_SERIES_M2354
+#define BSP_USING_BPWM
+#define BSP_USING_BPWM0
+#define BSP_USING_BPWM1
+#define BSP_USING_CAN
+#define BSP_USING_CAN0
+#define BSP_USING_CRC
+#define NU_CRC_USE_PDMA
+#define BSP_USING_CRYPTO
+#define BSP_USING_DAC
+#define BSP_USING_DAC0
+#define BSP_USING_DAC1
+#define BSP_USING_EADC
+#define BSP_USING_EADC0
+#define BSP_USING_EBI
+#define BSP_USING_ECAP
+#define BSP_USING_ECAP0
+#define BSP_USING_ECAP0_CHMSK 0
+#define BSP_USING_ECAP1
+#define BSP_USING_ECAP1_CHMSK 0
+#define BSP_USING_EPWM
+#define BSP_USING_EPWM0
+#define BSP_USING_EPWM1
+#define BSP_USING_FMC
+#define BSP_USING_GPIO
+#define BSP_USING_I2C
+#define BSP_USING_I2C0
+#define BSP_USING_I2C1
+#define BSP_USING_I2C2
+#define BSP_USING_I2S
+#define NU_I2S_DMA_FIFO_SIZE 2048
 #define BSP_USING_PDMA
 #define NU_PDMA_MEMFUN_ACTOR_MAX 2
 #define NU_PDMA_SGTBL_POOL_SIZE 16
-#define BSP_USING_GPIO
+#define BSP_USING_QEI
+#define BSP_USING_QEI0
+#define BSP_USING_QEI1
+#define BSP_USING_QSPI
+#define BSP_USING_QSPI0
+#define BSP_USING_QSPI0_PDMA
+#define BSP_USING_RTC
+#define NU_RTC_SUPPORT_MSH_CMD
+#define BSP_USING_SCUART
+#define BSP_USING_SCUART0
+#define BSP_USING_SCUART1
+#define BSP_USING_SCUART2
+#define BSP_USING_SDH
+#define BSP_USING_SDH0
+#define BSP_USING_SLCD
+#define BSP_USING_SOFT_I2C
+#define BSP_USING_SOFT_I2C0
+#define BSP_SOFT_I2C0_SCL_PIN 0x18
+#define BSP_SOFT_I2C0_SDA_PIN 0x17
+#define BSP_USING_SOFT_I2C1
+#define BSP_SOFT_I2C1_SCL_PIN 0x0B
+#define BSP_SOFT_I2C1_SDA_PIN 0x0A
+#define BSP_USING_SPI
+#define BSP_USING_SPI_PDMA
+#define BSP_USING_SPI0
+#define BSP_USING_SPI0_PDMA
+#define BSP_USING_SPI1
+#define BSP_USING_SPI1_PDMA
+#define BSP_USING_SPI2
+#define BSP_USING_SPI2_PDMA
+#define BSP_USING_SPI3
+#define BSP_USING_SPI3_PDMA
+#define BSP_USING_TMR
+#define BSP_USING_TIMER
+#define BSP_USING_TMR0
+#define BSP_USING_TIMER0
+#define BSP_USING_TMR1
+#define BSP_USING_TIMER1
+#define BSP_USING_TMR2
+#define BSP_USING_TIMER2
+#define BSP_USING_TMR3
+#define BSP_USING_TIMER3
+#define BSP_USING_TMR4
+#define BSP_USING_TIMER4
+#define BSP_USING_TMR5
+#define BSP_USING_TIMER5
+#define BSP_USING_TRNG
 #define BSP_USING_UART
 #define BSP_USING_UART0
+#define BSP_USING_UART1
+#define BSP_USING_UART2
+#define BSP_USING_UART3
+#define BSP_USING_UART4
+#define BSP_USING_UART4_TX_DMA
+#define BSP_USING_UART4_RX_DMA
+#define BSP_USING_UART5
+#define BSP_USING_USB
+#define BSP_USING_USBD
+#define BSP_USING_USCI
+#define BSP_USING_WDT
 /* end of On-chip Peripheral Drivers */
 
 /* On-board Peripheral Drivers */
 
 #define BSP_USING_NULINKME
-#define BOARD_USING_USB_NONE
+#define BOARD_USING_ESP8266
+#define BOARD_USING_USBD
 /* end of On-board Peripheral Drivers */
 
 /* Board extended module drivers */
 
+#define BOARD_USING_SEGMENT_LCD
 /* end of Board extended module drivers */
 
 /* Nuvoton Packages Config */
-
-#define NU_PKG_USING_UTILS
 
 /* Sensors */
 
 /* end of Sensors */
 
+/* Audio Codecs */
+
+/* end of Audio Codecs */
+
 /* Displays */
 
+#define NU_PKG_EBI_I80_CMD 0x0
+#define NU_PKG_EBI_I80_DATA 0x0
 /* end of Displays */
+
+/* Touch */
+
+/* end of Touch */
+
+/* Storages */
+
+/* end of Storages */
+
+/* Others */
+
+#define NU_PKG_USING_NUUTILS
+/* end of Others */
+
+/* Demo */
+
+#define NU_PKG_USING_DEMO
+/* end of Demo */
 /* end of Nuvoton Packages Config */
 /* end of Hardware Drivers Config */
+#define UTEST_CMD_PREFIX "numicro.bsp.utest."
+#define BOARD_USE_UTEST
 
 #endif

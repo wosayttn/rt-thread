@@ -40,6 +40,11 @@ rt_weak void rt_hw_board_init(void)
     rt_system_heap_init(HEAP_BEGIN, HEAP_END);
 #endif /* RT_USING_HEAP */
 
+#if defined(RT_USING_MEMHEAP) && defined(BSP_USING_LPSRAM)
+    extern int rt_hw_lpsram_init(void);
+    rt_hw_lpsram_init();
+#endif
+
 #if defined(BSP_USING_UART)
     rt_err_t rt_hw_uart_init(void);
     rt_hw_uart_init();

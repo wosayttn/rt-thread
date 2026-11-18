@@ -123,7 +123,7 @@ static USBD_EP_t *USBD_EndpointEntry(uint8_t busid, uint8_t ep_addr, bool add)
         }
         else
         {
-            if (ep_state->ep_addr == ep_addr) return periph_ep;
+            if ((periph_ep->CFG & USBD_CFG_STATE_Msk) && (ep_state->ep_addr == ep_addr)) return periph_ep;
         }
     }
 
@@ -145,7 +145,7 @@ static void USBD_EndpointConfigureBuffer(uint8_t busid)
 
         // Update the Endpoint Buffer Segmentation
         periph_ep->BUFSEG = g_nuvoton_udc->bufseg_addr;
-        g_nuvoton_udc->bufseg_addr += g_nuvoton_udc->ep_state[ep_index].ep_mps;
+        g_nuvoton_udc->bufseg_addr += (g_nuvoton_udc->ep_state[ep_index].ep_mps + 7U) & ~7U;
     }
 }
 
@@ -156,7 +156,7 @@ int usb_fs_dc_init(uint8_t busid)
 
     /*****************************************************/
     // Initial USB engine
-    USBD->ATTR = 0x7D0ul;
+    husbd->ATTR = 0x7D0ul;
 
     /*****************************************************/
 
@@ -164,6 +164,10 @@ int usb_fs_dc_init(uint8_t busid)
     husbd->INTSTS = (USBD_INT_BUS | USBD_INT_USB | USBD_INT_FLDET | USBD_INT_WAKEUP);
     // Enable USB-related interrupts.
     husbd->INTEN |= (USBD_INT_BUS | USBD_INT_USB | USBD_INT_FLDET | USBD_INT_WAKEUP);
+
+    // Force SE0 (software disconnect) so host detects re-connection
+    husbd->SE0 |= USBD_DRVSE0;
+    rt_thread_mdelay(50);
     // Disable software-disconnect function
     husbd->SE0 &= ~USBD_DRVSE0;
     /*****************************************************/
@@ -175,7 +179,7 @@ int usb_fs_dc_deinit(uint8_t busid)
 {
     USBD_t *husbd = USBD_HW(busid);
     NVIC_DisableIRQ(USBD_IRQn);
-    USBD->ATTR = 0x00000040;
+    husbd->ATTR = 0x00000040;
     // Enable software-disconnect function.
     husbd->SE0 |= USBD_DRVSE0;
     return 0;
@@ -184,9 +188,13 @@ int usb_fs_dc_deinit(uint8_t busid)
 int usbd_fs_set_address(uint8_t busid, const uint8_t addr)
 {
     USBD_t *husbd = USBD_HW(busid);
-    uint8_t usbd_addr = husbd->FADDR;
 
-    if ((usbd_addr == 0) && (usbd_addr != addr))
+    if (addr == 0U)
+    {
+        husbd->FADDR = 0U;
+        g_nuvoton_udc->usbd_set_address_flag = 0;
+    }
+    else
     {
         g_nuvoton_udc->dev_addr = addr;
         g_nuvoton_udc->usbd_set_address_flag = 1;
@@ -371,6 +379,12 @@ int usbd_fs_ep_start_read(uint8_t busid, const uint8_t ep, uint8_t *data, uint32
     ep_state->xfer_len = data_len;
     ep_state->actual_xfer_len = 0;
 
+    if (ep == 0x00)
+    {
+        // Set EP1 OUT token PID to DATA1
+        periph_ep->CFG |= USBD_CFG_DSQSYNC_Msk;
+    }
+
     // Trigger to get next OUT transfer
     periph_ep->MXPLD = ep_state->ep_mps;
 
@@ -443,6 +457,7 @@ NVT_ITCM void USBDn_IRQHandler(uint8_t busid)
     {
         // Clear event flag
         husbd->INTSTS = USBD_INTSTS_WAKEUP;
+        husbd->ATTR |= 0x7D0U;
     }
 
     //------------------------------------------------------------------
@@ -460,15 +475,13 @@ NVT_ITCM void USBDn_IRQHandler(uint8_t busid)
 
             usbd_event_reset_handler(busid);
         }
-
-        if (u32BusSts & USBD_STATE_SUSPEND)
+        else if (u32BusSts & USBD_STATE_SUSPEND)
         {
             /* Enable USB but disable PHY */
             husbd->ATTR &= ~USBD_PHY_EN;
             usbd_event_suspend_handler(busid);
         }
-
-        if (u32BusSts & USBD_STATE_RESUME)
+        else if (u32BusSts & USBD_STATE_RESUME)
         {
             /* Enable USB and enable PHY */
             husbd->ATTR |= 0x7D0U;
@@ -485,6 +498,14 @@ NVT_ITCM void USBDn_IRQHandler(uint8_t busid)
         {
             /* Clear event flag */
             husbd->INTSTS = USBD_INTSTS_SETUP;
+            /* Clear any pending EP0/EP1 flags caused by setup or previous aborted transfer */
+            #if defined(USBD_EPINTSTS_EPEVT0_Pos)
+            husbd->EPINTSTS = (USBD_EPINTSTS_EPEVT0_Msk | USBD_EPINTSTS_EPEVT1_Msk);
+            #else
+            husbd->INTSTS = (USBD_INTSTS_EPEVT0_Msk | USBD_INTSTS_EPEVT1_Msk);
+            #endif
+            u32EpIntSts &= ~(USBD_INTSTS_EPEVT0_Msk | USBD_INTSTS_EPEVT1_Msk);
+
             /* Clear the data IN/OUT ready flag of control end-points */
             husbd->EP[PERIPH_EP0].CFGP |= USBD_CFGP_CLRRDY_Msk;
             husbd->EP[PERIPH_EP1].CFGP |= USBD_CFGP_CLRRDY_Msk;
@@ -553,9 +574,12 @@ NVT_ITCM void USBDn_IRQHandler(uint8_t busid)
                     }
                     else
                     {
-                        uint32_t num_transferred = periph_ep->MXPLD;
+                        uint32_t num_transferred = periph_ep->MXPLD & 0x1FFU;
 
-                        USBD_MemCopy((uint8_t *)ep_state->xfer_buf + ep_state->actual_xfer_len, (uint8_t *)(USBD_BUF_BASE + periph_ep->BUFSEG), num_transferred);
+                        if ((ep_state->xfer_buf != NULL) && (num_transferred > 0))
+                        {
+                            USBD_MemCopy((uint8_t *)ep_state->xfer_buf + ep_state->actual_xfer_len, (uint8_t *)(USBD_BUF_BASE + periph_ep->BUFSEG), num_transferred);
+                        }
                         ep_state->actual_xfer_len += num_transferred;
 
                         if ((num_transferred < ep_state->ep_mps) || (ep_state->actual_xfer_len == ep_state->xfer_len))
@@ -572,11 +596,15 @@ NVT_ITCM void USBDn_IRQHandler(uint8_t busid)
                 }
             }
         }
+
+        /* Clear USB event interrupt flag */
+        husbd->INTSTS = USBD_INTSTS_USB;
     }
 }
 
 NVT_ITCM void USBD_IRQHandler(uint8_t busid)
 {
+    (void)busid;
     rt_interrupt_enter();
 
     USBDn_IRQHandler(DEF_DC_USBID_FS);

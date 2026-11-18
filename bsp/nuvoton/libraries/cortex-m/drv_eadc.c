@@ -13,6 +13,10 @@
 #define DBG_TAG LOG_TAG
 #include "drv_log.h"
 
+#if !defined(EADC0) && defined(EADC)
+    #define EADC0 EADC
+#endif
+
 #define CONFIG_MAX_CHN_NUM  EADC_CH_NUM
 #define DEFINE_NU_EADC(_idx)             \
     {                                    \
@@ -310,10 +314,14 @@ int rt_hw_eadc_init(void)
     int i;
     rt_err_t result;
 
+#if defined(SOC_SERIES_M460) || defined(SOC_SERIES_M480) || defined(SOC_SERIES_M3331) || defined(SOC_SERIES_M5531)
     /* Invoke ISP function to read built-in band-gap A/D conversion result*/
     FMC_Open();
     s_u32BuiltInBandGapValue = FMC_ReadBandGap();
     FMC_Close();
+#else
+    s_u32BuiltInBandGapValue = 0;
+#endif
 
     LOG_D("s_u32BuiltInBandGapValue: %d", s_u32BuiltInBandGapValue);
 

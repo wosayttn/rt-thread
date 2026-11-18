@@ -165,15 +165,6 @@ menuconfig BSP_USING_EQEI
     if BSP_USING_EQEI
         config BSP_USING_EQEI0
             bool "Enable EQEI0"
-
-        config BSP_USING_EQEI1
-            bool "Enable EQEI1"
-
-        config BSP_USING_EQEI2
-            bool "Enable EQEI2"
-
-        config BSP_USING_EQEI3
-            bool "Enable EQEI3"
     endif
 
 menuconfig BSP_USING_FMC
@@ -200,29 +191,6 @@ menuconfig BSP_USING_I2C
 
         config BSP_USING_I2C2
             bool "Enable I2C2"
-
-        config BSP_USING_I2C3
-            bool "Enable I2C3"
-    endif
-
-menuconfig BSP_USING_LPADC
-    bool "Enable Low Power Analog-to-Digital Converter(LPADC)"
-    select RT_USING_ADC
-
-    if BSP_USING_LPADC
-        config BSP_USING_LPADC0
-            bool "Enable LPADC0"
-    endif
-
-menuconfig BSP_USING_LPTMR
-    bool "Enable Low Power Timer(LPTMR)"
-
-    if BSP_USING_LPTMR
-        config BSP_USING_LPTMR0
-            bool "Enable LPTMR0"
-
-        config BSP_USING_LPTMR1
-            bool "Enable LPTMR1"
     endif
 
 menuconfig BSP_USING_PDMA
@@ -264,20 +232,6 @@ menuconfig BSP_USING_RTC
     if BSP_USING_RTC
         config BSP_USING_RTC_INTERNAL
             bool "Enable Internal RTC"
-    endif
-
-menuconfig BSP_USING_SC
-    bool "Enable Smart Card Interface(SC)"
-
-    if BSP_USING_SC
-        config BSP_USING_SC0
-            bool "Enable SC0"
-
-        config BSP_USING_SC1
-            bool "Enable SC1"
-
-        config BSP_USING_SC2
-            bool "Enable SC2"
     endif
 
 menuconfig BSP_USING_SPI
@@ -442,9 +396,6 @@ menuconfig BSP_USING_UART
 
         config BSP_USING_UART4
             bool "Enable UART4"
-
-        config BSP_USING_UART5
-            bool "Enable UART5"
     endif
 
 menuconfig BSP_USING_USB

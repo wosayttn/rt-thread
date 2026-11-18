@@ -15,28 +15,43 @@
 
 #include <rtconfig.h>
 #include <board.h>
-
+#include "fal.h"
+#include "drv_fmc.h"
 
 /* ===================== Flash device Configuration ========================= */
-extern const struct fal_flash_dev Onchip_aprom_flash;
-extern const struct fal_flash_dev Onchip_ldrom_flash;
+#if defined(FAL_PART_HAS_TABLE_CFG)
 
-/* -flash device table------------------------------------------------------- */
-#define FAL_FLASH_DEV_TABLE                                                                   \
-{                                                                                             \
-    &Onchip_aprom_flash,                                                                      \
-    &Onchip_ldrom_flash,                                                                      \
-}
+/* ---------------- FMC ---------------- */
+#if defined(BSP_USING_FMC)
+#define IFDEF_BOARD_USING_FMC   &g_falFMC_AP, &g_falFMC_LD,
+#define FAL_PART_FMC  \
+            {FAL_PART_MAGIC_WORD, "LDROM",     "FMC_LD",  0x0,    (8*1024),   0},  \
+            {FAL_PART_MAGIC_WORD, "APROM",     "FMC_AP",  0x0,    (512*1024), 0},
+#else
+#define IFDEF_BOARD_USING_FMC
+#define FAL_PART_FMC
+#endif
 
-/* ====================== Partition Configuration ============================ */
-#ifdef FAL_PART_HAS_TABLE_CFG
+/* ---------------- Device Table ---------------- */
+#if defined(BSP_USING_FMC)
+#define FAL_FLASH_DEV_TABLE     \
+        {                               \
+            IFDEF_BOARD_USING_FMC       \
+        }
+#else
+#define FAL_FLASH_DEV_TABLE { }
+#endif
 
-/* -partition table----------------------------------------------------------- */
-#define FAL_PART_TABLE                                                                        \
-{                                                                                             \
-    {FAL_PART_MAGIC_WORD,        "ldrom",     "OnChip_LDROM",         0,          0x1000,  0},   \
-    {FAL_PART_MAGIC_WORD,        "aprom",     "OnChip_APROM",         0xF0000,    0x10000, 0},   \
-}
+/* ---------------- Partition Table ---------------- */
+#if defined(BSP_USING_FMC)
+#define FAL_PART_TABLE          \
+        {                               \
+            FAL_PART_FMC                \
+        }
+#else
+#define FAL_PART_TABLE { }
+#endif
+
 #endif /* FAL_PART_HAS_TABLE_CFG */
 
 #endif /* _FAL_CFG_H_ */

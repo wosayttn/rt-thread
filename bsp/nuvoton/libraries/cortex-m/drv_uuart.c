@@ -484,8 +484,9 @@ static int nu_hw_uuart_dma_allocate(nu_uuart_t psNuUUart)
         }
     }
 
-    LOG_I("UUART DMA channels allocated: TX=%d, RX=%d", psNuUart->pdma_chanid_tx, psNuUart->pdma_chanid_rx);
-    LOG_I("UUART DMA RX DESC@%p", psNuUart->pdma_rx_desc);
+    LOG_I("%s DMA channels: TX=%d, RX=%d", psNuUUart->m_module.name, psNuUUart->pdma_chanid_tx, psNuUUart->pdma_chanid_rx);
+    if (psNuUUart->pdma_rx_desc != RT_NULL)
+        LOG_I("%s DMA RX DESC@%p", psNuUUart->m_module.name, psNuUUart->pdma_rx_desc);
 
     return RT_EOK;
 }
@@ -516,7 +517,8 @@ static rt_err_t nu_uuart_control(struct rt_serial_device *serial, int cmd, void 
         {
             /* Disable Receive Line interrupt & Stop DMA RX transfer. */
 #if defined(RT_SERIAL_USING_DMA)
-            nu_pdma_channel_terminate(((nu_uuart_t)serial)->pdma_chanid_rx);
+            if (psNuUUart->pdma_chanid_rx >= 0)
+                nu_pdma_channel_terminate(psNuUUart->pdma_chanid_rx);
             UUART_PDMA_DISABLE(uuart_base, UUART_PDMACTL_RXPDMAEN_Msk);
             UUART_DisableInt(uuart_base, UUART_RLS_INT_MASK);
 #endif
@@ -552,8 +554,10 @@ static rt_err_t nu_uuart_control(struct rt_serial_device *serial, int cmd, void 
         UUART_DisableInt(uuart_base, UUART_RXEND_INT_MASK | UUART_RLS_INT_MASK);
         UUART_PDMA_DISABLE(uuart_base, UUART_PDMACTL_TXPDMAEN_Msk | UUART_PDMACTL_PDMAEN_Msk);
 
-        nu_pdma_channel_terminate(psNuUUart->pdma_chanid_tx);
-        nu_pdma_channel_terminate(psNuUUart->pdma_chanid_rx);
+        if (psNuUUart->pdma_chanid_tx >= 0)
+            nu_pdma_channel_terminate(psNuUUart->pdma_chanid_tx);
+        if (psNuUUart->pdma_chanid_rx >= 0)
+            nu_pdma_channel_terminate(psNuUUart->pdma_chanid_rx);
 #endif
 
         /* Reset this module */
@@ -626,6 +630,8 @@ static int rt_hw_uuart_init(void)
         nu_uuart_arr[i].dev.config = nu_uuart_default_config;
 #if defined(RT_SERIAL_USING_DMA)
         nu_uuart_arr[i].dma_flag = 0;
+        nu_uuart_arr[i].pdma_chanid_tx = NU_PDMA_UNUSED;
+        nu_uuart_arr[i].pdma_chanid_rx = NU_PDMA_UNUSED;
         nu_hw_uuart_dma_allocate(&nu_uuart_arr[i]);
         flag |= nu_uuart_arr[i].dma_flag;
 #endif

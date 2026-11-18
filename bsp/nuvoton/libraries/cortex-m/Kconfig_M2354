@@ -90,7 +90,22 @@ menuconfig BSP_USING_CLK
         bool "Enable SPD1 and DPD mode wakeup timer. (About 6.6 Secs)"
         default y
     endif
+menuconfig BSP_USING_CRC
+    bool "Enable Cyclic Redundancy Check Generator(CRC)"
+    select BSP_USING_CRYPTO
+    select RT_USING_HWCRYPTO
+    select RT_HWCRYPTO_USING_CRC
+    select RT_HWCRYPTO_USING_CRC_07
+    select RT_HWCRYPTO_USING_CRC_8005
+    select RT_HWCRYPTO_USING_CRC_1021
+    select RT_HWCRYPTO_USING_CRC_04C11DB7
 
+    if BSP_USING_CRC
+        config NU_CRC_USE_PDMA
+            bool "Use PDMA for data transferring."
+            select BSP_USING_PDMA
+            default y
+    endif
 menuconfig BSP_USING_CRYPTO
     bool "Enable Cryptographic Accelerator(CRYPTO)"
     select RT_USING_HWCRYPTO
@@ -101,12 +116,6 @@ menuconfig BSP_USING_CRYPTO
     select RT_HWCRYPTO_USING_AES_CTR
     select RT_HWCRYPTO_USING_AES_CFB
     select RT_HWCRYPTO_USING_AES_OFB
-    select RT_HWCRYPTO_USING_DES
-    select RT_HWCRYPTO_USING_DES_ECB
-    select RT_HWCRYPTO_USING_DES_CBC
-    select RT_HWCRYPTO_USING_3DES
-    select RT_HWCRYPTO_USING_3DES_ECB
-    select RT_HWCRYPTO_USING_3DES_CBC
     select RT_HWCRYPTO_USING_SHA1
     select RT_HWCRYPTO_USING_SHA2
     select RT_HWCRYPTO_USING_SHA2_224
@@ -129,28 +138,17 @@ menuconfig BSP_USING_CRYPTO
         endif
     endif
 
-    config BSP_USING_TRNG
-        bool "Enable True Random Number Generator(TRNG)"
-        select BSP_USING_CRYPTO
-        select RT_USING_HWCRYPTO
-        select RT_HWCRYPTO_USING_RNG
+menuconfig BSP_USING_DAC
+    bool "Enable Digital-to-Analog Converter(DAC)"
+    select RT_USING_DAC
 
-    menuconfig BSP_USING_CRC
-        bool "Enable Cyclic Redundancy Check Generator(CRC)"
-        select BSP_USING_CRYPTO
-        select RT_USING_HWCRYPTO
-        select RT_HWCRYPTO_USING_CRC
-        select RT_HWCRYPTO_USING_CRC_07
-        select RT_HWCRYPTO_USING_CRC_8005
-        select RT_HWCRYPTO_USING_CRC_1021
-        select RT_HWCRYPTO_USING_CRC_04C11DB7
+    if BSP_USING_DAC
+        config BSP_USING_DAC0
+            bool "Enable DAC0"
 
-        if BSP_USING_CRC
-            config NU_CRC_USE_PDMA
-            bool "Use PDMA for data transferring."
-            select BSP_USING_PDMA
-            default y
-        endif
+        config BSP_USING_DAC1
+            bool "Enable DAC1"
+    endif
 
 menuconfig BSP_USING_EADC
     bool "Enable Enhanced Analog-to-Digital Converter(EADC)"
@@ -231,6 +229,10 @@ menuconfig BSP_USING_EPWM
 
         choice
             prompt "Select EPWM1 function mode"
+            config BSP_USING_EPWM1_NONE
+                bool "NONE"
+                help
+                   Choose this option if you need not EPWM1.
             config BSP_USING_EPWM1
                 select RT_USING_PWM
                 bool "Enable EPWM1"
@@ -290,11 +292,6 @@ if BSP_USING_I2S || BSP_USING_SPII2S
     default 2048
 endif
 
-config BSP_USING_OTG
-    bool "Enable Full-Speed USB On-The-Go(OTG)"
-    select BSP_USING_USBH
-    select BSP_USING_USBD
-
 menuconfig BSP_USING_PDMA
     bool "Enable Peripheral Direct Memory Access Controller(PDMA)"
     default y
@@ -344,13 +341,6 @@ menuconfig BSP_USING_RTC
     bool "Enable Real Time Clock(RTC)"
     select RT_USING_RTC
 
-    config NU_RTC_SUPPORT_IO_RW
-        bool "Support device RW entry"
-        depends on BSP_USING_RTC && RT_USING_RTC
-
-    config NU_RTC_SUPPORT_MSH_CMD
-        bool "Support module shell command"
-        depends on BSP_USING_RTC && RT_USING_RTC
 
 menuconfig BSP_USING_SCUART
     bool "Enable Smart Card Host Interface - UART(SCUART)"
@@ -374,9 +364,6 @@ menuconfig BSP_USING_SDH
     if BSP_USING_SDH
         config BSP_USING_SDH0
             bool "Enable SDH0"
-
-        config BSP_USING_SDH1
-            bool "Enable SDH1"
     endif
 
 config BSP_USING_SLCD
@@ -429,59 +416,59 @@ menuconfig BSP_USING_SPI
     select RT_USING_SPI
 
     if BSP_USING_SPI
-        config BSP_USING_SPI_PDMA
-        bool
-        default n
+            config BSP_USING_SPI_PDMA
+            bool
+            default n
 
-        config BSP_USING_SPII2S
-        bool
-        default n
+            config BSP_USING_SPII2S
+            bool
+            default n
 
-        choice
-            prompt "Select SPI0 function mode"
-            config BSP_USING_SPI0_NONE
-            bool "NONE"
-            help
-                Choose this option if you need not SPI0.
-
-            config BSP_USING_SPI0
-            bool "Enable SPI0"
-            help
-                Choose this option if you need SPI function mode.
-
-            config BSP_USING_SPII2S0
-                select RT_USING_AUDIO
-                select BSP_USING_SPII2S
-                bool "Enable SPII2S0"
+            choice
+                prompt "Select SPI0 function mode"
+                config BSP_USING_SPI0_NONE
+                bool "NONE"
                 help
-                    Choose this option if you need SPII2S function mode.
-        endchoice
+                    Choose this option if you need not SPI0.
 
-        if BSP_USING_SPI0
+                config BSP_USING_SPI0
+                bool "Enable SPI0"
+                help
+                    Choose this option if you need SPI function mode.
+
+                config BSP_USING_SPII2S0
+                    select RT_USING_AUDIO
+                    select BSP_USING_SPII2S
+                    bool "Enable SPII2S0"
+                    help
+                    Choose this option if you need SPII2S function mode.
+            endchoice
+
+            if BSP_USING_SPI0
                 config BSP_USING_SPI0_PDMA
                     bool "Enable PDMA for SPI0"
                     select BSP_USING_SPI_PDMA
                     depends on BSP_USING_SPI0
-        endif
+            endif
 
-        choice
-            prompt "Select SPI1 function mode"
-            config BSP_USING_SPI1_NONE
-            bool "NONE"
-            help
-                Choose this option if you need not SPI1.
+            choice
+                prompt "Select SPI1 function mode"
+                config BSP_USING_SPI1_NONE
+                bool "NONE"
+                help
+                    Choose this option if you need not SPI1.
 
-            config BSP_USING_SPI1
-            bool "Enable SPI1"
-            help
-                Choose this option if you need SPI function mode.
+                config BSP_USING_SPI1
+                bool "Enable SPI1"
+                help
+                    Choose this option if you need SPI function mode.
 
-            config BSP_USING_SPII2S1
-                select RT_USING_AUDIO
-                select BSP_USING_SPII2S
-                bool "Enable SPII2S1"
-            help
-                Choose this option if you need SPII2S function mode.
+                config BSP_USING_SPII2S1
+                    select RT_USING_AUDIO
+                    select BSP_USING_SPII2S
+                    bool "Enable SPII2S1"
+                help
+                    Choose this option if you need SPII2S function mode.
             endchoice
 
             if BSP_USING_SPI1
@@ -491,25 +478,25 @@ menuconfig BSP_USING_SPI
                     depends on BSP_USING_SPI1
             endif
 
-        choice
-            prompt "Select SPI2 function mode"
-            config BSP_USING_SPI2_NONE
-            bool "NONE"
-            help
-                Choose this option if you need not SPI2.
+            choice
+                prompt "Select SPI2 function mode"
+                config BSP_USING_SPI2_NONE
+                bool "NONE"
+                help
+                    Choose this option if you need not SPI2.
 
-            config BSP_USING_SPI2
-            bool "Enable SPI2"
+                config BSP_USING_SPI2
+                bool "Enable SPI2"
                 help
                     Choose this option if you need SPI function mode.
 
                 config BSP_USING_SPII2S2
-                select RT_USING_AUDIO
-                select BSP_USING_SPII2S
-                bool "Enable SPII2S2"
-                help
+                    select RT_USING_AUDIO
+                    select BSP_USING_SPII2S
+                    bool "Enable SPII2S2"
+                    help
                     Choose this option if you need SPII2S function mode.
-        endchoice
+            endchoice
 
             if BSP_USING_SPI2
                 config BSP_USING_SPI2_PDMA
@@ -518,23 +505,23 @@ menuconfig BSP_USING_SPI
                     depends on BSP_USING_SPI2
             endif
 
-        choice
-            prompt "Select SPI3 function mode"
-            config BSP_USING_SPI3_NONE
-            bool "NONE"
-            help
-                Choose this option if you need not SPI3.
-
-            config BSP_USING_SPI3
-            bool "Enable SPI3"
-            help
-                Choose this option if you need SPI function mode.
-
-            config BSP_USING_SPII2S3
-                select RT_USING_AUDIO
-                select BSP_USING_SPII2S
-                bool "Enable SPII2S3"
+            choice
+                prompt "Select SPI3 function mode"
+                config BSP_USING_SPI3_NONE
+                bool "NONE"
                 help
+                    Choose this option if you need not SPI3.
+
+                config BSP_USING_SPI3
+                bool "Enable SPI3"
+                help
+                    Choose this option if you need SPI function mode.
+
+                config BSP_USING_SPII2S3
+                    select RT_USING_AUDIO
+                    select BSP_USING_SPII2S
+                    bool "Enable SPII2S3"
+                    help
                     Choose this option if you need SPII2S function mode.
             endchoice
 
@@ -558,9 +545,6 @@ menuconfig BSP_USING_TMR
         config BSP_USING_TPWM
             bool
 
-        config BSP_USING_TIMER_CAPTURE
-            bool
-
         config BSP_USING_TMR0
             bool "Enable TIMER0"
             depends on BSP_USING_TMR
@@ -582,14 +566,6 @@ menuconfig BSP_USING_TMR
                     bool "TIMER PWM"
                 help
                     Choose this option if you need PWM function mode.
-
-                config BSP_USING_TIMER0_CAPTURE
-                    select BSP_USING_TIMER_CAPTURE
-                    select RT_USING_INPUT_CAPTURE
-                    bool "TIMER CAPTURE"
-                help
-                    Choose this option if you need CAPTURE function mode.
-
             endchoice
         endif
 
@@ -615,12 +591,6 @@ menuconfig BSP_USING_TMR
                 help
                     Choose this option if you need PWM function mode.
 
-                config BSP_USING_TIMER1_CAPTURE
-                    select BSP_USING_TIMER_CAPTURE
-                    select RT_USING_INPUT_CAPTURE
-                    bool "TIMER CAPTURE"
-                help
-                    Choose this option if you need CAPTURE function mode.
             endchoice
             endif
 
@@ -646,12 +616,6 @@ menuconfig BSP_USING_TMR
                 help
                     Choose this option if you need PWM function mode.
 
-                config BSP_USING_TIMER2_CAPTURE
-                    select BSP_USING_TIMER_CAPTURE
-                    select RT_USING_INPUT_CAPTURE
-                    bool "TIMER CAPTURE"
-                help
-                    Choose this option if you need CAPTURE function mode.
             endchoice
         endif
 
@@ -677,12 +641,6 @@ menuconfig BSP_USING_TMR
                     help
                         Choose this option if you need PWM function mode.
 
-                config BSP_USING_TIMER3_CAPTURE
-                    select BSP_USING_TIMER_CAPTURE
-                    select RT_USING_INPUT_CAPTURE
-                    bool "TIMER CAPTURE"
-                help
-                    Choose this option if you need CAPTURE function mode.
             endchoice
         endif
 
@@ -707,13 +665,6 @@ menuconfig BSP_USING_TMR
                     bool "TIMER PWM"
                     help
                         Choose this option if you need PWM function mode.
-
-                config BSP_USING_TIMER4_CAPTURE
-                    select BSP_USING_TIMER_CAPTURE
-                    select RT_USING_INPUT_CAPTURE
-                    bool "TIMER CAPTURE"
-                help
-                    Choose this option if you need CAPTURE function mode.
             endchoice
         endif
 
@@ -738,16 +689,15 @@ menuconfig BSP_USING_TMR
                     bool "TIMER PWM"
                     help
                         Choose this option if you need PWM function mode.
-
-                config BSP_USING_TIMER5_CAPTURE
-                    select BSP_USING_TIMER_CAPTURE
-                    select RT_USING_INPUT_CAPTURE
-                    bool "TIMER CAPTURE"
-                help
-                    Choose this option if you need CAPTURE function mode.
             endchoice
         endif
 endif
+
+config BSP_USING_TRNG
+    bool "Enable True Random Number Generator(TRNG)"
+    select BSP_USING_CRYPTO
+    select RT_USING_HWCRYPTO
+    select RT_HWCRYPTO_USING_RNG
 
 menuconfig BSP_USING_UART
     bool "Enable Universal Asynchronous Receiver/Transmitters(UART)"
@@ -901,45 +851,45 @@ menuconfig BSP_USING_USCI
         config BSP_USING_USCI1
             bool "Enable USCI1"
 
-            if BSP_USING_USCI1
-                choice
-                    prompt "Select USCI1 function mode"
+        if BSP_USING_USCI1
+            choice
+                prompt "Select USCI1 function mode"
 
-                    config BSP_USING_UUART1
-                        select RT_USING_SERIAL
-                        select BSP_USING_UUART
-                        bool "UUART1"
-                        help
+                config BSP_USING_UUART1
+                    select RT_USING_SERIAL
+                    select BSP_USING_UUART
+                    bool "UUART1"
+                    help
                         Choose this option if you need UART function mode.
 
-                    config BSP_USING_UI2C1
-                        select RT_USING_I2C
-                        select BSP_USING_UI2C
-                        bool "UI2C1"
-                        help
+                config BSP_USING_UI2C1
+                    select RT_USING_I2C
+                    select BSP_USING_UI2C
+                    bool "UI2C1"
+                    help
                         Choose this option if you need I2C function mode.
 
-                    config BSP_USING_USPI1
-                        select RT_USING_SPI
-                        select BSP_USING_USPI
-                        bool "USPI1"
-                        help
+                config BSP_USING_USPI1
+                    select RT_USING_SPI
+                    select BSP_USING_USPI
+                    bool "USPI1"
+                    help
                         Choose this option if you need SPI function mode.
-                endchoice
+            endchoice
 
-                config BSP_USING_UUART1_TX_DMA
-                    bool "Enable UUART1 TX DMA"
-                    depends on BSP_USING_UUART1 && RT_SERIAL_USING_DMA
+            config BSP_USING_UUART1_TX_DMA
+                bool "Enable UUART1 TX DMA"
+                depends on BSP_USING_UUART1 && RT_SERIAL_USING_DMA
 
-                config BSP_USING_UUART1_RX_DMA
-                    bool "Enable UUART1 RX DMA"
-                    depends on BSP_USING_UUART1 && RT_SERIAL_USING_DMA
+            config BSP_USING_UUART1_RX_DMA
+                bool "Enable UUART1 RX DMA"
+                depends on BSP_USING_UUART1 && RT_SERIAL_USING_DMA
 
-                config BSP_USING_USPI1_PDMA
-                    bool "Use PDMA for data transferring"
-                    select BSP_USING_USPI_PDMA
-                    depends on BSP_USING_USPI1
-            endif
+            config BSP_USING_USPI1_PDMA
+                bool "Use PDMA for data transferring"
+                select BSP_USING_USPI_PDMA
+                depends on BSP_USING_USPI1
+        endif
     endif
 
 config BSP_USING_WDT

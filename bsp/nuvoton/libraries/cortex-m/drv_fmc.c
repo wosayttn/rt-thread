@@ -170,9 +170,7 @@ int nu_fmc_write(long addr, const uint8_t *buf, size_t size)
 
     // If address is not dword-aligned, read the aligned dword first
     if (NU_GET_LSB3BIT(addr))
-    {
         FMC_Read64(NU_GET_DWALIGN(addr), &isp_rdata);
-    }
 
     for (; addr < addr_end;)
     {
@@ -186,18 +184,13 @@ int nu_fmc_write(long addr, const uint8_t *buf, size_t size)
         }
 
         if (NU_GET_LSB3BIT(addr) == 0)
-        {
             FMC_Read64(NU_GET_DWALIGN(addr), &isp_rdata);
-        }
 
         int byte_ofs = addr & 0x7;
-        isp_rdata = (isp_rdata & ~((uint64_t)0xFF << (byte_ofs * 8))) |
-                    ((uint64_t)(*buf) << (byte_ofs * 8));
+        isp_rdata = (isp_rdata & ~((uint64_t)0xFF << (byte_ofs * 8))) | ((uint64_t)(*buf) << (byte_ofs * 8));
 
         if (NU_GET_LSB3BIT(addr) == 0x7)
-        {
             FMC_Write64(NU_GET_DWALIGN(addr), isp_rdata);
-        }
 
         addr ++;
         buf++;

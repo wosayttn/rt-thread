@@ -282,6 +282,9 @@ config SOC_SERIES_M460
         if BSP_USING_I2S
             config BSP_USING_I2S0
                 bool "Enable I2S0"
+
+            config BSP_USING_I2S1
+                bool "Enable I2S1"
         endif
 
     if BSP_USING_I2S || BSP_USING_SPII2S

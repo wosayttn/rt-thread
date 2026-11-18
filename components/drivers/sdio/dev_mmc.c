@@ -299,7 +299,7 @@ static int mmc_poll_for_busy(struct rt_mmcsd_card *card, rt_uint32_t timeout_ms,
 {
     int timeout = rt_tick_from_millisecond(timeout_ms);
     int err = 0;
-    rt_uint32_t status;
+    rt_uint32_t status = 0;
     rt_tick_t start;
 
     start = rt_tick_get();
@@ -316,10 +316,16 @@ static int mmc_poll_for_busy(struct rt_mmcsd_card *card, rt_uint32_t timeout_ms,
         rt_thread_mdelay(1);
 
         err = mmc_send_status(card, &status, retries);
-        if (R1_STATUS(err))
+        if (err)
         {
             LOG_E("error %d requesting status", err);
             return err;
+        }
+
+        if (R1_STATUS(status))
+        {
+            LOG_E("card status error 0x%08x", status);
+            return -RT_ERROR;
         }
     }
     while (!(status & R1_READY_FOR_DATA) ||

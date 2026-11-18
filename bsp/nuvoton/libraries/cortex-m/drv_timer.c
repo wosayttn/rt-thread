@@ -24,6 +24,7 @@
             .ModId = TMR##_idx##_MODULE         \
         }                                       \
     }
+
 #define DEFINE_TIMER_IRQ_HANDLER(_idx)            \
 void TMR##_idx##_IRQHandler(void)                 \
 {                                                 \
@@ -50,6 +51,12 @@ enum
 #endif
 #if defined(BSP_USING_TIMER3)
     TIMER3_IDX,
+#endif
+#if defined(BSP_USING_TIMER4)
+    TIMER4_IDX,
+#endif
+#if defined(BSP_USING_TIMER5)
+    TIMER5_IDX,
 #endif
     TIMER_CNT
 };
@@ -82,6 +89,12 @@ static struct nu_timer nu_timer_arr [] =
 #endif
 #if defined(BSP_USING_TIMER3)
     DEFINE_NU_TIMER(3),
+#endif
+#if defined(BSP_USING_TIMER4)
+    DEFINE_NU_TIMER(4),
+#endif
+#if defined(BSP_USING_TIMER5)
+    DEFINE_NU_TIMER(5),
 #endif
 };
 
@@ -272,4 +285,12 @@ INIT_BOARD_EXPORT(rt_hw_timer_init);
 
 #if defined(BSP_USING_TIMER3)
     DEFINE_TIMER_IRQ_HANDLER(3)
+#endif
+
+#if defined(BSP_USING_TIMER4)
+    DEFINE_TIMER_IRQ_HANDLER(4)
+#endif
+
+#if defined(BSP_USING_TIMER5)
+    DEFINE_TIMER_IRQ_HANDLER(5)
 #endif

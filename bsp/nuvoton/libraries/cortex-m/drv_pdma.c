@@ -5,6 +5,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
+#include <rtthread.h>
 #include "drv_sys.h"
 #include "drv_pdma.h"
 #include "rthw.h"
@@ -31,13 +32,12 @@
 #define DEF_SGTBL_TOKEN_NUM               (RT_ALIGN(NU_PDMA_SGTBL_POOL_SIZE, 32) / 32)
 
 #define DEFINE_NU_PDMA(_idx)             \
-    [(_idx)] =                           \
     {                                    \
         .m_module = {                    \
             .name = "pdma" #_idx,        \
             .base = (void *)PDMA##_idx,  \
             .RstId = PDMA##_idx##_RST,   \
-            .eIRQn = PDMA##_idx##_IRQn, \
+            .eIRQn = PDMA##_idx##_IRQn,  \
         }                                \
     }
 
@@ -322,6 +322,9 @@ static const nu_pdma_periph_ctl_t g_nu_pdma_peripheral_ctl_pool[ ] =
 #if defined(PDMA_USCI0_RX)
     { PDMA_USCI0_RX, eMemCtl_SrcFix_DstInc },
 #endif
+#if defined(PDMA_USCI1_RX)
+    { PDMA_USCI1_RX, eMemCtl_SrcFix_DstInc },
+#endif
 
 #if defined(PDMA_QSPI0_RX)
     { PDMA_QSPI0_RX, eMemCtl_SrcFix_DstInc },
@@ -396,7 +399,6 @@ static const nu_pdma_periph_ctl_t g_nu_pdma_peripheral_ctl_pool[ ] =
 #if defined(PDMA_EADC1_RX)
     { PDMA_EADC1_RX, eMemCtl_SrcFix_DstInc },
 #endif
-
 };
 
 static struct nu_pdma_memfun_actor nu_pdma_memfun_actor_arr[NU_PDMA_MEMFUN_ACTOR_MAX];
@@ -423,6 +425,8 @@ static int nu_pdma_peripheral_query(uint32_t u32PeriphType)
             return idx;
         idx++;
     }
+
+    // Not such peripheral
     return -1;
 }
 
@@ -456,9 +460,8 @@ static void nu_pdma_init(void)
 
         PDMA_T *pdma = (PDMA_T *)nu_pdma_arr[i].m_module.base;
         nu_pdma_chn_mask_arr[i] = ~(NU_PDMA_CH_Msk);
-
         nu_pdma_arr[i].m_psSGTbl = rt_malloc_align(sizeof(DSCT_T) * NU_PDMA_SGTBL_POOL_SIZE, 32);
-        RT_ASSERT(nu_pdma_arr[i].m_psSGTbl);
+        RT_ASSERT(nu_pdma_arr[i].m_psSGTbl != RT_NULL);
 
         /* Initialize sg table array. */
         rt_memset(nu_pdma_arr[i].m_psSGTbl, 0x00, sizeof(DSCT_T) * NU_PDMA_SGTBL_POOL_SIZE);
@@ -573,8 +576,8 @@ static rt_err_t nu_pdma_timeout_set(int i32ModChnID, int i32Timeout_us)
             u32TOutCnt = (1 << 16);
         }
 
-#if defined(SOC_SERIES_M480) || defined(SOC_SERIES_M2354)
-        if (i32Timeout_us && u32ModChannId <= 1)   // M480 limit
+#if defined(SOC_SERIES_M480) || defined(SOC_SERIES_M2354) || defined(SOC_SERIES_M2L31)
+        if (i32Timeout_us && u32ModChannId <= 1)
         {
             pdma->TOUTPSC |= (u32Divider << (PDMA_TOUTPSC_TOUTPSC1_Pos * u32ModChannId));
             PDMA_SetTimeOut(pdma,  u32ModChannId, 1, u32TOutCnt);
@@ -762,6 +765,8 @@ nu_pdma_cb_handler_t nu_pdma_callback_hijack(int i32ModChnID, nu_pdma_cbtype_t e
     default:
         goto exit_nu_pdma_callback_hijack;
     }
+
+    /* Backup */
     sChnCB_Tmp.m_pfnCBHandler = psChnCb_Current->m_pfnCBHandler;
     sChnCB_Tmp.m_pvUserData = psChnCb_Current->m_pvUserData;
 
@@ -869,6 +874,8 @@ static void nu_pdma_channel_memctrl_fill(nu_pdma_memctrl_t eMemCtl, uint32_t *pu
         break;
     }
 }
+
+/* This is for Scatter-gather DMA. */
 rt_err_t nu_pdma_desc_setup(int i32ModChnID, nu_pdma_desc_t dma_desc, uint32_t u32DataWidth, uint32_t u32AddrSrc,
                             uint32_t u32AddrDst, int32_t i32TransferCnt, nu_pdma_desc_t next, uint32_t u32BeSilent)
 {
@@ -955,6 +962,8 @@ rt_err_t nu_pdma_desc_setup(int i32ModChnID, nu_pdma_desc_t dma_desc, uint32_t u
         dma_desc->NEXT = (uint32_t)next - (pdma->SCATBA);
         dma_desc->CTL = (dma_desc->CTL & ~PDMA_DSCT_CTL_OPMODE_Msk) | PDMA_OP_SCATTER;
     }
+
+    /* Be silent */
     if (u32BeSilent)
         dma_desc->CTL |= PDMA_DSCT_CTL_TBINTDIS_Msk;
 
@@ -982,6 +991,8 @@ static int nu_pdma_sgtbls_token_allocate(nu_pdma_t psPDMA)
             return idx;
         }
     }
+
+    /* No available */
     return -1;
 }
 
@@ -1142,8 +1153,9 @@ static rt_err_t _nu_pdma_transfer_chain(int i32ModChnID, uint32_t u32DataWidth, 
         _nu_pdma_sgtbls_free(i32ModChnID, psPdmaChann);
 
         psPdmaChann->m_u32WantedSGTblNum = needed;
-        psPdmaChann->m_ppsSgtbl = (nu_pdma_desc_t *)
-                                  rt_malloc_align(sizeof(nu_pdma_desc_t) * psPdmaChann->m_u32WantedSGTblNum, 32);
+
+        psPdmaChann->m_ppsSgtbl = (nu_pdma_desc_t *)rt_malloc_align(sizeof(nu_pdma_desc_t) * psPdmaChann->m_u32WantedSGTblNum, 32);
+
         if (!psPdmaChann->m_ppsSgtbl)
             goto exit__nu_pdma_transfer_chain;
 
@@ -1268,16 +1280,22 @@ void pdma_isr(PDMA_T *pdma, int idx)
         // Clear all Abort flags
         PDMA_CLR_ABORT_FLAG(pdma, abtsts);
     }
+
+    // Transfer done
     if (intsts & PDMA_INTSTS_TDIF_Msk)
     {
         // Clear all transfer done flags
         PDMA_CLR_TD_FLAG(pdma, tdsts);
     }
+
+    // Unaligned
     if (intsts & PDMA_INTSTS_ALIGNF_Msk)
     {
         // Clear all Unaligned flags
         PDMA_CLR_ALIGN_FLAG(pdma, unalignsts);
     }
+
+    // Timeout
     if (reqto)
     {
         // Clear all Timeout flags
@@ -1330,12 +1348,14 @@ void pdma_isr(PDMA_T *pdma, int idx)
                 if (reqto_ch & ch_mask)
                     nu_pdma_timeout_set(j, dma_chn->m_u32IdleTimeout_us);
 
-            }
+            }//if(dma_chn->handler)
 
-        }
+        } //if (nu_pdma_chn_mask & ch_mask)
+
+        // Clear the served bit.
         allch_sts &= ~ch_mask;
 
-    }
+    } //while
 }
 
 #if defined(PDMA0)
@@ -1344,6 +1364,9 @@ MAKE_PDMA_ISR(0);
 
 #if defined(PDMA1)
 MAKE_PDMA_ISR(1);
+#endif
+#if defined(LPPDMA)
+MAKE_LPPDMA_ISR(0);
 #endif
 
 static void nu_pdma_memfun_actor_init(void)
@@ -1466,6 +1489,8 @@ static rt_size_t nu_pdma_memfun(void *dest, void *src, uint32_t u32DataWidth, un
     {
         ret += (u32TransferCnt - nu_pdma_non_transfer_count_get(psMemFunActor->m_i32ModChnID));
     }
+
+    /* Terminate it if get ABORT event */
     if (psMemFunActor->m_u32Result & NU_PDMA_EVENT_ABORT)
     {
         nu_pdma_channel_terminate(psMemFunActor->m_i32ModChnID);

@@ -16,6 +16,8 @@ driver_deps = [
     ('glue/usb_glue_m460.c',  ['RT_USING_CHERRYUSB',  'SOC_SERIES_M460']),
     ('glue/usb_glue_m480.c',  ['RT_USING_CHERRYUSB',  'SOC_SERIES_M480']),
     ('glue/usb_glue_m3331.c', ['RT_USING_CHERRYUSB',  'SOC_SERIES_M3331']),
+    ('glue/usb_glue_m2354.c', ['RT_USING_CHERRYUSB',  'SOC_SERIES_M2354']),
+    ('glue/usb_glue_m2l31.c', ['RT_USING_CHERRYUSB',  'SOC_SERIES_M2L31']),
     ('nuvoton/usb_dc_hs.c',   ['RT_CHERRYUSB_DEVICE', 'BSP_USING_HSUSBD']),
     ('nuvoton/usb_dc_fs.c',   ['RT_CHERRYUSB_DEVICE', 'BSP_USING_USBD']),
 ]

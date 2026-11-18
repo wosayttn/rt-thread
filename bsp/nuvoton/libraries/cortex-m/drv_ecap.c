@@ -28,12 +28,12 @@
         } \
     }
 
-#define DEFINE_ECAP_IRQ_HANDLER(_idx)            \
-void ECAP##_idx##_IRQHandler(void)               \
-{                                                \
-    rt_interrupt_enter();                        \
-    nu_ecap_isr(&nu_ecap_arr[ECAP##_idx##_IDX]); \
-    rt_interrupt_leave();                        \
+#define DEFINE_ECAP_IRQ_HANDLER(_idx)                \
+void ECAP##_idx##_IRQHandler(void)                   \
+{                                                    \
+    rt_interrupt_enter();                            \
+    nu_ecap_isr(&nu_ecap_arr[ECAP##_idx##_CH0_IDX]); \
+    rt_interrupt_leave();                            \
 }
 
 /* Types / Structures ---------------------------------------------------------*/
@@ -41,24 +41,24 @@ enum
 {
     ECAP_START = -1,
 #if defined(BSP_USING_ECAP0)
-    ECAP0_IDX,
-    ECAP1_IDX,
-    ECAP2_IDX,
+    ECAP0_CH0_IDX,
+    ECAP0_CH1_IDX,
+    ECAP0_CH2_IDX,
 #endif
 #if defined(BSP_USING_ECAP1)
-    ECAP3_IDX,
-    ECAP4_IDX,
-    ECAP5_IDX,
+    ECAP1_CH0_IDX,
+    ECAP1_CH1_IDX,
+    ECAP1_CH2_IDX,
 #endif
 #if defined(BSP_USING_ECAP2)
-    ECAP6_IDX,
-    ECAP7_IDX,
-    ECAP8_IDX,
+    ECAP2_CH0_IDX,
+    ECAP2_CH1_IDX,
+    ECAP2_CH2_IDX,
 #endif
 #if defined(BSP_USING_ECAP3)
-    ECAP9_IDX,
-    ECAP10_IDX,
-    ECAP11_IDX,
+    ECAP3_CH0_IDX,
+    ECAP3_CH1_IDX,
+    ECAP3_CH2_IDX,
 #endif
     ECAP_CNT
 };

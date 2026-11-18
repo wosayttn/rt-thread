@@ -45,6 +45,19 @@ void nu_pin_func(rt_base_t pin, int data)
 
 void nu_read_uid(uint32_t *id)
 {
+#if defined(SOC_SERIES_M2L31)
+    /* Enable RMC ISP function */
+    RMC_ENABLE_ISP();
+
+    /* Read Unique ID */
+    id[0] = RMC_ReadUID(0);
+    id[1] = RMC_ReadUID(1);
+    id[2] = RMC_ReadUID(2);
+    id[3] = 0;
+
+    /* Disable RMC ISP function */
+    RMC_DISABLE_ISP();
+#else
     /* Enable FMC ISP function */
     FMC_Open();
 
@@ -56,7 +69,7 @@ void nu_read_uid(uint32_t *id)
 
     /* Disable FMC ISP function */
     FMC_Close();
-
+#endif
 }
 
 void devmem(int argc, char *argv[])

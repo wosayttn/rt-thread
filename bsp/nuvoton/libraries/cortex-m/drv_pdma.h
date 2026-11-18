@@ -22,8 +22,12 @@ enum
 #if defined(PDMA1)
     PDMA1_IDX,
 #endif
+#if defined(LPPDMA0)
+    LPPDMA_IDX,
+#endif
     PDMA_CNT
 };
+
 #define NU_PDMA_CAP_NONE             (0 << 0)
 
 #define NU_PDMA_EVENT_ABORT          (1 << 0)
@@ -33,6 +37,7 @@ enum
 #define NU_PDMA_EVENT_ALL            (NU_PDMA_EVENT_ABORT | NU_PDMA_EVENT_TRANSFER_DONE | NU_PDMA_EVENT_TIMEOUT)
 #define NU_PDMA_EVENT_MASK           NU_PDMA_EVENT_ALL
 #define NU_PDMA_UNUSED               (-1)
+
 #define NU_PDMA_SG_LIMITED_DISTANCE  ((PDMA_DSCT_NEXT_NEXT_Msk>>PDMA_DSCT_NEXT_NEXT_Pos) + 1)
 #define NU_PDMA_MAX_TXCNT            ((PDMA_DSCT_CTL_TXCNT_Msk>>PDMA_DSCT_CTL_TXCNT_Pos) + 1)
 
@@ -66,6 +71,7 @@ typedef struct
         {
             uint32_t u16ChnIdx : 16;
             uint32_t u16ModIdx : 16;
+
 #define NU_PDMA_CHN_IDX_Pos    (0)
 #define NU_PDMA_CHN_IDX_Msk    (0xFFFF<<NU_PDMA_CHN_IDX_Pos)
 #define NU_PDMA_IDX_Pos        (16)
@@ -74,6 +80,7 @@ typedef struct
         };
     };
 } pdma_chid_t;
+
 #define NU_PDMA_SET_REQ_SRC_ID(idx, x)    ((idx << NU_PDMA_IDX_Pos) | x)
 #define NU_PDMA_GET_REQ_SRC_ID(idx_x)     (idx_x & 0xFFFF)
 #define NU_PDMA_GET_CHN_ID                NU_PDMA_GET_REQ_SRC_ID
@@ -110,4 +117,5 @@ void nu_pdma_sgtbls_free(int i32ChannID, nu_pdma_desc_t *ppsSgtbls, int num);
 // For memory actor
 void *nu_pdma_memcpy(void *dest, void *src, unsigned int count);
 rt_size_t nu_pdma_mempush(void *dest, void *src, uint32_t data_width, unsigned int transfer_count);
+
 #endif /* __DRV_PDMA_H__ */

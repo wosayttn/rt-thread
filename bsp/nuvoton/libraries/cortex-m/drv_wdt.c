@@ -14,6 +14,45 @@
 #define DBG_TAG LOG_TAG
 #include "drv_log.h"
 
+#if !defined(WDT_IRQn) && defined(WDT0_IRQn)
+    #define WDT_IRQn                    WDT0_IRQn
+#endif
+
+#if !defined(WDT_MODULE) && defined(WDT0_MODULE)
+    #define WDT_MODULE                  WDT0_MODULE
+#endif
+
+#if defined(CLK_CLKSEL1_WDTSEL_Pos)
+    #define DRV_WDT_WDTSEL_Pos      CLK_CLKSEL1_WDTSEL_Pos
+#elif defined(CLK_CLKSEL1_WDT0SEL_Pos)
+    #define DRV_WDT_WDTSEL_Pos      CLK_CLKSEL1_WDT0SEL_Pos
+#elif defined(LPSCC_CLKSEL0_WDTSEL_Pos)
+    #define DRV_WDT_WDTSEL_Pos      LPSCC_CLKSEL0_WDTSEL_Pos
+#endif
+
+#if defined(CLK_CLKSEL1_WDTSEL_LXT)
+    #define DRV_WDT_WDTSEL_LXT      CLK_CLKSEL1_WDTSEL_LXT
+#elif defined(CLK_CLKSEL1_WDT0SEL_LXT)
+    #define DRV_WDT_WDTSEL_LXT      CLK_CLKSEL1_WDT0SEL_LXT
+#elif defined(LPSCC_CLKSEL0_WDTSEL_LXT)
+    #define DRV_WDT_WDTSEL_LXT      LPSCC_CLKSEL0_WDTSEL_LXT
+#endif
+
+#if defined(CLK_CLKSEL1_WDTSEL_LIRC)
+    #define DRV_WDT_WDTSEL_LIRC      CLK_CLKSEL1_WDTSEL_LIRC
+#elif defined(CLK_CLKSEL1_WDT0SEL_LIRC)
+    #define DRV_WDT_WDTSEL_LIRC      CLK_CLKSEL1_WDT0SEL_LIRC
+#elif defined(LPSCC_CLKSEL0_WDTSEL_LIRC)
+    #define DRV_WDT_WDTSEL_LIRC      LPSCC_CLKSEL0_WDTSEL_LIRC
+#endif
+
+#if defined(CLK_CLKSEL1_WDTSEL_HCLK_DIV2048)
+    #define DRV_WDT_WDTSEL_HCLK_DIV2048      CLK_CLKSEL1_WDTSEL_HCLK_DIV2048
+#elif defined(CLK_CLKSEL1_WDT0SEL_HCLK_DIV2048)
+    #define DRV_WDT_WDTSEL_HCLK_DIV2048      CLK_CLKSEL1_WDT0SEL_HCLK_DIV2048
+#elif defined(LPSCC_CLKSEL0_WDTSEL_HCLK1_DIV2048)
+    #define DRV_WDT_WDTSEL_HCLK_DIV2048      LPSCC_CLKSEL0_WDTSEL_HCLK1_DIV2048
+#endif
 
 /* Types / Structures ---------------------------------------------------------*/
 /* Static Function Prototypes ------------------------------------------------*/
@@ -157,7 +196,7 @@ static rt_err_t wdt_pm_frequency_change(const struct rt_device *device, rt_uint8
     new_hz = wdt_get_working_hz();
     clk = wdt_get_module_clock();
 
-    if (clk == CLK_CLKSEL1_WDT0SEL_HCLK_DIV2048)
+    if (clk == DRV_WDT_WDTSEL_HCLK_DIV2048)
     {
         if (new_hz == soft_time.clock_hz)
             return (int)(RT_EOK);
@@ -212,7 +251,7 @@ static void hw_wdt_init(void)
         WDT_CLEAR_RESET_FLAG(WDT);
     }
 
-    NVIC_EnableIRQ(WDT0_IRQn);
+    NVIC_EnableIRQ(WDT_IRQn);
 }
 int rt_hw_wdt_init(void)
 {
@@ -242,7 +281,7 @@ static rt_err_t wdt_init(rt_watchdog_t *dev)
 
 static uint32_t wdt_get_module_clock(void)
 {
-    return (CLK_GetModuleClockSource(WDT0_MODULE) << CLK_CLKSEL1_WDT0SEL_Pos);
+    return (CLK_GetModuleClockSource(WDT_MODULE) << DRV_WDT_WDTSEL_Pos);
 }
 
 static uint32_t wdt_get_working_hz(void)
@@ -254,15 +293,15 @@ static uint32_t wdt_get_working_hz(void)
     switch (clk)
     {
 
-    case CLK_CLKSEL1_WDT0SEL_LIRC:
+    case DRV_WDT_WDTSEL_LIRC:
         hz = __LIRC;
         break;
 
-    case CLK_CLKSEL1_WDT0SEL_LXT:
+    case DRV_WDT_WDTSEL_LXT:
         hz = __LXT;
         break;
 
-    case CLK_CLKSEL1_WDT0SEL_HCLK_DIV2048:
+    case DRV_WDT_WDTSEL_HCLK_DIV2048:
         hz = CLK_GetHCLKFreq() / 2048;
         break;
 
@@ -373,7 +412,7 @@ static rt_err_t wdt_control(rt_watchdog_t *dev, int cmd, void *args)
 
     return -(ret);
 }
-void WDT0_IRQHandler(void)
+void WDT_IRQHandler(void)
 {
     rt_interrupt_enter();
 
@@ -413,3 +452,8 @@ void WDT0_IRQHandler(void)
 
     rt_interrupt_leave();
 }
+
+#if defined(__GNUC__)
+void WDT0_IRQHandler(void) __attribute__((weak, alias("WDT_IRQHandler")));
+#endif
+

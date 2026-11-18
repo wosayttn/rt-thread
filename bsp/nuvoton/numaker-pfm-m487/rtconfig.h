@@ -161,8 +161,8 @@
 #define RT_USING_DFS_MNTTABLE
 #define DFS_FD_MAX 16
 #define RT_USING_DFS_V1
-#define DFS_FILESYSTEMS_MAX 4
-#define DFS_FILESYSTEM_TYPES_MAX 4
+#define DFS_FILESYSTEMS_MAX 8
+#define DFS_FILESYSTEM_TYPES_MAX 8
 #define RT_USING_DFS_ELMFAT
 
 /* elm-chan's FatFs, Generic FAT Filesystem Module */
@@ -235,6 +235,26 @@
 #define RT_BLK_PARTITION_EFI
 /* end of Partition Types */
 #define RT_USING_PIN
+#define RT_USING_CHERRYUSB
+#define RT_CHERRYUSB_DEVICE
+#define RT_CHERRYUSB_DEVICE_HID
+#define CONFIG_USBDEV_REQUEST_BUFFER_LEN 512
+#define CONFIG_USBDEV_MSC_MAX_BUFSIZE 512
+#define RT_CHERRYUSB_DEVICE_TEMPLATE_HID_MOUSE
+#define RT_CHERRYUSB_HOST
+#define RT_CHERRYUSB_HOST_EHCI_CUSTOM
+#define RT_CHERRYUSB_HOST_MSC
+#define CONFIG_USBHOST_PSC_PRIO 0
+#define CONFIG_USBHOST_PSC_STACKSIZE 4096
+#define CONFIG_USBHOST_REQUEST_BUFFER_LEN 512
+#define CONFIG_USBHOST_CONTROL_TRANSFER_TIMEOUT 500
+#define CONFIG_USBHOST_SERIAL_RX_SIZE 2048
+#define RT_LWIP_PBUF_POOL_BUFSIZE 1600
+#define CONFIG_USB_DFS_MOUNT_POINT "/udisk"
+
+/* Select USB host template, please select class driver first */
+
+/* end of Select USB host template, please select class driver first */
 /* end of Device Drivers */
 
 /* C/C++ and POSIX layer */
@@ -396,6 +416,8 @@
 /* Micrium: Micrium software products porting for RT-Thread */
 
 /* end of Micrium: Micrium software products porting for RT-Thread */
+#define PKG_CHERRYUSB_DEVICE_SPEED_HS
+#define PKG_CHERRYUSB_DEVICE_CUSTOM
 /* end of system packages */
 
 /* peripheral libraries and drivers */
@@ -564,9 +586,9 @@
 #define BSP_USING_UART0
 #define BSP_USING_USB
 #define BSP_USING_USBD
-#define BSP_USING_USBH
-#define BSP_USING_OTG
 #define BSP_USING_HSUSBD
+#define BSP_USING_HSUSBH
+#define BSP_USING_HSOTG
 /* end of On-chip Peripheral Drivers */
 
 /* On-board Peripheral Drivers */

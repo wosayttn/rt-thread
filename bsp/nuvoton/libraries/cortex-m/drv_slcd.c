@@ -1,63 +1,61 @@
-/**************************************************************************//**
-*
-* @copyright (C) 2020 Nuvoton Technology Corp. All rights reserved.
-*
-* SPDX-License-Identifier: Apache-2.0
-*
-* Change Logs:
-* Date            Author       Notes
-* 2020-11-11      Wayne        First version
-*
-******************************************************************************/
+/*
+ * @copyright (C) 2026 Nuvoton Technology Corp. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-#include <rtconfig.h>
+/* Includes ------------------------------------------------------------------*/
+#include "drv_sys.h"
+#include "drv_slcd.h"
 
-#if defined(BSP_USING_SLCD)
+/* Defines / Macros ----------------------------------------------------------*/
+#undef LOG_TAG
+#define LOG_TAG "drv.slcd"
+#define DBG_TAG LOG_TAG
+#include "drv_log.h"
 
-#include <rtdevice.h>
-#include <rthw.h>
-#include "NuMicro.h"
-#include <drv_slcd.h>
-
-/* Private define ---------------------------------------------------------------*/
-#define DBG_ENABLE
-#define DBG_LEVEL DBG_LOG
-#define DBG_SECTION_NAME  "slcd"
-#define DBG_COLOR
-#include <rtdbg.h>
-
+/* Types / Structures ---------------------------------------------------------*/
 enum
 {
     SLCD_START = -1,
+#if defined(BSP_USING_SLCD)
     SLCD_IDX,
+#endif
     SLCD_CNT
 };
-#define LCD_ALPHABET_NUM    7
 
-/* Private typedef --------------------------------------------------------------*/
 struct nu_slcd
 {
     struct rt_device dev;
-    char *name;
-    LCD_T *base;
-    uint32_t rst;
+    const struct nu_module m_module;
     rt_mutex_t lock;
 };
 typedef struct nu_slcd *nu_slcd_t;
 
-/* Private functions ------------------------------------------------------------*/
+/* Static Function Prototypes ------------------------------------------------*/
+static rt_err_t nu_slcd_open(struct rt_device *dev, rt_uint16_t oflag);
+static rt_err_t nu_slcd_close(struct rt_device *dev);
+static rt_ssize_t nu_slcd_write(struct rt_device *dev,
+                                rt_off_t          pos,
+                                const void       *buffer,
+                                rt_size_t         size);
+static rt_err_t nu_slcd_control(struct rt_device *dev,
+                                int              cmd,
+                                void             *args);
 
-/* Public functions ------------------------------------------------------------*/
-
-/* Private variables ------------------------------------------------------------*/
-static struct nu_slcd nu_slcd_arr [] =
+/* Static Variables ----------------------------------------------------------*/
+static struct nu_slcd nu_slcd_arr[] =
 {
+#if defined(BSP_USING_SLCD)
     {
-        .name = "slcd",
-        .base = LCD,
-        .rst = LCD_RST,
-    }
-}; /* nu_slcd_arr */
+        .m_module = {
+            .name  = "slcd",
+            .base  = (void *)LCD,
+            .RstId = LCD_RST,
+        },
+    },
+#endif
+};
 
 static S_LCD_CFG_T g_SLCDCfg =
 {
@@ -71,19 +69,42 @@ static S_LCD_CFG_T g_SLCDCfg =
     LCD_VOLTAGE_SOURCE_VLCD,    /*!< Voltage source */
 };
 
+#if defined(RT_USING_DEVICE_OPS)
+static const struct rt_device_ops slcd_ops =
+{
+    .init    = RT_NULL,
+    .open    = nu_slcd_open,
+    .close   = nu_slcd_close,
+    .read    = RT_NULL,
+    .write   = nu_slcd_write,
+    .control = nu_slcd_control,
+};
+#endif
+
+/* Functions Implementation --------------------------------------------------*/
 static rt_err_t nu_slcd_open(struct rt_device *dev, rt_uint16_t oflag)
 {
+    nu_slcd_t psNuSLcd = (nu_slcd_t)dev;
+
+    RT_ASSERT(dev != RT_NULL);
+
+    (void)oflag;
+
     if (dev->ref_count == 0)
     {
-        nu_slcd_t psNuSLcd = (nu_slcd_t)dev;
+        uint32_t u32ActiveFPS;
+        LCD_T *base = (LCD_T *)psNuSLcd->m_module.base;
+
+        RT_ASSERT(base != RT_NULL);
+        (void)base;
 
         /* Reset LCD module */
-        SYS_ResetModule(psNuSLcd->rst);
+        SYS_ResetModule(psNuSLcd->m_module.RstId);
 
-        uint32_t u32ActiveFPS = LCD_Open(&g_SLCDCfg);
+        u32ActiveFPS = LCD_Open(&g_SLCDCfg);
 
         /* LCD Initialize and calculate real frame rate */
-        LOG_I("Working frame rate is %dHz on Type-%c.\n\n", u32ActiveFPS, (g_SLCDCfg.u32WaveformType == LCD_PCTL_TYPE_Msk) ? 'B' : 'A');
+        LOG_I("Working frame rate is %dHz on Type-%c.", u32ActiveFPS, (g_SLCDCfg.u32WaveformType == LCD_PCTL_TYPE_Msk) ? 'B' : 'A');
 
         /* Enable LCD display */
         LCD_ENABLE_DISPLAY();
@@ -94,33 +115,51 @@ static rt_err_t nu_slcd_open(struct rt_device *dev, rt_uint16_t oflag)
 
 static rt_err_t nu_slcd_close(struct rt_device *dev)
 {
+    nu_slcd_t psNuSLcd = (nu_slcd_t)dev;
+
+    RT_ASSERT(dev != RT_NULL);
+
     if (dev->ref_count == 0)
     {
+        LCD_T *base = (LCD_T *)psNuSLcd->m_module.base;
+
+        RT_ASSERT(base != RT_NULL);
+        (void)base;
+
         /* Disable LCD display */
         LCD_DISABLE_DISPLAY();
     }
+
     return RT_EOK;
 }
 
 static rt_ssize_t nu_slcd_write(struct rt_device *dev,
-                               rt_off_t          pos,
-                               const void       *buffer,
-                               rt_size_t         size)
+                                rt_off_t          pos,
+                                const void       *buffer,
+                                rt_size_t         size)
 {
     nu_slcd_pixel_t psSlcdPixel;
-    nu_slcd_t psNuSLCD = (nu_slcd_t)dev;
+    nu_slcd_t psNuSLcd = (nu_slcd_t)dev;
 
+    (void)pos;
+
+    RT_ASSERT(dev != RT_NULL);
     RT_ASSERT(buffer != RT_NULL);
     RT_ASSERT(size == sizeof(struct nu_slcd_pixel));
+
+    if (dev == RT_NULL || buffer == RT_NULL || size != sizeof(struct nu_slcd_pixel))
+    {
+        return 0;
+    }
 
     psSlcdPixel = (nu_slcd_pixel_t)buffer;
 
     /* Critical section */
-    rt_mutex_take(psNuSLCD->lock, RT_WAITING_FOREVER);
+    rt_mutex_take(psNuSLcd->lock, RT_WAITING_FOREVER);
     LCD_SetPixel(psSlcdPixel->m_u32Com, psSlcdPixel->m_u32Seg, psSlcdPixel->m_u32OnFlag);
-    rt_mutex_release(psNuSLCD->lock);
+    rt_mutex_release(psNuSLcd->lock);
 
-    return size;
+    return (rt_ssize_t)size;
 }
 
 static rt_err_t nu_slcd_control(struct rt_device *dev,
@@ -128,6 +167,9 @@ static rt_err_t nu_slcd_control(struct rt_device *dev,
                                 void             *args)
 {
     rt_err_t ret = RT_EOK;
+
+    RT_ASSERT(dev != RT_NULL);
+
     switch (cmd)
     {
     case NU_SLCD_CMD_SET_LCD_CFG:
@@ -152,9 +194,10 @@ static rt_err_t nu_slcd_control(struct rt_device *dev,
         LCD_CP_VOLTAGE_LV_5  3.6 V
         */
         uint32_t u32CPVol;
+
         RT_ASSERT(args != RT_NULL);
 
-        u32CPVol = *((uint32_t *)args) ;
+        u32CPVol = *((uint32_t *)args);
         if ((u32CPVol >> LCD_PCTL_CPVSEL_Pos) <= (LCD_CP_VOLTAGE_LV_5 >> LCD_PCTL_CPVSEL_Pos))
         {
             LCD_SET_CP_VOLTAGE(u32CPVol);
@@ -165,28 +208,18 @@ static rt_err_t nu_slcd_control(struct rt_device *dev,
         }
     }
     break;
+
     default:
         return -RT_EINVAL;
     }
+
     return ret;
 }
 
-#ifdef RT_USING_DEVICE_OPS
-const static struct rt_device_ops slcd_ops =
-{
-    RT_NULL,
-    nu_slcd_open,
-    nu_slcd_close,
-    RT_NULL,
-    nu_slcd_write,
-    nu_slcd_control
-};
-#endif
-
 rt_err_t rt_hw_slcd_register(struct rt_device *device,
-                             const char              *name,
-                             rt_uint32_t              flag,
-                             void                    *data)
+                             const char       *name,
+                             rt_uint32_t       flag,
+                             void             *data)
 {
     RT_ASSERT(device != RT_NULL);
 
@@ -194,7 +227,7 @@ rt_err_t rt_hw_slcd_register(struct rt_device *device,
     device->rx_indicate = RT_NULL;
     device->tx_complete = RT_NULL;
 
-#ifdef RT_USING_DEVICE_OPS
+#if defined(RT_USING_DEVICE_OPS)
     device->ops         = &slcd_ops;
 #else
     device->init        = RT_NULL;
@@ -213,16 +246,17 @@ rt_err_t rt_hw_slcd_register(struct rt_device *device,
 /**
  * Hardware SLCD Initialization
  */
-static int rt_hw_slcd_init(void)
+int rt_hw_slcd_init(void)
 {
     int i;
     rt_err_t ret = RT_EOK;
 
     for (i = (SLCD_START + 1); i < SLCD_CNT; i++)
     {
-        ret = rt_hw_slcd_register(&nu_slcd_arr[i].dev, nu_slcd_arr[i].name, RT_DEVICE_FLAG_RDWR, NULL);
+        ret = rt_hw_slcd_register(&nu_slcd_arr[i].dev, nu_slcd_arr[i].m_module.name, RT_DEVICE_FLAG_RDWR, RT_NULL);
         RT_ASSERT(ret == RT_EOK);
-        nu_slcd_arr[i].lock = rt_mutex_create(nu_slcd_arr[i].name, RT_IPC_FLAG_PRIO);
+
+        nu_slcd_arr[i].lock = rt_mutex_create(nu_slcd_arr[i].m_module.name, RT_IPC_FLAG_PRIO);
         RT_ASSERT(nu_slcd_arr[i].lock != RT_NULL);
     }
 
@@ -230,4 +264,3 @@ static int rt_hw_slcd_init(void)
 }
 INIT_DEVICE_EXPORT(rt_hw_slcd_init);
 
-#endif //#if defined(BSP_USING_SLCD)
